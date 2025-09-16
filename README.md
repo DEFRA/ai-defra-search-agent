@@ -1,8 +1,8 @@
-# cdp-python-backend-template
+# ai-defra-search-agent
 
 This is work-in-progress. See [To Do List](./TODO.md)
 
-- [cdp-python-backend-template](#cdp-python-backend-template)
+- [ai-defra-search-agent](#ai-defra-search-agent)
   - [Requirements](#requirements)
     - [Python](#python)
     - [Linting and Formatting](#linting-and-formatting)
