@@ -3,11 +3,12 @@ from logging import getLogger
 
 from pydantic import BaseModel, Field
 
+from app.config import config as settings
 from app.lib.bedrock_client import chat_bedrock_client
 
 logger = getLogger(__name__)
 
-MODEL = "eu.amazon.nova-lite-v1:0"
+MODEL = settings.AWS_BEDROCK_MODEL_GRADING
 
 
 class ValidationResult(BaseModel):

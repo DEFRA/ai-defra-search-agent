@@ -10,8 +10,6 @@ logger = getLogger(__name__)
 router = APIRouter(prefix="/debug")
 chat_history = []
 
-MODEL = "eu.amazon.nova-lite-v1:0"
-
 
 class QuestionRequest(BaseModel):
     question: str = Field(

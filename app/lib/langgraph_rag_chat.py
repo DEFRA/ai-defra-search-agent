@@ -6,12 +6,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import START, StateGraph
 from pydantic import BaseModel, Field
 
+from app.config import config as settings
 from app.lib.bedrock_client import chat_bedrock, chat_bedrock_client
 from app.lib.guardrails import GuardrailsManager
 from app.lib.security_monitoring import security_monitor
 from app.lib.vectorstore_client import VectorStoreClient
 
 logger = getLogger(__name__)
+
+GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
 
 
 class State(dict):
@@ -51,7 +54,7 @@ def grade_documents(state: State):
     context = state["context"]
     print(f"###### GRADING {len(context)} documents")
 
-    llm = chat_bedrock_client("eu.amazon.nova-lite-v1:0")
+    llm = chat_bedrock_client(GRADING_MODEL)
 
     structured_llm_grader = llm.with_structured_output(GradeDocument)
 
