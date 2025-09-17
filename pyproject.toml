@@ -5,15 +5,25 @@ description = "ai-defra-search-agent"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=0.64.0",
     "asgi-logger>=0.1.0",
     "aws-embedded-metrics>=3.3.0",
+    "beautifulsoup4>=4.13.5",
     "dnspython>=2.7.0",
     "ecs-logging>=2.2.0",
     "fastapi>=0.115.12",
     "httpx>=0.28.1",
+    "langchain>=0.3.27",
+    "langchain-aws>=0.2.31",
+    "langchain-community>=0.3.28",
+    "langchain-core>=0.3.75",
+    "langgraph>=0.6.6",
+    "langgraph-checkpoint-mongodb>=0.2.0",
+    "langgraph-store-mongodb>=0.1.0",
     "pydantic-settings>=2.9.1",
     "pymongo[aws,encryption,snappy,zstd]>=4.13.1",
-    "uvicorn>=0.34.3",
+    "tiktoken>=0.11.0",
+    "uvicorn>=0.34.3"
 ]
 
 [dependency-groups]

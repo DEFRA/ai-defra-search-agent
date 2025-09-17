@@ -16,5 +16,23 @@ class AppConfig(BaseSettings):
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
 
+    # AWS
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
+    AWS_REGION: str | None = None
+
+    # Bedrock
+    AWS_ACCESS_KEY_ID_BEDROCK: str | None = None
+    AWS_SECRET_ACCESS_KEY_BEDROCK: str | None = None
+    AWS_REGION_BEDROCK: str | None = None
+    AWS_BEDROCK_MODEL: str | None = None
+    AWS_USE_CREDENTIALS_BEDROCK: str | None = None
+    AWS_BEDROCK_GUARDRAIL: str | None = None
+    AWS_BEDROCK_GUARDRAIL_VERSION: str | None = None
+
+    # Anthropic
+    ANTHROPIC_MAX_TOKENS: int | None = None
+    ANTHROPIC_TEMPERATURE: float | None = None
+
 
 config = AppConfig()

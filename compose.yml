@@ -53,9 +53,10 @@ services:
       - "compose/secrets.env"
     environment:
       PORT: ${PORT:-8085}
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      # AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
+      GIT_PYTHON_REFRESH: "quiet"
     develop:
       watch:
         - action: sync
