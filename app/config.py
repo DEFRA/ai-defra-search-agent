@@ -26,9 +26,10 @@ class AppConfig(BaseSettings):
     AWS_SECRET_ACCESS_KEY_BEDROCK: str | None = None
     AWS_REGION_BEDROCK: str | None = None
     AWS_BEDROCK_MODEL: str | None = None
+    AWS_BEDROCK_EMBEDDING_MODEL: str | None = None
     AWS_USE_CREDENTIALS_BEDROCK: str | None = None
     AWS_BEDROCK_GUARDRAIL: str | None = None
-    AWS_BEDROCK_GUARDRAIL_VERSION: str | None = None
+    AWS_BEDROCK_GUARDRAIL_VERSION: int | None = None
 
     # Anthropic
     ANTHROPIC_MAX_TOKENS: int | None = None
