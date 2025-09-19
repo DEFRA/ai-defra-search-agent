@@ -5,6 +5,7 @@ from app.config import config as settings
 
 MODEL = settings.AWS_BEDROCK_EMBEDDING_MODEL
 USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
+PROVIDER = settings.AWS_BEDROCK_PROVIDER
 
 if USE_CREDENTIALS:
     bedrock_runtime = boto3.client(
@@ -20,7 +21,4 @@ else:
 
 
 def embedding_bedrock():
-    return BedrockEmbeddings(
-        client=bedrock_runtime,
-        model_id=MODEL,
-    )
+    return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL, provider=PROVIDER)
