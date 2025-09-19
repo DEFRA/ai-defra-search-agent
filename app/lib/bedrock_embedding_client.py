@@ -5,6 +5,8 @@ from app.config import config as settings
 
 MODEL = settings.AWS_BEDROCK_EMBEDDING_MODEL
 USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
+GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
+GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
 PROVIDER = settings.AWS_BEDROCK_PROVIDER
 
 if USE_CREDENTIALS:
@@ -21,4 +23,16 @@ else:
 
 
 def embedding_bedrock():
-    return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL, provider=PROVIDER)
+    if USE_CREDENTIALS:
+        return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL)
+
+    return BedrockEmbeddings(
+        client=bedrock_runtime,
+        model_id=MODEL,
+        provider=PROVIDER,
+        guardrails={
+            "guardrailIdentifier": GUARDRAIL,
+            "guardrailVersion": GUARDRAIL_VERSION,
+            "trace": "enabled",
+        },
+    )
