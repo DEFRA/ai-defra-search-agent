@@ -20,7 +20,7 @@ def grade_documents(state: State):
     filtered_documents = []
 
     for doc in context:
-        score = retrieval_grader.invoke(
+        score = retrieval_grader().invoke(
             {"document": doc.page_content, "question": question}
         )
         grade = score.binary_score

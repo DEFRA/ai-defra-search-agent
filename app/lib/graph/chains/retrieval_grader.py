@@ -6,8 +6,6 @@ from app.lib.bedrock_client import chat_bedrock_client
 
 GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
 
-llm = chat_bedrock_client(GRADING_MODEL)
-
 
 class GradeDocument(BaseModel):
     """Binary score for relevance check on the retrieved documents."""
@@ -16,8 +14,6 @@ class GradeDocument(BaseModel):
         description="Documents are relevent to the question. 'yes or 'no'."
     )
 
-
-structured_llm_grader = llm.with_structured_output(GradeDocument)
 
 system = """You are a grader assessing the relevence of a retrieved document to a question. \n
 If the document contains keyword(s) or sematic meaning related to the question, grade it as relevant. \n
@@ -34,4 +30,9 @@ grade_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-retrieval_grader = grade_prompt | structured_llm_grader
+
+def retrieval_grader():
+    """Create and return the retrieval grader chain."""
+    llm = chat_bedrock_client(GRADING_MODEL)
+    structured_llm_grader = llm.with_structured_output(GradeDocument)
+    return grade_prompt | structured_llm_grader

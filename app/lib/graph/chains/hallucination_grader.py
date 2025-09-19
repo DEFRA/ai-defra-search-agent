@@ -6,7 +6,7 @@ from app.lib.bedrock_client import chat_bedrock_client
 
 GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
 
-llm = chat_bedrock_client(GRADING_MODEL)
+# Remove the module-level instantiation
 
 
 class GradeHallucinations(BaseModel):
@@ -16,8 +16,6 @@ class GradeHallucinations(BaseModel):
         description="Answer is grounded in the facts, 'yes' or 'no'."
     )
 
-
-structured_llm_grader = llm.with_structured_output(GradeHallucinations)
 
 system = """You are a grader assessing whether an llm generation is grounded in /supported by a set of documents. \n
         Give a binary score of 'yes' or 'no'. 'yes' means that the answer is grounded in / supported by the set of facts."""
@@ -29,4 +27,9 @@ hallucination_prompt = ChatPromptTemplate(
     ]
 )
 
-hallucination_grader = hallucination_prompt | structured_llm_grader
+
+def hallucination_grader():
+    """Create and return the hallucination grader chain."""
+    llm = chat_bedrock_client(GRADING_MODEL)
+    structured_llm_grader = llm.with_structured_output(GradeHallucinations)
+    return hallucination_prompt | structured_llm_grader

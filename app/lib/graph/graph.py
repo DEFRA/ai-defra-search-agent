@@ -14,7 +14,7 @@ def grade_generation_grounded_in_documents(state: State) -> str:
     answer = state["answer"]
     context = state["documents_for_context"]
 
-    score = hallucination_grader.invoke({"context": context, "answer": answer})
+    score = hallucination_grader().invoke({"context": context, "answer": answer})
 
     if score.binary_score:
         print("---GRADE: ANSWER IS GROUNDED IN THE FACTS---")
