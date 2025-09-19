@@ -7,7 +7,6 @@ FROM defradigital/python-development:${PARENT_VERSION} AS development
 
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging-dev.json"
-ENV GIT_PYTHON_REFRESH="quiet"
 
 USER root
 
@@ -42,7 +41,6 @@ FROM defradigital/python:${PARENT_VERSION} AS production
 
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging.json"
-ENV GIT_PYTHON_REFRESH="quiet"
 
 USER root
 

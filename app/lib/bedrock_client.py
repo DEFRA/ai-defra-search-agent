@@ -6,6 +6,7 @@ USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
 MODEL_ID = settings.AWS_BEDROCK_MODEL
 GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
 GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
+PROVIDER = settings.AWS_BEDROCK_PROVIDER
 
 
 def chat_bedrock_client(model: str = MODEL_ID):
@@ -31,6 +32,8 @@ def chat_bedrock_client(model: str = MODEL_ID):
             "guardrailVersion": GUARDRAIL_VERSION,
             "trace": "enabled",
         }
+
+    llm.provider = "anthropic"
 
     return llm
 

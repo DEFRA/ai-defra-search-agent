@@ -1,6 +1,7 @@
 from logging import getLogger
 
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from app.lib.vectorstore_client import VectorStoreClient
 
@@ -8,9 +9,9 @@ logger = getLogger(__name__)
 
 router = APIRouter()
 
-urls = [
-    "https://www.gov.uk/government/publications/ai-playbook-for-the-uk-government/artificial-intelligence-playbook-for-the-uk-government-html"
-]
+
+class SetupDataRequest(BaseModel):
+    urls: list[str]
 
 
 @router.get("/data/search")
@@ -34,10 +35,10 @@ async def search_data(
 
 
 @router.post("/data/setup")
-async def setup_data():
+async def setup_data(request: SetupDataRequest):
     try:
         client = VectorStoreClient()
-        doc_ids = client.load_documents(urls)
+        doc_ids = client.load_documents(request.urls)
         logger.info("Loaded documents with ids: %s", doc_ids)
         return {
             "status": "success",
