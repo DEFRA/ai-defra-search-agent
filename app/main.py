@@ -12,6 +12,7 @@ from app.config import config
 from app.data_ingestion.router import router as data_router
 from app.debug.router import router as debug_router
 from app.health.router import router as health_router
+from app.observability.router import router as observability_router
 
 logger = getLogger(__name__)
 
@@ -39,6 +40,7 @@ app.include_router(data_router)
 app.include_router(chat_history_router)
 app.include_router(chat_router)
 app.include_router(debug_router)
+app.include_router(observability_router)
 
 
 def main() -> None:

@@ -30,7 +30,9 @@ class AppConfig(BaseSettings):
     AWS_USE_CREDENTIALS_BEDROCK: str | None = None
     AWS_BEDROCK_GUARDRAIL: str | None = None
     AWS_BEDROCK_GUARDRAIL_VERSION: int | None = None
-    AWS_BEDROCK_MODEL_GRADING: str | None = None
+    AWS_BEDROCK_MODEL_GRADING: str | None = (
+        "default-grading-model"  # Default value added
+    )
 
     # Anthropic
     ANTHROPIC_MAX_TOKENS: int | None = None

@@ -8,7 +8,11 @@ GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
 GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
 
 
-def chat_bedrock_client(model=settings.AWS_BEDROCK_MODEL):
+def chat_bedrock_client(model: str):
+    if model is None:
+        error_message = "Model ID cannot be None. Please check your configuration."
+        raise ValueError(error_message)
+
     if USE_CREDENTIALS:
         print("USE CREDENTIALS")
         llm = ChatBedrockConverse(
