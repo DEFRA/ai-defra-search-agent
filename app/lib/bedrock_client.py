@@ -6,7 +6,7 @@ USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
 MODEL_ID = settings.AWS_BEDROCK_MODEL
 GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
 GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
-PROVIDER = settings.AWS_BEDROCK_PROVIDER
+PROVIDER = settings.AWS_BEDROCK_PROVIDER or "anthropic"
 
 
 def chat_bedrock_client(model: str = MODEL_ID):
@@ -24,16 +24,15 @@ def chat_bedrock_client(model: str = MODEL_ID):
         )
 
     else:
-        llm = ChatBedrockConverse(model_id=model)
-
-    if GUARDRAIL and GUARDRAIL_VERSION:
-        llm.guardrail_config = {
-            "guardrailIdentifier": GUARDRAIL,
-            "guardrailVersion": GUARDRAIL_VERSION,
-            "trace": "enabled",
-        }
-
-    llm.provider = PROVIDER
+        llm = ChatBedrockConverse(
+            model_id=model,
+            guardrails={
+                "guardrailIdentifier": GUARDRAIL,
+                "guardrailVersion": GUARDRAIL_VERSION,
+                "trace": "enabled",
+            },
+            provider=PROVIDER,
+        )
 
     return llm
 
