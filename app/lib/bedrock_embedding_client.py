@@ -26,13 +26,4 @@ def embedding_bedrock():
     if USE_CREDENTIALS:
         return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL)
 
-    return BedrockEmbeddings(
-        client=bedrock_runtime,
-        model_id=MODEL,
-        provider=PROVIDER,
-        guardrails={
-            "guardrailIdentifier": GUARDRAIL,
-            "guardrailVersion": GUARDRAIL_VERSION,
-            "trace": "enabled",
-        },
-    )
+    return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL, provider=PROVIDER)
