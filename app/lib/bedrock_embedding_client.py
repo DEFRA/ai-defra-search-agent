@@ -24,6 +24,15 @@ else:
 
 def embedding_bedrock():
     if USE_CREDENTIALS:
-        return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL)
+        return BedrockEmbeddings(
+            client=bedrock_runtime,
+            model_id=MODEL,
+            model_kwargs={"guardrailIdentifier": GUARDRAIL, "guardrailVersion": GUARDRAIL_VERSION, "trace": "enabled"},
+        )
 
-    return BedrockEmbeddings(client=bedrock_runtime, model_id=MODEL, provider=PROVIDER)
+    return BedrockEmbeddings(
+        client=bedrock_runtime,
+        model_id=MODEL,
+        provider=PROVIDER,
+        model_kwargs={"guardrailIdentifier": GUARDRAIL, "guardrailVersion": GUARDRAIL_VERSION, "trace": "enabled"},
+    )
