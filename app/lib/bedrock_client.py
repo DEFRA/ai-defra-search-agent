@@ -33,7 +33,7 @@ def chat_bedrock_client(model: str = MODEL_ID):
             "trace": "enabled",
         }
 
-    llm.provider = "anthropic"
+    llm.provider = PROVIDER
 
     return llm
 
