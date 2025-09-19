@@ -8,7 +8,7 @@ GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
 GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
 
 
-def chat_bedrock_client(model: str):
+def chat_bedrock_client(model: str = MODEL_ID):
     if model is None:
         error_message = "Model ID cannot be None. Please check your configuration."
         raise ValueError(error_message)

@@ -136,6 +136,55 @@ class ObservabilityService:
             },
         )
 
+    def _safe_json_serialize(self, obj):
+        """Safely serialize an object to JSON, handling non-serializable types."""
+        if obj is None:
+            return {}
+
+        # Handle non-dict objects first to reduce complexity
+        if not isinstance(obj, dict):
+            # For non-dict objects, convert to string
+            return {"value": str(obj)}
+
+        # Create a sanitized copy to avoid modifying the original
+        sanitized = {}
+        for k, v in obj.items():
+            try:
+                # Try simple serialization first
+                json.dumps({k: v})
+                sanitized[k] = v
+            except (TypeError, OverflowError):
+                # If it fails, handle various object types
+                sanitized[k] = self._convert_unserializable_value(v)
+
+        return sanitized
+
+    def _convert_unserializable_value(self, v):
+        """Helper method to convert an unserializable value to a serializable format."""
+        # Handle Pydantic models
+        if hasattr(v, "model_dump"):
+            try:
+                return v.model_dump()
+            except Exception:
+                return str(v)
+
+        # Handle objects with dict() method
+        if hasattr(v, "dict") and callable(v.dict):
+            try:
+                return v.dict()
+            except Exception:
+                return str(v)
+
+        # Handle objects with __dict__
+        if hasattr(v, "__dict__"):
+            try:
+                return str(v)
+            except Exception:
+                return f"<non-serializable {type(v).__name__}>"
+
+        # Default case
+        return f"<non-serializable {type(v).__name__}>"
+
     async def track_node_execution(
         self,
         execution_id: str,
@@ -148,15 +197,28 @@ class ObservabilityService:
         error: Exception | None = None,
         **node_specific_metrics,
     ) -> None:
+        # Sanitize input and output data for serialization
+        safe_input_data = self._safe_json_serialize(input_data)
+        safe_output_data = self._safe_json_serialize(output_data)
+
+        # Calculate sizes using the sanitized versions
+        try:
+            input_size_bytes = len(json.dumps(safe_input_data).encode())
+            output_size_bytes = len(json.dumps(safe_output_data).encode())
+        except (TypeError, OverflowError):
+            # Fallback if serialization still fails
+            input_size_bytes = len(str(input_data).encode()) if input_data else 0
+            output_size_bytes = len(str(output_data).encode()) if output_data else 0
+
         node_execution = NodeExecution(
             execution_id=execution_id,
             node_name=node_name,
             node_type=node_type,
             status=status,
-            input_data=input_data or {},
-            output_data=output_data or {},
-            input_size_bytes=len(json.dumps(input_data or {}).encode()),
-            output_size_bytes=len(json.dumps(output_data or {}).encode()),
+            input_data=safe_input_data,
+            output_data=safe_output_data,
+            input_size_bytes=input_size_bytes,
+            output_size_bytes=output_size_bytes,
             duration_ms=duration_ms,
             error_message=str(error) if error else None,
             error_type=type(error).__name__ if error else None,
@@ -236,8 +298,20 @@ class LangGraphObservabilityHandler(BaseCallbackHandler):
             )
         )
 
-    def on_chain_end(self, outputs: dict[str, Any], **_kwargs) -> None:
-        node_name = "unknown_node"
+    def on_chain_end(self, outputs: dict[str, Any], **kwargs) -> None:
+        # Extract node name from serialized data if available, otherwise use kwargs
+        serialized = kwargs.get("serialized", {})
+        node_name = serialized.get("name") if serialized else None
+
+        # Fallback to checking run_id which might contain node name
+        if not node_name and "run_id" in kwargs:
+            parts = kwargs["run_id"].split("-")
+            if len(parts) > 1:
+                node_name = parts[0]
+
+        # Final fallback
+        if not node_name:
+            node_name = "unknown_node"
 
         start_time = self.node_start_times.get(node_name)
         duration_ms = int((time.time() - start_time) * 1000) if start_time else None
@@ -263,11 +337,31 @@ class LangGraphObservabilityHandler(BaseCallbackHandler):
             )
         )
 
-    def on_chain_error(self, error: Exception, **_kwargs) -> None:
-        node_name = "unknown_node"
+    def on_chain_error(self, error: Exception, **kwargs) -> None:
+        # Extract node name from serialized data if available, otherwise use kwargs
+        serialized = kwargs.get("serialized", {})
+        node_name = serialized.get("name") if serialized else None
+
+        # Fallback to checking run_id which might contain node name
+        if not node_name and "run_id" in kwargs:
+            parts = kwargs["run_id"].split("-")
+            if len(parts) > 1:
+                node_name = parts[0]
+
+        # Final fallback
+        if not node_name:
+            node_name = "unknown_node"
 
         start_time = self.node_start_times.get(node_name)
         duration_ms = int((time.time() - start_time) * 1000) if start_time else None
+
+        node_type_mapping = {
+            "retrieve": NodeType.RETRIEVE,
+            "grade_documents": NodeType.GRADE_DOCUMENTS,
+            "generate": NodeType.GENERATE,
+        }
+
+        node_type = node_type_mapping.get(node_name, NodeType.RETRIEVE)
 
         import asyncio
 
@@ -275,7 +369,7 @@ class LangGraphObservabilityHandler(BaseCallbackHandler):
             self.observability_service.track_node_execution(
                 execution_id=self.execution_id,
                 node_name=node_name,
-                node_type=NodeType.RETRIEVE,  # Default
+                node_type=node_type,
                 status=ExecutionStatus.FAILED,
                 duration_ms=duration_ms,
                 error=error,
