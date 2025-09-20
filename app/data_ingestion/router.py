@@ -3,7 +3,7 @@ from logging import getLogger
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.lib.vectorstore_client import VectorStoreClient
+from app.lib.store.vectorstore_client import VectorStoreClient
 
 logger = getLogger(__name__)
 

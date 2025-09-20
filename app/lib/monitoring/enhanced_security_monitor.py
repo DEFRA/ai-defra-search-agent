@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.lib.security_monitoring import SecurityEvent, SecurityMonitor
+from app.lib.monitoring.security_monitoring import SecurityEvent, SecurityMonitor
 
 
 class ObservabilitySecurityMonitor(SecurityMonitor):

@@ -3,8 +3,8 @@ from logging import getLogger
 from langchain_core.callbacks import UsageMetadataCallbackHandler
 
 from app.lib.graph.graph import app
-from app.lib.guardrails import GuardrailsManager
-from app.lib.security_monitoring import security_monitor
+from app.lib.guardrails.guardrails import GuardrailsManager
+from app.lib.monitoring.security_monitoring import security_monitor
 
 logger = getLogger(__name__)
 

@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field, ValidationError
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db
-from app.lib.enhanced_langgraph_rag import run_rag_llm_with_observability
 from app.lib.langgraph_rag_chat import run_rag_llm
+from app.lib.rag.enhanced_langgraph_rag import run_rag_llm_with_observability
 
 logger = getLogger(__name__)
 

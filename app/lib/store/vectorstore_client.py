@@ -4,7 +4,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.vectorstores import InMemoryVectorStore
 
-from app.lib.bedrock_embedding_client import embedding_bedrock
+from app.lib.aws_bedrock.bedrock_embedding_client import embedding_bedrock
 
 
 class VectorStoreClient:

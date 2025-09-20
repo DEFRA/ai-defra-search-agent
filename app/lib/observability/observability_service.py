@@ -15,7 +15,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db
 from app.common.tracing import ctx_trace_id
-from app.lib.observability_models import (
+from app.lib.observability.observability_models import (
     AgentExecution,
     ExecutionStatus,
     NodeExecution,

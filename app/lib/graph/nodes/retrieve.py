@@ -1,5 +1,5 @@
 from app.lib.graph.state import State
-from app.lib.vectorstore_client import VectorStoreClient
+from app.lib.store.vectorstore_client import VectorStoreClient
 
 
 def retrieve(state: State) -> dict[str, any]:

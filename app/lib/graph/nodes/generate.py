@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.lib.bedrock_client import chat_bedrock
+from app.lib.aws_bedrock.bedrock_client import chat_bedrock
 from app.lib.graph.state import State
 
 

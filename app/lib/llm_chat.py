@@ -4,8 +4,8 @@ from langchain.chains.history_aware_retriever import create_history_aware_retrie
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-from app.lib.bedrock_client import chat_bedrock_client
-from app.lib.vectorstore_client import VectorStoreClient
+from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
+from app.lib.store.vectorstore_client import VectorStoreClient
 
 
 def run_llm(query: str, chat_history: list[tuple[dict, any]], chat_client=None):

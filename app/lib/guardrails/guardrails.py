@@ -4,7 +4,7 @@ from logging import getLogger
 from pydantic import BaseModel, Field
 
 from app.config import config as settings
-from app.lib.bedrock_client import chat_bedrock_client
+from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
 
 logger = getLogger(__name__)
 
