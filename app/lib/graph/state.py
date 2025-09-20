@@ -6,3 +6,4 @@ class State(dict):
     context: dict[Document]
     documents_for_context: dict[Document]
     answer: str
+    conversation_history: list | None = None

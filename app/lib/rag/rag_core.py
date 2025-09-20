@@ -1,11 +1,14 @@
 import contextlib
+from datetime import UTC, datetime
 from logging import getLogger
 from typing import Any
+from uuid import uuid4
 
 from langchain_core.callbacks import UsageMetadataCallbackHandler
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.tracing import ctx_trace_id
+from app.lib.conversation_history.service import ConversationHistoryService
 from app.lib.graph.graph import app
 from app.lib.guardrails.guardrails import GuardrailsManager
 from app.lib.monitoring.enhanced_security_monitor import ObservabilitySecurityMonitor
@@ -119,7 +122,9 @@ async def validate_output(
     return None
 
 
-async def run_rag_llm_with_observability(query: str, db: AsyncDatabase = None):
+async def run_rag_llm_with_observability(
+    query: str, db: AsyncDatabase = None, conversation_id: str = None
+):
     """
     Run RAG LLM with observability, validation, and security monitoring.
     Handles input/output validation, observability, and error handling.
@@ -136,6 +141,16 @@ async def run_rag_llm_with_observability(query: str, db: AsyncDatabase = None):
     execution = await observability_service.start_execution(query, trace_id)
     execution_id = execution.execution_id
     guardrails = GuardrailsManager()
+
+    # Conversation history logic
+    conversation_service = ConversationHistoryService(db)
+    if not conversation_id:
+        conversation_id = str(uuid4())
+        await conversation_service.create_conversation(conversation_id)
+    history_doc = await conversation_service.get_history(conversation_id)
+    conversation_history = (
+        history_doc["messages"] if history_doc and "messages" in history_doc else []
+    )
 
     try:
         # Input validation
@@ -163,7 +178,24 @@ async def run_rag_llm_with_observability(query: str, db: AsyncDatabase = None):
         logger.info(
             "Starting LangGraph execution", extra={"execution_id": execution_id}
         )
-        response = app.invoke({"question": query}, config)
+        state = {"question": query, "conversation_history": conversation_history}
+        response = app.invoke(state, config)
+
+        # Update conversation history with new message
+        new_message = {
+            "role": "user",
+            "content": query,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        if "answer" in response:
+            new_message["answer"] = response["answer"]
+        await conversation_service.add_message(conversation_id, new_message)
+        updated_history_doc = await conversation_service.get_history(conversation_id)
+        updated_conversation_history = (
+            updated_history_doc["messages"]
+            if updated_history_doc and "messages" in updated_history_doc
+            else []
+        )
 
         # Output validation
         output_error = await validate_output(
@@ -205,12 +237,15 @@ async def run_rag_llm_with_observability(query: str, db: AsyncDatabase = None):
             source_docs=response["documents_for_context"],
             token_usage=callback_handler.usage_metadata,
         )
+
         return {
             "question": response["question"],
             "answer": response["answer"],
             "source_documents": response["documents_for_context"],
             "usage": callback_handler.usage_metadata,
             "execution_id": execution_id,
+            "conversation_id": conversation_id,
+            "conversation_history": updated_conversation_history,
         }
 
     except Exception as e:
