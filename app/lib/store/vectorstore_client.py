@@ -33,8 +33,9 @@ class VectorStoreClient:
         doc_ids = []
         docs = [WebBaseLoader(url).load() for url in urls]
         docs_list = [item for sublist in docs for item in sublist]
-        for doc in docs_list:
+        for doc, url in zip(docs_list, urls, strict=False):
             doc.metadata[metadata_key] = metadata_value
+            doc.metadata["url"] = url
 
         self.last_loaded_urls = list(urls)
         self.last_docs = docs_list

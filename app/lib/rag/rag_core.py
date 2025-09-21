@@ -122,7 +122,7 @@ async def validate_output(
     return None
 
 
-async def run_rag_llm_with_observability(
+async def run_rag_llm_with_observability(  # noqa: C901
     query: str, db: AsyncDatabase = None, conversation_id: str = None
 ):
     """
@@ -189,6 +189,30 @@ async def run_rag_llm_with_observability(
         }
         if "answer" in response:
             new_message["answer"] = response["answer"]
+
+        if "documents_for_context" in response:
+            docs = response["documents_for_context"]
+            sources = []
+            if docs and isinstance(docs, list):
+                seen = set()
+                for doc in docs:
+                    title = None
+                    url = None
+                    if hasattr(doc, "metadata"):
+                        title = doc.metadata.get("title")
+                        url = doc.metadata.get("url")
+                    if not title and hasattr(doc, "title"):
+                        title = doc.title
+                    if not url and hasattr(doc, "url"):
+                        url = doc.url
+                    key = (title, url)
+                    if title and key not in seen:
+                        sources.append({"title": title, "url": url})
+                        seen.add(key)
+                new_message["sources"] = sources
+            else:
+                new_message["sources"] = docs
+
         await conversation_service.add_message(conversation_id, new_message)
         updated_history_doc = await conversation_service.get_history(conversation_id)
         updated_conversation_history = (
