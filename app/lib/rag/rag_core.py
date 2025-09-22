@@ -78,7 +78,7 @@ async def validate_input(
             )
         return build_error_response(
             question=query,
-            answer="I'm sorry, but I cannot process this request. Please ask a question related to Department for Environment, Food & Rural Affairs (Defra) and UK Government AI topics.",
+            answer="I'm sorry, but I cannot process this request. Please ask a question related to AI topics in the Department for Environment, Food & Rural Affairs (Defra) and UK Government.",
             validation_error=input_validation.reason,
             validation_severity=input_validation.severity,
             execution_id=execution_id,

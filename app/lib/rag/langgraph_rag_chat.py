@@ -17,7 +17,7 @@ def run_rag_llm(query: str):
         logger.warning("Input validation failed: %s", input_validation.reason)
         return {
             "question": query,
-            "answer": "I'm sorry, but I cannot process this request. Please ask a question related to Department for Environment, Food & Rural Affairs (Defra) and UK Government and UK Government AI topics.",
+            "answer": "I'm sorry, but I cannot process this request. Please ask a question related to AI topics in the Department for Environment, Food & Rural Affairs (Defra) and UK Government.",
             "source_documents": [],
             "usage": {},
             "validation_error": input_validation.reason,
@@ -38,7 +38,7 @@ def run_rag_llm(query: str):
             logger.warning("Output validation failed: %s", output_validation.reason)
             return {
                 "question": query,
-                "answer": "I apologise, but I cannot provide a satisfactory answer based on the available documents. Please try rephrasing your question about Department for Environment, Food & Rural Affairs (Defra) and UK Government AI topics.",
+                "answer": "I apologise, but I cannot provide a satisfactory answer based on the available documents. Please try rephrasing your question about AI topics in the Department for Environment, Food & Rural Affairs (Defra) and UK Government.",
                 "source_documents": response["documents_for_context"],
                 "usage": callback_handler.usage_metadata,
                 "validation_error": output_validation.reason,

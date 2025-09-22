@@ -1,7 +1,7 @@
 from logging import getLogger
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db
@@ -48,9 +48,9 @@ async def chat(request: QuestionRequest):
 
         return {"status": "success", **response}
 
-    except ValidationError as e:
-        logger.error("Validation error: %s", e)
-        raise HTTPException(status_code=422, detail=e.errors()) from e
+    # except ValidationError as e:
+    #    logger.error("Validation error: %s", e)
+    #    raise HTTPException(status_code=422, detail=e.errors()) from e
     except Exception as e:
         logger.exception("Failed to chat with LangGraph Rag Chat")
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -105,9 +105,9 @@ async def chat_with_observability(
             **response,
         }
 
-    except ValidationError as e:
-        logger.error("Validation error in enhanced endpoint: %s", e)
-        raise HTTPException(status_code=422, detail=e.errors()) from e
+    # except ValidationError as e:
+    #    logger.error("Validation error in enhanced endpoint: %s", e)
+    #    raise HTTPException(status_code=422, detail=e.errors()) from e
     except Exception as e:
         logger.exception("Failed to chat with enhanced LangGraph Rag Chat")
         raise HTTPException(status_code=500, detail=str(e)) from e
