@@ -20,6 +20,16 @@ def hook_request_tracing(request):
         request.headers[config.tracing_header] = trace_id
 
 
+def get_proxies():
+    if config.http_proxy:
+        return {
+            "http": config.http_proxy,
+            "https": config.http_proxy,
+        }
+
+    return None
+
+
 # Provides an instacne of httpx.AsyncClient with preconfigured hooks for
 # propagating the x-cdp-request-id header to allow requets to be traced across
 # service boundaries as well as adding in request/response logging.

@@ -4,8 +4,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.vectorstores import InMemoryVectorStore
 
+from app.common.http_client import get_proxies
 from app.lib.bedrock_embedding_client import embedding_bedrock
-
 
 class VectorStoreClient:
     _instance = None
@@ -31,7 +31,7 @@ class VectorStoreClient:
 
     def load_documents(self, urls, metadata_key="source", metadata_value="defra-ai"):
         doc_ids = []
-        docs = [WebBaseLoader(url).load() for url in urls]
+        docs = [WebBaseLoader(url, proxies=get_proxies()).load() for url in urls]
         docs_list = [item for sublist in docs for item in sublist]
         for doc in docs_list:
             doc.metadata[metadata_key] = metadata_value
