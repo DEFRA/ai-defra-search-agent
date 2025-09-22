@@ -22,7 +22,7 @@ class VectorStoreClient:
         self.vector_store = InMemoryVectorStore(embedding_bedrock())
 
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=250, chunk_overlap=0
+            chunk_size=250, chunk_overlap=50
         )
 
         self.last_loaded_urls: list[str] | None = None
