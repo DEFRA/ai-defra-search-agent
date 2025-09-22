@@ -3,6 +3,7 @@ from logging import getLogger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ValidationError
 
+from app.common.http_client import async_client
 from app.lib.store.vectorstore_client import VectorStoreClient
 
 logger = getLogger(__name__)
@@ -55,4 +56,17 @@ async def get_document_count():
         }
     except Exception as e:
         logger.exception("Failed to get document count")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/proxy-test")
+async def proxy_test():
+    try:
+        async with async_client() as client:
+            response = await client.get("https://www.gov.uk/government/publications/ai-playbook-for-the-uk-government/artificial-intelligence-playbook-for-the-uk-government-html")
+            response.raise_for_status()
+            data = response.text
+            return {"status": "success", "data": data}
+    except Exception as e:
+        logger.exception("Proxy test failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
