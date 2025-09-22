@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from app.config import config as settings
 from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
+from app.prompts.loader import load_prompt
 
 GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
 
@@ -22,7 +23,7 @@ system = """You are a grader assessing whether an llm generation is grounded in 
 
 hallucination_prompt = ChatPromptTemplate(
     [
-        ("system", system),
+        ("system", load_prompt("hallucination_grader")),
         ("human", "Set of facts: \n\n {context} \n\n LLM generation: {answer}"),
     ]
 )
