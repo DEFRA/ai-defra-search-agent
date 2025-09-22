@@ -7,6 +7,7 @@ from langchain_core.vectorstores import InMemoryVectorStore
 from app.common.http_client import get_proxies
 from app.lib.bedrock_embedding_client import embedding_bedrock
 
+
 class VectorStoreClient:
     _instance = None
     _lock = Lock()
