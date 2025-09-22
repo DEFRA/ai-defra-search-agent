@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db
-from app.lib.enhanced_security_monitor import ObservabilitySecurityMonitor
+from app.lib.monitoring.enhanced_security_monitor import ObservabilitySecurityMonitor
 
 observability_router = APIRouter(prefix="/observability", tags=["observability"])
 

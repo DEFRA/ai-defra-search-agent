@@ -2,7 +2,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from app.config import config as settings
-from app.lib.bedrock_client import chat_bedrock_client
+from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
+from app.prompts.loader import load_prompt
 
 GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
 
@@ -22,7 +23,7 @@ Give a binary score of 'yes' or 'no' to indicate whether the document is relevan
 
 grade_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", system),
+        ("system", load_prompt("retrieval_grader")),
         (
             "human",
             "Retrieved document: \n\n {document} \n\n User question: {question}",

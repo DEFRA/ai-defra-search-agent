@@ -5,7 +5,7 @@ from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.vectorstores import InMemoryVectorStore
 
 from app.common.http_client import get_proxies
-from app.lib.bedrock_embedding_client import embedding_bedrock
+from app.lib.aws_bedrock.bedrock_embedding_client import embedding_bedrock
 
 
 class VectorStoreClient:
@@ -23,7 +23,7 @@ class VectorStoreClient:
         self.vector_store = InMemoryVectorStore(embedding_bedrock())
 
         self.text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=250, chunk_overlap=0
+            chunk_size=250, chunk_overlap=50
         )
 
         self.last_loaded_urls: list[str] | None = None
@@ -34,8 +34,9 @@ class VectorStoreClient:
         doc_ids = []
         docs = [WebBaseLoader(url, proxies=get_proxies()).load() for url in urls]
         docs_list = [item for sublist in docs for item in sublist]
-        for doc in docs_list:
+        for doc, url in zip(docs_list, urls, strict=False):
             doc.metadata[metadata_key] = metadata_value
+            doc.metadata["url"] = url
 
         self.last_loaded_urls = list(urls)
         self.last_docs = docs_list

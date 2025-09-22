@@ -1,12 +1,12 @@
 from logging import getLogger
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db
-from app.lib.enhanced_langgraph_rag import run_rag_llm_with_observability
-from app.lib.langgraph_rag_chat import run_rag_llm
+from app.lib.rag.enhanced_langgraph_rag import run_rag_llm_with_observability
+from app.lib.rag.langgraph_rag_chat import run_rag_llm
 
 logger = getLogger(__name__)
 
@@ -20,6 +20,11 @@ class QuestionRequest(BaseModel):
         examples=[
             "What ethical consideration do we need to make sure we cover using AI?"
         ],
+    )
+    conversation_id: str | None = Field(
+        default=None,
+        description="The conversation ID for tracking history. Leave empty to start a new conversation.",
+        examples=["123e4567-e89b-12d3-a456-426614174000"],
     )
 
 
@@ -43,9 +48,9 @@ async def chat(request: QuestionRequest):
 
         return {"status": "success", **response}
 
-    except ValidationError as e:
-        logger.error("Validation error: %s", e)
-        raise HTTPException(status_code=422, detail=e.errors()) from e
+    # except ValidationError as e:
+    #    logger.error("Validation error: %s", e)
+    #    raise HTTPException(status_code=422, detail=e.errors()) from e
     except Exception as e:
         logger.exception("Failed to chat with LangGraph Rag Chat")
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -57,7 +62,8 @@ async def chat_with_observability(
 ):
     try:
         question = request.question
-        response = await run_rag_llm_with_observability(question, db)
+        conversation_id = request.conversation_id
+        response = await run_rag_llm_with_observability(question, db, conversation_id)
 
         logger.info(
             "Enhanced RAG chat completed",
@@ -99,9 +105,9 @@ async def chat_with_observability(
             **response,
         }
 
-    except ValidationError as e:
-        logger.error("Validation error in enhanced endpoint: %s", e)
-        raise HTTPException(status_code=422, detail=e.errors()) from e
+    # except ValidationError as e:
+    #    logger.error("Validation error in enhanced endpoint: %s", e)
+    #    raise HTTPException(status_code=422, detail=e.errors()) from e
     except Exception as e:
         logger.exception("Failed to chat with enhanced LangGraph Rag Chat")
         raise HTTPException(status_code=500, detail=str(e)) from e
