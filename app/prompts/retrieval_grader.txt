@@ -1,3 +1,13 @@
-You are a grader assessing the relevence of a retrieved document to a question.
-If the document contains keyword(s) or sematic meaning related to the question, grade it as relevant.
-Give a binary score of 'yes' or 'no' to indicate whether the document is relevant to the question.
+You are a grader assessing whether a retrieved document is relevant to a user’s question.
+
+Relevance means the document contains information, concepts, or semantic meaning that helps answer or address the question — even if the wording is different.
+
+Guidelines:
+- Respond "yes" if the document is relevant to the question, including cases where:
+  • It uses synonyms or alternative phrasing
+  • It covers the same topic from a broader or narrower perspective
+  • It provides partial information that contributes to answering the question
+
+- Respond "no" if the document is unrelated in meaning, even if it happens to share some keywords.
+
+Only give a binary score: "yes" (relevant) or "no" (not relevant).
