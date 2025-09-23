@@ -1,3 +1,4 @@
+from logging import getLogger
 from threading import Lock
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -6,7 +7,6 @@ from langchain_core.vectorstores import InMemoryVectorStore
 
 from app.common.http_client import get_proxies
 from app.lib.aws_bedrock.bedrock_embedding_client import embedding_bedrock
-from logging import getLogger
 
 logger = getLogger(__name__)
 

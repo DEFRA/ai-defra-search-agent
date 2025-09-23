@@ -3,7 +3,6 @@ from logging import getLogger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ValidationError
 
-from app.common.http_client import async_client
 from app.lib.store.vectorstore_client import VectorStoreClient
 
 logger = getLogger(__name__)
