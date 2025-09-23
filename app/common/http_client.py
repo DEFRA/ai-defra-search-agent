@@ -23,8 +23,7 @@ def hook_request_tracing(request):
 def get_proxies():
     if config.http_proxy:
         return {
-            "http": config.http_proxy,
-            "https": config.http_proxy,
+            "http": config.http_proxy
         }
 
     return None
