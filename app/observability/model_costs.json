@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Amazon Nova Lite",
+    "model": "eu.amazon.nova-lite-v1:0",
+    "input_tokens": {
+        "cost": 0.000069,
+        "tokens": 1000
+    },
+    "output_tokens": {
+        "cost": 0.000276,
+        "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Claude 3.7 Sonnet",
+    "model": "eu.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    "input_tokens": {
+        "cost": 0.003,
+        "tokens": 1000
+    },
+    "output_tokens": {
+        "cost": 0.015,
+        "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  }
+]

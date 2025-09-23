@@ -1,13 +1,205 @@
+import json
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db
 from app.lib.monitoring.enhanced_security_monitor import ObservabilitySecurityMonitor
 
 observability_router = APIRouter(prefix="/observability", tags=["observability"])
+
+
+# --- Simulation API for usage/cost estimation ---
+class SimulationRequest(BaseModel):
+    model_id: str
+    users: int = 1
+    transactions_per_user: int = 1
+    input_tokens_per_tx: int = 0
+    output_tokens_per_tx: int = 0
+    days: int = 1
+
+
+@observability_router.post("/metrics/simulate-usage")
+async def simulate_token_usage_and_cost(simulation: SimulationRequest):
+    """Simulate total token usage and cost per model and overall for hypothetical usage."""
+    try:
+        model_id = simulation.model_id
+        users = simulation.users
+        transactions_per_user = simulation.transactions_per_user
+        input_tokens_per_tx = simulation.input_tokens_per_tx
+        output_tokens_per_tx = simulation.output_tokens_per_tx
+        days = simulation.days
+
+        model_costs = _get_model_costs()
+        cost_entry = _get_cost_for_model(model_costs, model_id)
+        if not cost_entry:
+            raise HTTPException(
+                status_code=404, detail=f"No cost entry found for model {model_id}"
+            )
+
+        total_transactions = users * transactions_per_user * days
+        total_input_tokens = total_transactions * input_tokens_per_tx
+        total_output_tokens = total_transactions * output_tokens_per_tx
+
+        in_cost = 0.0
+        out_cost = 0.0
+        if "input_tokens" in cost_entry and input_tokens_per_tx > 0:
+            in_cost = (
+                total_input_tokens / cost_entry["input_tokens"]["tokens"]
+            ) * cost_entry["input_tokens"]["cost"]
+        if "output_tokens" in cost_entry and output_tokens_per_tx > 0:
+            out_cost = (
+                total_output_tokens / cost_entry["output_tokens"]["tokens"]
+            ) * cost_entry["output_tokens"]["cost"]
+        usd_total = in_cost + out_cost
+        gbp_rate = cost_entry.get("usd-gbp", 0.74)
+        gbp_total = usd_total * gbp_rate
+
+        return {
+            "model_id": model_id,
+            "model_name": cost_entry.get("name", model_id),
+            "users": users,
+            "transactions_per_user": transactions_per_user,
+            "input_tokens_per_tx": input_tokens_per_tx,
+            "output_tokens_per_tx": output_tokens_per_tx,
+            "days": days,
+            "total_transactions": total_transactions,
+            "total_input_tokens": total_input_tokens,
+            "total_output_tokens": total_output_tokens,
+            "total_cost_usd": round(usd_total, 6),
+            "total_cost_gbp": round(gbp_total, 6),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to simulate token usage/cost: {str(e)}"
+        ) from e
+
+
+def _get_model_costs():
+    """Load model costs from the JSON file."""
+    cost_path = os.path.join(os.path.dirname(__file__), "model_costs.json")
+    with open(cost_path) as f:
+        return json.load(f)
+
+
+def _get_cost_for_model(model_costs, model_name, date=None):
+    """Get the cost entry for a model, optionally filtering by date (YYYY-MM-DD)."""
+    candidates = [c for c in model_costs if c["model"] == model_name]
+    if not candidates:
+        return None
+    if date:
+        # Find the latest cost effective on or before the date
+        candidates = [c for c in candidates if c["effective_date"] <= date]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda c: c["effective_date"], reverse=True)
+        return candidates[0]
+    # If no date, return the latest
+    candidates.sort(key=lambda c: c["effective_date"], reverse=True)
+    return candidates[0]
+
+
+@observability_router.get("/metrics/token-usage")
+async def get_token_usage_and_cost(  # noqa: C901
+    hours: int = Query(default=24, description="Hours of data to analyze"),
+    db: AsyncDatabase = Depends(get_db),
+):
+    """Get total token usage and cost per model and overall."""
+    try:
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
+        # Fetch executions with any non-empty token_usage
+        executions = await db.agent_executions.find(
+            {"timestamp": {"$gte": cutoff_time}, "token_usage": {"$ne": {}}},
+            {"token_usage": 1, "timestamp": 1},
+        ).to_list(None)
+
+        model_costs = _get_model_costs()
+        usage_by_model = {}
+        model_names = {c["model"]: c.get("name", c["model"]) for c in model_costs}
+        model_gbp_rates = {c["model"]: c.get("usd-gbp", 0.74) for c in model_costs}
+        for ex in executions:
+            token_usage = ex.get("token_usage", {})
+            timestamp = ex.get("timestamp")
+            for model_id, usage in token_usage.items():
+                input_tokens = 0
+                output_tokens = 0
+                if isinstance(usage, dict):
+                    input_tokens = usage.get("input_tokens", 0) or 0
+                    output_tokens = usage.get("output_tokens", 0) or 0
+                elif isinstance(usage, int | float):
+                    input_tokens = usage
+                if model_id not in usage_by_model:
+                    usage_by_model[model_id] = {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "executions": 0,
+                        "cost_usd": 0.0,
+                        "cost_gbp": 0.0,
+                        "name": model_names.get(model_id, model_id),
+                    }
+                usage_by_model[model_id]["input_tokens"] += input_tokens
+                usage_by_model[model_id]["output_tokens"] += output_tokens
+                usage_by_model[model_id]["executions"] += 1
+                date_str = None
+                if timestamp:
+                    date_str = str(timestamp)[:10]
+                cost_entry = _get_cost_for_model(model_costs, model_id, date=date_str)
+                if cost_entry:
+                    in_cost = 0.0
+                    out_cost = 0.0
+                    if "input_tokens" in cost_entry:
+                        in_cost = (
+                            input_tokens / cost_entry["input_tokens"]["tokens"]
+                        ) * cost_entry["input_tokens"]["cost"]
+                    if "output_tokens" in cost_entry:
+                        out_cost = (
+                            output_tokens / cost_entry["output_tokens"]["tokens"]
+                        ) * cost_entry["output_tokens"]["cost"]
+                    usd_total = in_cost + out_cost
+                    gbp_rate = cost_entry.get(
+                        "usd-gbp", model_gbp_rates.get(model_id, 0.74)
+                    )
+                    usage_by_model[model_id]["cost_usd"] += usd_total
+                    usage_by_model[model_id]["cost_gbp"] += usd_total * gbp_rate
+
+        overall_input_tokens = sum(m["input_tokens"] for m in usage_by_model.values())
+        overall_output_tokens = sum(m["output_tokens"] for m in usage_by_model.values())
+        overall_cost_usd = sum(m["cost_usd"] for m in usage_by_model.values())
+        overall_cost_gbp = sum(m["cost_gbp"] for m in usage_by_model.values())
+
+        return {
+            "period_hours": hours,
+            "cutoff_time": cutoff_time.isoformat(),
+            "models": {
+                model: {
+                    "name": data["name"],
+                    "input_tokens": data["input_tokens"],
+                    "output_tokens": data["output_tokens"],
+                    "executions": data["executions"],
+                    "total_cost_usd": round(data["cost_usd"], 6),
+                    "total_cost_gbp": round(data["cost_gbp"], 6),
+                }
+                for model, data in usage_by_model.items()
+            },
+            "overall": {
+                "input_tokens": overall_input_tokens,
+                "output_tokens": overall_output_tokens,
+                "total_cost_usd": round(overall_cost_usd, 6),
+                "total_cost_gbp": round(overall_cost_gbp, 6),
+            },
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch token usage/cost: {str(e)}"
+        ) from e
+
 
 router = observability_router
 
