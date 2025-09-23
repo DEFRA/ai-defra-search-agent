@@ -58,15 +58,3 @@ async def get_document_count():
         logger.exception("Failed to get document count")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
-@router.get("/proxy-test")
-async def proxy_test():
-    try:
-        async with async_client() as client:
-            response = await client.get("https://www.gov.uk/government/publications/ai-playbook-for-the-uk-government/artificial-intelligence-playbook-for-the-uk-government-html")
-            response.raise_for_status()
-            data = response.text
-            return {"status": "success", "data": data}
-    except Exception as e:
-        logger.exception("Proxy test failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e

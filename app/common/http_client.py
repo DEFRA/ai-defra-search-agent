@@ -23,16 +23,16 @@ def hook_request_tracing(request):
 def get_proxies():
     if config.http_proxy:
         return {
-            "http": config.http_proxy
+            "http": config.http_proxy,
+            "https": config.http_proxy,
         }
 
     return None
 
-# Provides an instacne of httpx.AsyncClient with preconfigured hooks for
+# Provides an instance of httpx.AsyncClient with preconfigured hooks for
 # propagating the x-cdp-request-id header to allow requets to be traced across
 # service boundaries as well as adding in request/response logging.
 def async_client():
-    logger.info("Creating async http client with proxy: %s", config.http_proxy)
     return httpx.AsyncClient(
         event_hooks={"request": [async_hook_request_tracing]},
         proxy=config.http_proxy
@@ -40,7 +40,6 @@ def async_client():
 
 
 def client():
-    logger.info("Creating sync http client with proxy: %s", config.http_proxy)
     return httpx.Client(
         event_hooks={"request": [hook_request_tracing]},
         proxy=config.http_proxy
