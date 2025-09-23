@@ -36,6 +36,7 @@ class VectorStoreClient:
     def load_documents(self, urls, metadata_key="source", metadata_value="defra-ai"):
         doc_ids = []
         docs = [WebBaseLoader(url, proxies=get_proxies()).load() for url in urls]
+        logger.info("Loaded documents from URLs: %s", urls)
         docs_list = [item for sublist in docs for item in sublist]
         for doc, url in zip(docs_list, urls, strict=False):
             doc.metadata[metadata_key] = metadata_value
