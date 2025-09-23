@@ -1,4 +1,3 @@
-from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +11,7 @@ class AppConfig(BaseSettings):
     mongo_database: str = "ai-defra-search-agent"
     mongo_truststore: str = "TRUSTSTORE_CDP_ROOT_CA"
     aws_endpoint_url: str | None = None
-    http_proxy: HttpUrl | None = None
+    http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
 
