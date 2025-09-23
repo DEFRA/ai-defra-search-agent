@@ -1,6 +1,6 @@
 from logging import getLogger
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from app.lib.store.vectorstore_client import VectorStoreClient
@@ -34,16 +34,23 @@ async def search_data(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+def setup_data_background(client: VectorStoreClient, urls: list[str]):
+    doc_ids =client.load_documents(urls)
+    logger.info("Loaded documents with ids: %s", doc_ids)
+
+
 @router.post("/data/setup")
-async def setup_data(request: SetupDataRequest):
+async def setup_data(request: SetupDataRequest, background_tasks: BackgroundTasks):
     try:
-        client = VectorStoreClient()
-        doc_ids = client.load_documents(request.urls)
-        logger.info("Loaded documents with ids: %s", doc_ids)
-        return {
-            "status": "success",
-            "docIds": doc_ids,
-        }
+        background_tasks.add_task(
+            setup_data_background,
+            VectorStoreClient(),
+            request.urls
+        )
+
+        return Response(
+            status_code=202
+        )
 
     except Exception as e:
         logger.exception("Failed to setup data")

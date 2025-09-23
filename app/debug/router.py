@@ -56,3 +56,4 @@ async def get_document_count():
     except Exception as e:
         logger.exception("Failed to get document count")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
