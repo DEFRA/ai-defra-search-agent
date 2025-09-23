@@ -40,4 +40,7 @@ def async_client():
 
 
 def client():
-    return httpx.Client(event_hooks={"request": [hook_request_tracing]})
+    return httpx.Client(
+        event_hooks={"request": [hook_request_tracing]},
+        proxy=config.http_proxy
+    )
