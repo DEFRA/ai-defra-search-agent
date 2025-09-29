@@ -12,6 +12,7 @@ services:
       SERVICES: s3,sqs,sns,firehose
       LOCALSTACK_HOST: 127.0.0.1
     volumes:
+      - ./app/prompts/:/mnt/prompts/
       - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
       - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
     healthcheck:

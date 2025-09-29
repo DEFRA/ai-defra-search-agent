@@ -197,3 +197,5 @@ cython_debug/
 compose/secrets.env
 
 coverage*
+
+app/prompts/**/*.txt

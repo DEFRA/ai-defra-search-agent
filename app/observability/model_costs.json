@@ -1,5 +1,20 @@
 [
   {
+    "name": "Amazon Nova Pro",
+    "model": "eu.amazon.nova-pro-v1:0",
+    "input_tokens": {
+        "cost": 0.00092,
+        "tokens": 1000
+    },
+    "output_tokens": {
+        "cost": 0.00368,
+        "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
     "name": "Amazon Nova Lite",
     "model": "eu.amazon.nova-lite-v1:0",
     "input_tokens": {
@@ -15,7 +30,7 @@
     "effective_date": "2024-09-23"
   },
   {
-    "name": "Claude 3.7 Sonnet",
+    "name": "AWS - Claude 3.7 Sonnet",
     "model": "eu.anthropic.claude-3-7-sonnet-20250219-v1:0",
     "input_tokens": {
         "cost": 0.003,
@@ -24,6 +39,171 @@
     "output_tokens": {
         "cost": 0.015,
         "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "AWS - Claude Sonnet 4",
+    "model": "eu.anthropic.claude-sonnet-4-20250514-v1:0",
+    "input_tokens": {
+        "cost": 0.003,
+        "tokens": 1000
+    },
+    "output_tokens": {
+        "cost": 0.015,
+        "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "AWS - Claude 3.5 Sonnet",
+    "model": "eu.anthropic.claude-3-5-sonnet-20240620-v1:0",
+    "input_tokens": {
+        "cost": 0.003,
+        "tokens": 1000
+    },
+    "output_tokens": {
+        "cost": 0.015,
+        "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Amazon Titan Text Embeddings V2",
+    "model": "amazon.titan-embed-text-v2:0",
+    "input_tokens": {
+        "cost": 0.000026004,
+        "tokens": 1000
+    },
+    "output_tokens": {
+        "cost": 0,
+        "tokens": 1000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - GPT-5",
+    "model": "azure.chatgpt-5",
+    "input_tokens": {
+        "cost": 1.25,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 10,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - GPT-5 mini",
+    "model": "azure.chatgpt-5-mini",
+    "input_tokens": {
+        "cost": 0.25,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 2,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - GPT-5 nano",
+    "model": "azure.chatgpt-5-nano",
+    "input_tokens": {
+        "cost": 0.05,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 0.40,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - o3",
+    "model": "azure.chatgpt-o3",
+    "input_tokens": {
+        "cost": 2,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 8,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - o4 mini",
+    "model": "azure.chatgpt-o4-mini",
+    "input_tokens": {
+        "cost": 1.10,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 4.40,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - 4.1",
+    "model": "azure.chatgpt-4-1",
+    "input_tokens": {
+        "cost": 2,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 8,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - 4.1 mini",
+    "model": "azure.chatgpt-4-1-mini",
+    "input_tokens": {
+        "cost": 0.40,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 1.60,
+        "tokens": 1000000
+    },
+    "usd-gbp": 0.74,
+    "currency": "USD",
+    "effective_date": "2024-09-23"
+  },
+  {
+    "name": "Azure - 4.1 nano",
+    "model": "azure.chatgpt-4-1-nano",
+    "input_tokens": {
+        "cost": 0.10,
+        "tokens": 1000000
+    },
+    "output_tokens": {
+        "cost": 0.40,
+        "tokens": 1000000
     },
     "usd-gbp": 0.74,
     "currency": "USD",

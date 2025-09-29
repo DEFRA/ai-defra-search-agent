@@ -20,6 +20,7 @@ class AppConfig(BaseSettings):
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
     AWS_REGION: str | None = None
+    PROMPT_S3_BUCKET: str | None = None
 
     # Bedrock
     AWS_ACCESS_KEY_ID_BEDROCK: str | None = None

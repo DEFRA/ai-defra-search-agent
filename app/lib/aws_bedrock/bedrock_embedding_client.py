@@ -42,10 +42,6 @@ class CustomBedrockEmbeddings(BedrockEmbeddings):
                 "accept": "application/json",
                 "contentType": "application/json",
             }
-            if GUARDRAIL is not None:
-                invoke_args["guardrailIdentifier"] = GUARDRAIL
-            if GUARDRAIL_VERSION is not None:
-                invoke_args["guardrailVersion"] = GUARDRAIL_VERSION
 
             response = bedrock_runtime.invoke_model(**invoke_args)
             return json.loads(response["body"].read())
