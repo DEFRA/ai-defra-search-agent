@@ -4,7 +4,7 @@ from app.config import config as settings
 from app.lib.s3.s3_service import S3Service
 
 PROMPT_DIR = Path(__file__).parent
-PROMPT_S3_BUCKET = settings.PROMPT_S3_BUCKET
+PROMPT_S3_BUCKET = settings.prompt_s3_bucket
 
 
 def load_prompt(name: str) -> str:

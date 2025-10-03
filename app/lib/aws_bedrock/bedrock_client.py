@@ -1,40 +1,33 @@
 from langchain_aws import ChatBedrockConverse
 
+from app.common.bedrock import get_bedrock_client
 from app.config import config as settings
 
-USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
-MODEL_ID = settings.AWS_BEDROCK_MODEL
-GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
-GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
-PROVIDER = settings.AWS_BEDROCK_PROVIDER or "anthropic"
 
-
-def chat_bedrock_client(model: str = MODEL_ID):
+def chat_bedrock_client(model: str = settings.bedrock.generation_model):
     if model is None:
-        error_message = "Model ID cannot be None. Please check your configuration."
-        raise ValueError(error_message)
+        msg = "Model ID cannot be None. Please check your configuration."
+        raise ValueError(msg)
 
-    if USE_CREDENTIALS:
-        print("USE CREDENTIALS")
-        llm = ChatBedrockConverse(
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID_BEDROCK,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY_BEDROCK,
-            region_name=settings.AWS_REGION_BEDROCK,
-            model_id=model,
-        )
+    kwargs = {
+        "model_id": model,
+        "provider": settings.bedrock.provider
+    }
 
-    else:
-        llm = ChatBedrockConverse(
-            model_id=model,
-            guardrails={
-                "guardrailIdentifier": GUARDRAIL,
-                "guardrailVersion": GUARDRAIL_VERSION,
-                "trace": "enabled",
-            },
-            provider=PROVIDER,
-        )
+    if settings.bedrock.guardrail_identifier and settings.bedrock.guardrail_version:
+        kwargs["guardrail_id"] = settings.bedrock.guardrail_identifier
+        kwargs["guardrail_version"] = settings.bedrock.guardrail_version
 
-    return llm
+        kwargs["guardrails"] = {
+            "guardrailIdentifier": settings.bedrock.guardrail_identifier,
+            "guardrailVersion": settings.bedrock.guardrail_version,
+            "trace": "enabled",
+        }
+
+    return ChatBedrockConverse(
+        client=get_bedrock_client(),
+        **kwargs
+    )
 
 
 def chat_bedrock(question, callback):
