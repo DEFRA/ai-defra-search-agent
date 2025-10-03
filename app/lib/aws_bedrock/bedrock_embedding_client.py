@@ -1,28 +1,9 @@
 import json
 from typing import Any
 
-import boto3
 from langchain_aws import BedrockEmbeddings
 
-from app.config import config as settings
-
-MODEL = settings.AWS_BEDROCK_EMBEDDING_MODEL or "amazon.titan-embed-text-v2:0"
-USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
-GUARDRAIL = settings.AWS_BEDROCK_GUARDRAIL
-GUARDRAIL_VERSION = settings.AWS_BEDROCK_GUARDRAIL_VERSION
-PROVIDER = settings.AWS_BEDROCK_PROVIDER
-
-if USE_CREDENTIALS:
-    bedrock_runtime = boto3.client(
-        service_name="bedrock-runtime",
-        region_name=settings.AWS_REGION_BEDROCK,
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID_BEDROCK,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY_BEDROCK,
-    )
-else:
-    bedrock_runtime = boto3.client(
-        service_name="bedrock-runtime",
-    )
+from app.common.bedrock import get_bedrock_client
 
 
 class CustomBedrockEmbeddings(BedrockEmbeddings):
@@ -43,7 +24,7 @@ class CustomBedrockEmbeddings(BedrockEmbeddings):
                 "contentType": "application/json",
             }
 
-            response = bedrock_runtime.invoke_model(**invoke_args)
+            response = self.client.invoke_model(**invoke_args)
             return json.loads(response["body"].read())
 
         except Exception as e:
@@ -53,5 +34,5 @@ class CustomBedrockEmbeddings(BedrockEmbeddings):
 
 def embedding_bedrock():
     return CustomBedrockEmbeddings(
-        client=bedrock_runtime, model_id=MODEL, normalize=True, provider=PROVIDER
+        client=get_bedrock_client(),
     )

@@ -3,24 +3,16 @@ from botocore.exceptions import ClientError
 
 from app.config import config as settings
 
-USE_CREDENTIALS = settings.AWS_USE_CREDENTIALS_BEDROCK == "true"
-REGION = settings.AWS_REGION_BEDROCK
-
 
 class S3Service:
     def __init__(self, bucket_name: str):
         self.bucket_name = bucket_name
-        self.region_name = REGION
 
-        if USE_CREDENTIALS:
-            print("USE CREDENTIALS")
-            self.s3_client = boto3.client(
-                "s3",
-                region_name=self.region_name,
-                endpoint_url="http://localstack:4566",
-            )
-        else:
-            self.s3_client = boto3.client("s3")
+        self.s3_client = boto3.client(
+            "s3",
+            region_name=settings.aws_region,
+            endpoint_url=settings.localstack_url,
+        )
 
     def get_file(self, key: str) -> bytes:
         """Retrieve a file from S3 bucket by key."""
