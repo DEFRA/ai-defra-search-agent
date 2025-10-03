@@ -30,10 +30,10 @@ def grade_generation_grounded_in_documents(state: State) -> str:
 
 workflow = StateGraph(State)
 
-workflow.add_node(RETRIEVE, retrieve)
-workflow.add_node(GRADE_DOCUMENTS, grade_documents)
-workflow.add_node(GENERATE, generate)
-workflow.add_node(FINAL_ANSWER, generate_final_answer)
+workflow.add_node(RETRIEVE, retrieve.retrieve)
+workflow.add_node(GRADE_DOCUMENTS, grade_documents.grade_documents)
+workflow.add_node(GENERATE, generate.generate)
+workflow.add_node(FINAL_ANSWER, generate_final_answer.generate_final_answer)
 
 workflow.set_entry_point(RETRIEVE)
 
