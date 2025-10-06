@@ -8,8 +8,6 @@ from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
 
 logger = getLogger(__name__)
 
-MODEL = settings.AWS_BEDROCK_MODEL_GRADING
-
 
 class ValidationResult(BaseModel):
     """Result of input validation."""
@@ -74,7 +72,7 @@ class InputGuardrails:
     ]
 
     def __init__(self):
-        self.llm = chat_bedrock_client(MODEL)
+        self.llm = chat_bedrock_client(settings.bedrock.grading_model)
 
     def validate_input(self, query: str) -> ValidationResult:
         """
@@ -202,7 +200,7 @@ class OutputGuardrails:
     """Output validation and filtering guardrails."""
 
     def __init__(self):
-        self.llm = chat_bedrock_client(MODEL)
+        self.llm = chat_bedrock_client(settings.bedrock.grading_model)
 
     def validate_output(
         self, response: str, source_documents: list, original_query: str

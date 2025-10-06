@@ -10,8 +10,7 @@ from app.lib.rag.langgraph_rag_chat import run_rag_llm
 
 logger = getLogger(__name__)
 
-router = APIRouter(prefix="/langgraph/chat")
-chat_history = []
+router = APIRouter(tags=["chat"])
 
 
 class QuestionRequest(BaseModel):
@@ -28,7 +27,7 @@ class QuestionRequest(BaseModel):
     )
 
 
-@router.post("/")
+@router.post("/langgraph/chat")
 async def chat(request: QuestionRequest):
     try:
         question = request.question
@@ -56,7 +55,7 @@ async def chat(request: QuestionRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/enhanced")
+@router.post("/langgraph/chat/enhanced")
 async def chat_with_observability(
     request: QuestionRequest, db: AsyncDatabase = Depends(get_db)
 ):

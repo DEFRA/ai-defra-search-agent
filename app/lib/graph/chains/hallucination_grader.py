@@ -5,10 +5,6 @@ from app.config import config as settings
 from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
 from app.prompts.loader import load_prompt
 
-GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
-
-# Remove the module-level instantiation
-
 
 class GradeHallucinations(BaseModel):
     """Binary score for hallucination present in generation answer."""
@@ -31,6 +27,6 @@ hallucination_prompt = ChatPromptTemplate(
 
 def hallucination_grader():
     """Create and return the hallucination grader chain."""
-    llm = chat_bedrock_client(GRADING_MODEL)
+    llm = chat_bedrock_client(settings.bedrock.grading_model)
     structured_llm_grader = llm.with_structured_output(GradeHallucinations)
     return hallucination_prompt | structured_llm_grader

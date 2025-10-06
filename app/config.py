@@ -17,9 +17,9 @@ class BedrockConfig(BaseSettings):
 
 class MongoConfig(BaseSettings):
     model_config = SettingsConfigDict()
-    uri: str
-    database: str = "ai-defra-search-agent"
-    truststore: str = "TRUSTSTORE_CDP_ROOT_CA"
+    uri: str = Field(..., alias="MONGO_URI")
+    database: str = Field(default="ai-defra-search-agent", alias="MONGO_DATABASE")
+    truststore: str = Field(default="TRUSTSTORE_CDP_ROOT_CA", alias="MONGO_TRUSTSTORE")
 
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict()

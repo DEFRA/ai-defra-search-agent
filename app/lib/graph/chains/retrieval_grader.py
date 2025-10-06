@@ -5,8 +5,6 @@ from app.config import config as settings
 from app.lib.aws_bedrock.bedrock_client import chat_bedrock_client
 from app.prompts.loader import load_prompt
 
-GRADING_MODEL = settings.AWS_BEDROCK_MODEL_GRADING
-
 
 class GradeDocument(BaseModel):
     """Binary score for relevance check on the retrieved documents."""
@@ -34,6 +32,6 @@ grade_prompt = ChatPromptTemplate.from_messages(
 
 def retrieval_grader():
     """Create and return the retrieval grader chain."""
-    llm = chat_bedrock_client(GRADING_MODEL)
+    llm = chat_bedrock_client(settings.bedrock.grading_model)
     structured_llm_grader = llm.with_structured_output(GradeDocument)
     return grade_prompt | structured_llm_grader
