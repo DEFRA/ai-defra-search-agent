@@ -1,5 +1,5 @@
 # Set default values for build arguments
-ARG PARENT_VERSION=latest-3.12
+ARG PARENT_VERSION=latest-3.13
 ARG PORT=8085
 ARG PORT_DEBUG=8086
 
@@ -10,7 +10,6 @@ ENV LOG_CONFIG="logging-dev.json"
 
 USER root
 
-# curl is required for CDP health checks
 # Install curl via Debian 13 (trixie) backport to patch CVE-2025-0725
 RUN echo "deb https://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/bookworm-backports.list \
     && apt update \
@@ -24,10 +23,12 @@ WORKDIR /home/nonroot
 
 COPY --chown=nonroot:nonroot pyproject.toml .
 COPY --chown=nonroot:nonroot uv.lock .
+COPY --chown=nonroot:nonroot README.md .
+COPY --chown=nonroot:nonroot app/ ./app/
 
 RUN uv sync --frozen --no-cache
+RUN uv build --no-cache
 
-COPY --chown=nonroot:nonroot app/ ./app/
 COPY --chown=nonroot:nonroot logging-dev.json .
 
 ARG PORT=8085
@@ -35,11 +36,11 @@ ARG PORT_DEBUG=8086
 ENV PORT=${PORT}
 EXPOSE ${PORT} ${PORT_DEBUG}
 
-CMD [ "-m", "app.main" ]
+ENTRYPOINT [ "python", "-m", "app.entrypoints.fastapi" ]
 
 FROM defradigital/python:${PARENT_VERSION} AS production
 
-ENV PATH="/home/nonroot/.venv/bin:${PATH}"
+ENV PATH="/home/nonroot/.local/bin:${PATH}"
 ENV LOG_CONFIG="logging.json"
 
 USER root
@@ -55,13 +56,15 @@ USER nonroot
 
 WORKDIR /home/nonroot
 
-COPY --chown=nonroot:nonroot --from=development /home/nonroot/.venv .venv/
-
 COPY --chown=nonroot:nonroot --from=development /home/nonroot/app/ ./app/
+COPY --chown=nonroot:nonroot --from=development /home/nonroot/dist/ ./dist/
+
 COPY --chown=nonroot:nonroot logging.json .
+
+RUN pip install dist/*.whl
 
 ARG PORT
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-CMD [ "-m", "app.main" ]
+ENTRYPOINT [ "ai-defra-search-data" ]
