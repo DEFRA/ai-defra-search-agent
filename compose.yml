@@ -6,6 +6,8 @@ services:
       - "4510-4559:4510-4559" # external services port range
     env_file:
       - "compose/aws.env"
+    profiles:
+      - use-localstack
     environment:
       DEBUG: ${DEBUG:-1}
       LS_LOG: WARN # Localstack DEBUG Level
@@ -27,7 +29,7 @@ services:
     networks:
       - cdp-tenant
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongodb-data:/data
 
@@ -36,13 +38,10 @@ services:
       context: .
       target: development
     ports:
-      - 8085:8085
+      - 8086:8086
     links:
-      - "localstack:localstack"
       - "mongodb:mongodb"
     depends_on:
-      localstack:
-        condition: service_healthy
       mongodb:
         condition: service_started
     profiles:
@@ -51,7 +50,7 @@ services:
       - "compose/aws.env"
       - "compose/secrets.env"
     environment:
-      PORT: ${PORT:-8085}
+      PORT: ${PORT:-8086}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
       LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}

@@ -10,4 +10,4 @@ Guidelines:
 
 - Respond "no" if the document is unrelated in meaning, even if it happens to share some keywords.
 
-Only give a binary score: "yes" (relevant) or "no" (not relevant).
+Response only with "yes" or "no" and nothing else.

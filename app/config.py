@@ -21,6 +21,12 @@ class MongoConfig(BaseSettings):
     database: str = Field(default="ai-defra-search-agent", alias="MONGO_DATABASE")
     truststore: str = Field(default="TRUSTSTORE_CDP_ROOT_CA", alias="MONGO_TRUSTSTORE")
 
+
+class ChatWorkflowConfig(BaseSettings):
+    model_config = SettingsConfigDict()
+    data_service_url: HttpUrl = Field(..., alias="DATA_SERVICE_URL")
+
+
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict()
     python_env: str = "production"
@@ -32,10 +38,11 @@ class AppConfig(BaseSettings):
     http_proxy: HttpUrl | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
-    prompt_s3_bucket: str
+    mcp_server_url: HttpUrl | None = None
 
     mongo: MongoConfig = MongoConfig()
     bedrock: BedrockConfig = BedrockConfig()
+    workflow: ChatWorkflowConfig = ChatWorkflowConfig()
 
 
 config = AppConfig()
