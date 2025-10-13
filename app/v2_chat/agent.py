@@ -4,11 +4,10 @@ from pathlib import Path
 from langgraph.graph import END, StateGraph
 
 from app.common.bedrock import BedrockInferenceService
+from app.conversation_history.models import ConversationHistory
 from app.v2_chat.nodes import GraphNodes, NodeDependencies
 from app.v2_chat.repository import FileSystemPromptRepository
 from app.v2_chat.state_models import ChatState, InputState, OutputState
-
-from app.conversation_history.models import ConversationHistory
 
 
 class AbstractChatAgent(ABC):

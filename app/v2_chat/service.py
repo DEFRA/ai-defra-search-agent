@@ -1,9 +1,10 @@
 from uuid import UUID
-from app.v2_chat.agent import AbstractChatAgent
 
 from app.conversation_history.models import ChatMessage
-from app.v2_chat.state_models import ChatState
 from app.conversation_history.service import ConversationHistoryService
+from app.v2_chat.agent import AbstractChatAgent
+from app.v2_chat.state_models import ChatState
+
 
 class ChatService:
     def __init__(
@@ -17,7 +18,7 @@ class ChatService:
     async def _setup_chat(self, conversation_id: UUID = None):
         if conversation_id is None:
             return await self.history_service.create_conversation()
-        
+
         return await self.history_service.get_history(conversation_id)
 
     async def execute_chat(

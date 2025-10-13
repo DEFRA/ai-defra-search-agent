@@ -1,12 +1,11 @@
+from uuid import UUID, uuid4
+
 from app.conversation_history.models import (
     ChatMessage,
     ConversationHistory,
     ConversationNotFoundError,
 )
-
 from app.conversation_history.repository import AbstractConversationHistoryRepository
-
-from uuid import uuid4, UUID
 
 
 class ConversationHistoryService:

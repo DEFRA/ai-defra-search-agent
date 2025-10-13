@@ -1,5 +1,4 @@
 from fastapi import Depends
-
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.common.mongo import get_db

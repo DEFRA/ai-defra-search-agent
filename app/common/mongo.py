@@ -1,10 +1,10 @@
 from logging import getLogger
 
+from bson.binary import UuidRepresentation
+from bson.codec_options import CodecOptions
 from fastapi import Depends
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
-from bson.codec_options import CodecOptions
-from bson.binary import UuidRepresentation
 
 from app.common.tls import custom_ca_certs
 from app.config import config
@@ -27,7 +27,7 @@ async def get_mongo_client() -> AsyncMongoClient:
                 config.mongo.truststore,
             )
             client = AsyncMongoClient(
-                config.mongo.uri, 
+                config.mongo.uri,
                 tlsCAFile=cert,
                 uuidRepresentation="standard"
             )
