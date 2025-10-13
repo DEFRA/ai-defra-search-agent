@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
+
 import boto3
 
 from app.config import config as settings
@@ -63,7 +64,7 @@ class BedrockInferenceService:
                 total_tokens=response_json.get("totalTokens", None)
             )
         )
-        
+
 
 def _create_bedrock_client():
     if settings.bedrock.use_credentials:

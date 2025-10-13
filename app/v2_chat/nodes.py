@@ -1,10 +1,11 @@
 from dataclasses import dataclass
+
 from app.common.bedrock import BedrockInferenceService
 from app.common.http_client import create_async_client
-from app.v2_chat.repository import AbstractPromptRepository
-from app.v2_chat.state_models import ChatState, OutputState, KnowledgeDocument
-
 from app.config import config
+from app.v2_chat.repository import AbstractPromptRepository
+from app.v2_chat.state_models import ChatState, KnowledgeDocument
+
 
 @dataclass
 class NodeDependencies:
@@ -23,7 +24,7 @@ class GraphNodes:
 
     async def retrieve(self, state: ChatState) -> ChatState:
         request = {
-            "groupId": "kg_n6qbxjyyaxcc",
+            "groupId": config.workflow.default_knowledge_group_id,
             "query": state.question,
             "maxResults": 5
         }
@@ -35,6 +36,8 @@ class GraphNodes:
             documents = [
                 KnowledgeDocument(
                     content=doc.get("content", ""),
+                    snapshot_id=doc.get("snapshotId", ""),
+                    source_id=doc.get("sourceId", ""),
                     metadata=doc.get("metadata", {})
                 )
                 for doc in response.json()
@@ -69,10 +72,13 @@ class GraphNodes:
 
         full_prompt = prompt.format(context=joined_context)
 
+        # Include the user's question as a message
+        messages = [{"role": "user", "content": state.question}]
+
         generation = self.dependencies.inference_service.invoke_anthropic(
             config.bedrock.generation_model,
             system_prompt=full_prompt,
-            messages=[]
+            messages=messages
         )
 
         answer = generation.content[0]["text"]

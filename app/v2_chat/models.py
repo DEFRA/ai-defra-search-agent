@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class KnowledgeDocument:
     content: str
+    snapshot_id: str
+    source_id: str
     metadata: dict[str, any] = field(default_factory=dict)
 
 
@@ -22,4 +24,4 @@ class ConversationHistory:
 
     def get_history(self, limit=10) -> list[ChatMessage]:
         return self.messages[-limit:]
-    
+

@@ -4,11 +4,11 @@ from logging import getLogger
 import uvicorn
 from fastapi import FastAPI
 
-from app.v2_chat.router import router as chat_v2_router
 from app.common.mongo import get_mongo_client
 from app.common.tracing import TraceIdMiddleware
 from app.config import config
 from app.health.router import router as health_router
+from app.v2_chat.router import router as chat_v2_router
 
 logger = getLogger(__name__)
 

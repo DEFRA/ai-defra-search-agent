@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 
 from app.v2_chat.models import ChatMessage, KnowledgeDocument
 
+
 @dataclass
 class InputState:
     question: str

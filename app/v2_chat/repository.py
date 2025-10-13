@@ -13,7 +13,8 @@ class FileSystemPromptRepository(AbstractPromptRepository):
 
     def get_prompt_by_name(self, name: str) -> str:
         try:
-            with open(f"{self.prompt_directory}/{name}", "r") as file:
+            with open(f"{self.prompt_directory}/{name}") as file:
                 return file.read()
-        except FileNotFoundError:
-            raise RuntimeError(f"Prompt '{name}' not found in directory '{self.prompt_directory}'")
+        except FileNotFoundError as err:
+            msg = f"Prompt '{name}' not found in directory '{self.prompt_directory}'"
+            raise RuntimeError(msg) from err

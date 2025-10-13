@@ -25,6 +25,7 @@ class MongoConfig(BaseSettings):
 class ChatWorkflowConfig(BaseSettings):
     model_config = SettingsConfigDict()
     data_service_url: HttpUrl = Field(..., alias="DATA_SERVICE_URL")
+    default_knowledge_group_id: str = Field(..., alias="DEFAULT_KNOWLEDGE_GROUP_ID")
 
 
 class AppConfig(BaseSettings):
@@ -38,7 +39,6 @@ class AppConfig(BaseSettings):
     http_proxy: HttpUrl | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
-    mcp_server_url: HttpUrl | None = None
 
     mongo: MongoConfig = MongoConfig()
     bedrock: BedrockConfig = BedrockConfig()

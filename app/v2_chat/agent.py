@@ -1,15 +1,19 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from app.common.bedrock import BedrockInferenceService
-from app.v2_chat.repository import FileSystemPromptRepository
+
 from langgraph.graph import END, StateGraph
 
+from app.common.bedrock import BedrockInferenceService
 from app.v2_chat.nodes import GraphNodes, NodeDependencies
+from app.v2_chat.repository import FileSystemPromptRepository
 from app.v2_chat.state_models import ChatState, InputState, OutputState
+
+from app.conversation_history.models import ConversationHistory
+
 
 class AbstractChatAgent(ABC):
     @abstractmethod
-    async def execute_flow(self, question: str) -> dict[str, any]:
+    async def execute_flow(self, question: str, conversation: ConversationHistory) -> ChatState:
         pass
 
 
@@ -43,9 +47,10 @@ class LangGraphChatAgent(AbstractChatAgent):
 
         self._app = workflow.compile()
 
-    async def execute_flow(self, question: str) -> dict[str, any]:
-        start_state = ChatState(question=question)
+    async def execute_flow(self, question: str, conversation: ConversationHistory) -> ChatState:
+        state = ChatState(
+            question=question,
+            conversation_history=conversation.messages
+        )
 
-        result = await self._app.ainvoke(start_state)
-
-        return result
+        return await self._app.ainvoke(state)

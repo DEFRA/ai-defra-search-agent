@@ -1,21 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pymongo.asynchronous.database import AsyncDatabase
 
-from app.common.mongo import get_db
-from app.lib.conversation_history.service import ConversationHistoryService
+from app.conversation_history.models import ConversationHistory, ConversationNotFoundError
+from app.conversation_history.dependencies import get_conversation_history_service
+from app.conversation_history.service import ConversationHistoryService
 
 router = APIRouter(tags=["conversation-history"])
 
 
 @router.get("/conversation-history/{conversation_id}")
 async def get_conversation_history(
-    conversation_id: str, db: AsyncDatabase = Depends(get_db)
+    conversation_id: str,
+    history_service: ConversationHistoryService = Depends(get_conversation_history_service)
 ):
-    service = ConversationHistoryService(db)
-    history = await service.get_history(conversation_id)
-    if not history:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    try:
+        history = await history_service.get_history(conversation_id)
 
-    if "_id" in history:
-        history["_id"] = str(history["_id"])
-    return history
+        return history
+    except ConversationNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))

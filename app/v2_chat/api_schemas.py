@@ -1,6 +1,6 @@
-from app.v2_chat.models import KnowledgeDocument
+
 from pydantic import BaseModel, Field
-from uuid import uuid4
+
 
 class ChatRequest(BaseModel):
     question: str = Field(
@@ -9,10 +9,18 @@ class ChatRequest(BaseModel):
             "What ethical consideration do we need to make sure we cover using AI?"
         ],
     )
-    conversation_id: str | None = Field(
-        default_factory=lambda: str(uuid4()),
-        description="UUIDv4 identifier for the conversation",
-        examples=["123e4567-e89b-12d3-a456-426614174000"],
+
+
+class ContextDocumentResponse(BaseModel):
+    content: str = Field(description="Content of matched document content")
+    title: str = Field(description="Title of document or knowledge source")
+    snapshot_id: str = Field(
+        description="Internal identifier for parent knowledge snapshot",
+        serialization_alias="snapshotId",
+    )
+    source_id: str = Field(
+        description="Internal identifier for source document",
+        serialization_alias="sourceId",
     )
 
 
@@ -26,7 +34,9 @@ class ChatResponse(BaseModel):
     conversation_id: str = Field(
         description="UUIDv4 identifier for the conversation",
         examples=["123e4567-e89b-12d3-a456-426614174000"],
+        serialization_alias="conversationId",
     )
-    context_documents: list[dict] = Field(
+    context_documents: list[ContextDocumentResponse] = Field(
         description="The documents used to generate the answer",
+        serialization_alias="contextDocuments",
     )

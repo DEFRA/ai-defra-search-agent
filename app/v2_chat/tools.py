@@ -13,4 +13,3 @@ class KnowledgeSearchTool(AbstractKnowledgeSearchTool):
     def __init__(self):
         self._client = create_async_client()
 
-        
