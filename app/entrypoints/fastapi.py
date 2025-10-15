@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from app.common.mongo import get_mongo_client
 from app.common.tracing import TraceIdMiddleware
 from app.config import config
+from app.conversation_history.router import router as conversation_history_router
 from app.health.router import router as health_router
 from app.v2_chat.router import router as chat_v2_router
-from app.conversation_history.router import router as conversation_history_router
 
 logger = getLogger(__name__)
 

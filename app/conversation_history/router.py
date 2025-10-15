@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.conversation_history.dependencies import get_conversation_history_service
 from app.conversation_history.models import (
