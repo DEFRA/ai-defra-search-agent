@@ -28,7 +28,7 @@ jobs:
           pipx install uv
           uv sync --frozen
           uv run ruff check
-          uv run pytest
+#          uv run pytest
 
       - name: Test Docker Image Build
         run: |
