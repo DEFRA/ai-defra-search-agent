@@ -67,4 +67,4 @@ ARG PORT
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-ENTRYPOINT [ "ai-defra-search-data" ]
+ENTRYPOINT [ "ai-defra-search-agent" ]
