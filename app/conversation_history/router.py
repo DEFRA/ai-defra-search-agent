@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID
 
 from app.conversation_history.dependencies import get_conversation_history_service
 from app.conversation_history.models import (
@@ -11,7 +12,7 @@ router = APIRouter(tags=["conversation-history"])
 
 @router.get("/conversation-history/{conversation_id}")
 async def get_conversation_history(
-    conversation_id: str,
+    conversation_id: UUID,
     history_service: ConversationHistoryService = Depends(get_conversation_history_service)
 ):
     try:

@@ -1,5 +1,6 @@
 
 from pydantic import BaseModel, Field
+from uuid import UUID
 
 
 class ChatRequest(BaseModel):
@@ -31,7 +32,7 @@ class ChatResponse(BaseModel):
             "When using AI, it is important to consider the ethical implications of its use, including issues such as bias, privacy, and accountability."
         ],
     )
-    conversation_id: str = Field(
+    conversation_id: UUID = Field(
         description="UUIDv4 identifier for the conversation",
         examples=["123e4567-e89b-12d3-a456-426614174000"],
         serialization_alias="conversationId",
