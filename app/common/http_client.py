@@ -1,6 +1,6 @@
-from logging import getLogger
-
 import httpx
+
+from logging import getLogger
 
 from app.common.tracing import ctx_trace_id
 from app.config import get_config
@@ -8,17 +8,6 @@ from app.config import get_config
 logger = getLogger(__name__)
 
 config = get_config()
-
-sync_proxy_mounts = {
-    "http://": httpx.HTTPTransport(proxy=config.http_proxy),
-    "https://": httpx.HTTPTransport(proxy=config.http_proxy)
-} if config.http_proxy else {}
-
-async_proxy_mounts = {
-    "http://": httpx.AsyncHTTPTransport(proxy=config.http_proxy),
-    "https://": httpx.AsyncHTTPTransport(proxy=config.http_proxy)
-} if config.http_proxy else {}
-
 
 async def async_hook_request_tracing(request):
     trace_id = ctx_trace_id.get(None)
@@ -49,7 +38,13 @@ def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
 
     if config.http_proxy:
         logger.info("Using HTTP proxy: %s", config.http_proxy)
-        client_kwargs["mounts"] = async_proxy_mounts
+
+        proxy_mounts = {
+            "http://": httpx.AsyncHTTPTransport(proxy=config.http_proxy),
+            "https://": httpx.AsyncHTTPTransport(proxy=config.http_proxy)
+        }
+
+        client_kwargs["mounts"] = proxy_mounts
 
     return httpx.AsyncClient(**client_kwargs)
 
@@ -71,6 +66,12 @@ def create_client(request_timeout: int = 30) -> httpx.Client:
 
     if config.http_proxy:
         logger.info("Using HTTP proxy: %s", config.http_proxy)
-        client_kwargs["mounts"] = sync_proxy_mounts
+
+        proxy_mounts = {
+            "http://": httpx.HTTPTransport(proxy=config.http_proxy),
+            "https://": httpx.HTTPTransport(proxy=config.http_proxy)
+        }
+
+        client_kwargs["mounts"] = proxy_mounts
 
     return httpx.Client(**client_kwargs)
