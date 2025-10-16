@@ -35,7 +35,7 @@ class ChatWorkflowConfig(BaseSettings):
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict()
     python_env: str = "production"
-    host: str
+    host: str | None = None
     port: int
     log_config: str
     aws_region: str
