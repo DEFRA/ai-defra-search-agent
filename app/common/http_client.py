@@ -3,9 +3,11 @@ from logging import getLogger
 import httpx
 
 from app.common.tracing import ctx_trace_id
-from app.config import config
+from app.config import get_config
 
 logger = getLogger(__name__)
+
+config = get_config()
 
 proxies = {
     "http": str(config.http_proxy),

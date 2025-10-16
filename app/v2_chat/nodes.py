@@ -2,9 +2,11 @@ from dataclasses import dataclass
 
 from app.common.bedrock import BedrockInferenceService
 from app.common.http_client import create_async_client
-from app.config import config
+from app.config import get_config
 from app.v2_chat.repository import AbstractPromptRepository
 from app.v2_chat.state_models import ChatState, KnowledgeDocument
+
+config = get_config()
 
 
 @dataclass

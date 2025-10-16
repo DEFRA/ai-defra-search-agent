@@ -3,9 +3,11 @@ from dataclasses import dataclass
 
 import boto3
 
-from app.config import config as settings
+from app.config import get_config
 
 bedrock_client: boto3.client = None
+
+settings = get_config()
 
 
 @dataclass

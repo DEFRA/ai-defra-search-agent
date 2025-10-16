@@ -1,7 +1,7 @@
+from logging import getLogger
+
 from pydantic import Field, HttpUrl, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from logging import getLogger
 
 logger = getLogger(__name__)
 
@@ -44,25 +44,33 @@ class AppConfig(BaseSettings):
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
 
-    mongo: MongoConfig = MongoConfig()
-    bedrock: BedrockConfig = BedrockConfig()
-    workflow: ChatWorkflowConfig = ChatWorkflowConfig()
+    mongo: MongoConfig = Field(default_factory=MongoConfig)
+    bedrock: BedrockConfig = Field(default_factory=BedrockConfig)
+    workflow: ChatWorkflowConfig = Field(default_factory=ChatWorkflowConfig)
 
 
-try:
-    config = AppConfig()
-except ValidationError as e:
-    error_details = {}
-    
-    for error in e.errors():
-        field = ".".join(str(loc) for loc in error["loc"])
+config: AppConfig | None = None
 
-        error_details[field] = {
-            "type": error["type"],
-            "message": error["msg"],
-            "url": error["url"]
-        }
-    
-    logger.error("Config validation failed with errors: %s", error_details)
 
-    raise RuntimeError("Invalid application configuration") from None
+def get_config() -> AppConfig:
+    global config
+    if config is None:
+        try:
+            config = AppConfig()
+        except ValidationError as e:
+            error_details = [
+                {
+                    "field": ".".join(str(loc) for loc in error["loc"]),
+                    "type": error["type"],
+                    "message": error["msg"],
+                    "url": error["url"]
+                }
+                for error in e.errors()
+            ]
+
+            logger.error("Config validation failed with errors: %s", error_details)
+
+            msg = "Invalid application configuration"
+            raise RuntimeError(msg) from None
+
+    return config

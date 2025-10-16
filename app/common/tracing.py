@@ -4,9 +4,11 @@ from logging import getLogger
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.config import config
+from app.config import get_config
 
 logger = getLogger(__name__)
+
+config = get_config()
 
 ctx_trace_id = contextvars.ContextVar("trace_id")
 ctx_request = contextvars.ContextVar("request")
