@@ -1,7 +1,8 @@
 from logging import getLogger
 
-from app.common.http_client import create_async_client, create_client
 from fastapi import APIRouter
+
+from app.common.http_client import create_async_client, create_client
 
 logger = getLogger(__name__)
 
