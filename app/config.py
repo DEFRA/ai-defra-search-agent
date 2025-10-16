@@ -1,5 +1,9 @@
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 
 class BedrockConfig(BaseSettings):
@@ -45,4 +49,20 @@ class AppConfig(BaseSettings):
     workflow: ChatWorkflowConfig = ChatWorkflowConfig()
 
 
-config = AppConfig()
+try:
+    config = AppConfig()
+except ValidationError as e:
+    error_details = {}
+    
+    for error in e.errors():
+        field = ".".join(str(loc) for loc in error["loc"])
+
+        error_details[field] = {
+            "type": error["type"],
+            "message": error["msg"],
+            "url": error["url"]
+        }
+    
+    logger.error("Configuration validation errors: %s", error_details)
+
+    raise RuntimeError("Invalid application configuration") from None
