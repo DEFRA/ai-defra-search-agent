@@ -40,7 +40,7 @@ class AppConfig(BaseSettings):
     log_config: str
     aws_region: str
     localstack_url: str | None = None
-    http_proxy: HttpUrl | None = None
+    http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
 
