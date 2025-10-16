@@ -63,6 +63,6 @@ except ValidationError as e:
             "url": error["url"]
         }
     
-    logger.error("Configuration validation errors: %s", error_details)
+    logger.error("Config validation failed with errors: %s", error_details)
 
     raise RuntimeError("Invalid application configuration") from None
