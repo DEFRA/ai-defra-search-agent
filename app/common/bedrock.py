@@ -51,7 +51,7 @@ class BedrockInferenceService:
         }
 
         if settings.bedrock.guardrail_identifier and settings.bedrock.guardrail_version:
-            logger.info("Using Bedrock guardrail %s version %s",
+            logger.info("Using Bedrock guardrail: %s (version: %s)",
                         settings.bedrock.guardrail_identifier,
                         settings.bedrock.guardrail_version)
 
