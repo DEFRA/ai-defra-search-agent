@@ -1,18 +1,19 @@
 services:
   localstack:
-    image: localstack/localstack:3.0.2
+    image: localstack/localstack:4
     ports:
       - "4566:4566" # LocalStack Gateway
       - "4510-4559:4510-4559" # external services port range
     env_file:
       - "compose/aws.env"
+    profiles:
+      - use-localstack
     environment:
       DEBUG: ${DEBUG:-1}
       LS_LOG: WARN # Localstack DEBUG Level
       SERVICES: s3,sqs,sns,firehose
       LOCALSTACK_HOST: 127.0.0.1
     volumes:
-      - ./app/prompts/:/mnt/prompts/
       - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
       - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
     healthcheck:
@@ -28,23 +29,19 @@ services:
     networks:
       - cdp-tenant
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongodb-data:/data
-    restart: always
 
   service:
     build:
       context: .
       target: development
     ports:
-      - 8085:8085
+      - 8086:8086
     links:
-      - "localstack:localstack"
       - "mongodb:mongodb"
     depends_on:
-      localstack:
-        condition: service_healthy
       mongodb:
         condition: service_started
     profiles:
@@ -53,32 +50,14 @@ services:
       - "compose/aws.env"
       - "compose/secrets.env"
     environment:
-      PORT: ${PORT:-8085}
-      # AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      PORT: ${PORT:-8086}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
-      GIT_PYTHON_REFRESH: "quiet"
+      LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
+    volumes:
+      - ./app:/home/nonroot/app
     develop:
       watch:
-        - action: sync
-          path: ./app
-          target: /home/nonroot/app
-          ignore:
-            - README.md
-            - "**/*.md"
-            - "**/test_*.py"
-            - tests/**/*
-            - .git/**/*
-            - .venv/**/*
-            - .pytest_cache/**/*
-            - .ruff_cache/**/*
-            - .vscode/**/*
-            - .github/**/*
-            - requirements-dev.txt
-            - pytest.ini
-            - .pre-commit-config.yaml
-            - sonar-project.properties
-            - LICENCE
         - action: rebuild
           path: ./pyproject.toml
           target: /home/nonroot/pyproject.toml

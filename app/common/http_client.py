@@ -3,10 +3,11 @@ from logging import getLogger
 import httpx
 
 from app.common.tracing import ctx_trace_id
-from app.config import config
+from app.config import get_config
 
 logger = getLogger(__name__)
 
+config = get_config()
 
 async def async_hook_request_tracing(request):
     trace_id = ctx_trace_id.get(None)
@@ -20,12 +21,57 @@ def hook_request_tracing(request):
         request.headers[config.tracing_header] = trace_id
 
 
-# Provides an instacne of httpx.AsyncClient with preconfigured hooks for
-# propagating the x-cdp-request-id header to allow requets to be traced across
-# service boundaries as well as adding in request/response logging.
-def async_client():
-    return httpx.AsyncClient(event_hooks={"request": [async_hook_request_tracing]})
+def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
+    """
+    Create an async HTTP client with configurable timeout.
+
+    Args:
+        request_timeout: Request timeout in seconds
+
+    Returns:
+        Configured httpx.AsyncClient instance
+    """
+    client_kwargs = {
+        "timeout": request_timeout,
+        "event_hooks": {"request": [async_hook_request_tracing]}
+    }
+
+    if config.http_proxy:
+        logger.info("Using HTTP proxy: %s", config.http_proxy)
+
+        proxy_mounts = {
+            "http://": httpx.AsyncHTTPTransport(proxy=config.http_proxy),
+            "https://": httpx.AsyncHTTPTransport(proxy=config.http_proxy)
+        }
+
+        client_kwargs["mounts"] = proxy_mounts
+
+    return httpx.AsyncClient(**client_kwargs)
 
 
-def client():
-    return httpx.Client(event_hooks={"request": [hook_request_tracing]})
+def create_client(request_timeout: int = 30) -> httpx.Client:
+    """
+    Create a sync HTTP client with configurable timeout.
+
+    Args:
+        request_timeout: Request timeout in seconds
+
+    Returns:
+        Configured httpx.Client instance
+    """
+    client_kwargs = {
+        "timeout": request_timeout,
+        "event_hooks": {"request": [hook_request_tracing]}
+    }
+
+    if config.http_proxy:
+        logger.info("Using HTTP proxy: %s", config.http_proxy)
+
+        proxy_mounts = {
+            "http://": httpx.HTTPTransport(proxy=config.http_proxy),
+            "https://": httpx.HTTPTransport(proxy=config.http_proxy)
+        }
+
+        client_kwargs["mounts"] = proxy_mounts
+
+    return httpx.Client(**client_kwargs)
