@@ -1,11 +1,14 @@
 import json
 from dataclasses import dataclass
+from logging import getLogger
 
 import boto3
 
 from app.config import get_config
 
 bedrock_client: boto3.client = None
+
+logger = getLogger(__name__)
 
 settings = get_config()
 
@@ -48,6 +51,10 @@ class BedrockInferenceService:
         }
 
         if settings.bedrock.guardrail_identifier and settings.bedrock.guardrail_version:
+            logger.info("Using Bedrock guardrail: %s (version: %s)",
+                        settings.bedrock.guardrail_identifier,
+                        settings.bedrock.guardrail_version)
+
             invoke_args["guardrailConfig"] = {
                 "guardrailIdentifier": settings.bedrock.guardrail_identifier,
                 "guardrailVersion": settings.bedrock.guardrail_version,
