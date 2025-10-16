@@ -10,6 +10,7 @@ from app.config import get_config
 from app.conversation_history.router import router as conversation_history_router
 from app.health.router import router as health_router
 from app.v2_chat.router import router as chat_v2_router
+from app.debug.router import router as debug_router
 
 logger = getLogger(__name__)
 
@@ -37,6 +38,7 @@ app.add_middleware(TraceIdMiddleware)
 app.include_router(health_router)
 app.include_router(chat_v2_router, prefix="/v2")
 app.include_router(conversation_history_router)
+app.include_router(debug_router)
 
 
 def main() -> None:
