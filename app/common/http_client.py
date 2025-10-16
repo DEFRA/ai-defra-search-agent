@@ -1,6 +1,6 @@
-import httpx
-
 from logging import getLogger
+
+import httpx
 
 from app.common.tracing import ctx_trace_id
 from app.config import get_config
