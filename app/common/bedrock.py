@@ -1,8 +1,8 @@
 import json
-import boto3
-
 from dataclasses import dataclass
 from logging import getLogger
+
+import boto3
 
 from app.config import get_config
 
