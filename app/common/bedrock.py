@@ -57,7 +57,7 @@ class BedrockInferenceService:
 
             invoke_args["guardrailIdentifier"] = settings.bedrock.guardrail_identifier
             invoke_args["guardrailVersion"] = settings.bedrock.guardrail_version
-            invoke_args["trace"] = "enabled"
+            invoke_args["trace"] = "ENABLED"
 
         response = self.client.invoke_model(**invoke_args)
 
