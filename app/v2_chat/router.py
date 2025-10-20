@@ -26,7 +26,10 @@ def get_chat_service(history_service: ConversationHistoryService = Depends(get_c
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, chat_service: ChatService=Depends(get_chat_service)):
-    response, conversation_id = await chat_service.execute_chat(request.question)
+    response, conversation_id = await chat_service.execute_chat(
+        request.question,
+        request.conversation_id
+    )
 
     context_documents = [
         ContextDocumentResponse(

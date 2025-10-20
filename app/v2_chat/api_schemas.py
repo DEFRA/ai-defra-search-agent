@@ -11,6 +11,12 @@ class ChatRequest(BaseModel):
             "What ethical consideration do we need to make sure we cover using AI?"
         ],
     )
+    conversation_id: UUID | None = Field(
+        default=None,
+        description="UUIDv4 identifier for the conversation",
+        examples=["123e4567-e89b-12d3-a456-426614174000"],
+        serialization_alias="conversationId",
+    )
 
 
 class ContextDocumentResponse(BaseModel):
