@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-
+from datetime import datetime, UTC
 
 @dataclass(frozen=True)
 class KnowledgeDocument:
@@ -13,6 +13,19 @@ class KnowledgeDocument:
 class ChatMessage:
     role: str
     content: str
+
+
+@dataclass(frozen=True)
+class StageTokenUsage:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    model: str = "Unknown"
+    stage_name: str = "Unknown"
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
 
 
 class ConversationHistory:

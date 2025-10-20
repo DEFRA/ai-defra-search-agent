@@ -6,7 +6,7 @@ from fastapi.params import Depends
 from app.conversation_history.dependencies import get_conversation_history_service
 from app.conversation_history.service import ConversationHistoryService
 from app.v2_chat.agent import LangGraphChatAgent
-from app.v2_chat.api_schemas import ChatRequest, ChatResponse, ContextDocumentResponse
+from app.v2_chat.api_schemas import ChatRequest, ChatResponse, ContextDocumentResponse, TokenUsageResponse
 from app.v2_chat.service import ChatService
 
 logger = getLogger(__name__)
@@ -33,8 +33,20 @@ async def chat(request: ChatRequest, chat_service: ChatService=Depends(get_chat_
         for doc in response.get("context", [])
     ]
 
+    usage = [
+        TokenUsageResponse(
+            model=token_usage.model,
+            stage_name=token_usage.stage_name,
+            input_tokens=token_usage.input_tokens,
+            output_tokens=token_usage.output_tokens,
+            total_tokens=token_usage.total_tokens
+        )
+        for token_usage in response.get("token_usage", [])
+    ]
+
     return ChatResponse(
         answer=response.get("answer", ""),
         conversation_id=str(conversation_id),
         context_documents=context_documents,
+        usage=usage
     )

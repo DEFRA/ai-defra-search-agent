@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from app.common.bedrock import BedrockInferenceService
 from app.common.http_client import create_async_client
 from app.config import get_config
+from app.v2_chat.models import StageTokenUsage
 from app.v2_chat.repository import AbstractPromptRepository
 from app.v2_chat.state_models import ChatState, KnowledgeDocument
 
@@ -62,7 +63,16 @@ class GraphNodes:
             if grade_result.content[-1]["text"].strip().lower() == "yes":
                 context.append(doc)
 
-        return { "context": context }
+            stage_token_usage = StageTokenUsage(
+                model=grade_result.model,
+                stage_name="grade_documents",
+                input_tokens=grade_result.token_usage.input_tokens,
+                output_tokens=grade_result.token_usage.output_tokens
+            )
+
+            state.token_usage.append(stage_token_usage)
+
+        return { "context": context, "token_usage": state.token_usage }
 
     def generate(self, state: ChatState) -> ChatState:
         prompt = self.dependencies.prompt_repository.get_prompt_by_name("qa_system.txt")
@@ -74,7 +84,6 @@ class GraphNodes:
 
         full_prompt = prompt.format(context=joined_context)
 
-        # Include the user's question as a message
         messages = [{"role": "user", "content": state.question}]
 
         generation = self.dependencies.inference_service.invoke_anthropic(
@@ -83,6 +92,15 @@ class GraphNodes:
             messages=messages
         )
 
+        state_token_usage = StageTokenUsage(
+            model=generation.model,
+            stage_name="generate",
+            input_tokens=generation.token_usage.input_tokens,
+            output_tokens=generation.token_usage.output_tokens
+        )
+
+        state.token_usage.append(state_token_usage)
+
         answer = generation.content[0]["text"]
 
-        return { "answer": answer }
+        return { "answer": answer, "token_usage": state.token_usage }

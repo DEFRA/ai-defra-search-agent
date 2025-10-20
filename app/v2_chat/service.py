@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.conversation_history.models import ChatMessage
 from app.conversation_history.service import ConversationHistoryService
@@ -40,5 +40,10 @@ class ChatService:
             conversation.conversation_id,
             ChatMessage(role="assistant", content=response.get("answer"))
         )
+
+        await self.history_service.reset_token_usage(conversation.conversation_id)
+
+        for usage in response["token_usage"]:
+            await self.history_service.add_token_usage(conversation.conversation_id, usage)
 
         return response, conversation.conversation_id

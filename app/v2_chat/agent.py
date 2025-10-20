@@ -46,7 +46,7 @@ class LangGraphChatAgent(AbstractChatAgent):
 
         self._app = workflow.compile()
 
-    async def execute_flow(self, question: str, conversation: ConversationHistory) -> ChatState:
+    async def execute_flow(self, question: str, conversation: ConversationHistory) -> OutputState:
         state = ChatState(
             question=question,
             conversation_history=conversation.messages

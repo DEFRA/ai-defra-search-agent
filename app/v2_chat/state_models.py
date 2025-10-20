@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from app.v2_chat.models import ChatMessage, KnowledgeDocument
+from app.v2_chat.models import ChatMessage, KnowledgeDocument, StageTokenUsage
 
 
 @dataclass
@@ -12,6 +12,7 @@ class InputState:
 class OutputState:
     answer: str
     context: list[KnowledgeDocument] = field(default_factory=list)
+    token_usage: list[StageTokenUsage] = field(default_factory=list)
 
 
 @dataclass
@@ -21,3 +22,4 @@ class ChatState:
     candidate_documents: list[KnowledgeDocument] = field(default_factory=list)
     context: list[KnowledgeDocument] = field(default_factory=list)
     conversation_history: list[ChatMessage] = field(default_factory=list)
+    token_usage: list[StageTokenUsage] = field(default_factory=list)
