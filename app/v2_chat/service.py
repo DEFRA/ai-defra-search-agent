@@ -1,4 +1,4 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from app.conversation_history.models import ChatMessage
 from app.conversation_history.service import ConversationHistoryService

@@ -1,8 +1,8 @@
 import json
-import boto3
-
 from dataclasses import dataclass, field
 from logging import getLogger
+
+import boto3
 
 from app.config import get_config
 
@@ -22,7 +22,7 @@ class Message:
 @dataclass(frozen=True)
 class TokenUsage:
     input_tokens: int
-    output_tokens: int 
+    output_tokens: int
     total_tokens: int
 
 
@@ -50,7 +50,7 @@ class BedrockInferenceService:
         invoke_args = {
             "modelId": model,
             "body": json.dumps(native_request)
-        }            
+        }
 
         if settings.bedrock.guardrail_identifier and settings.bedrock.guardrail_version:
             invoke_args["guardrailIdentifier"] = settings.bedrock.guardrail_identifier
@@ -65,22 +65,22 @@ class BedrockInferenceService:
             content=response_json["content"],
             token_usage=self._extract_token_usage(response_json)
         )
-    
+
 
     def _get_backing_model(self, model_id: str) -> str | None:
         if not model_id.startswith("arn:aws:bedrock:"):
             return model_id
-        
+
         inference_profile = self.api_client.get_inference_profile(
             inferenceProfileIdentifier=model_id
         )
 
-        profileModels = inference_profile.get("models", [])
+        profile_models = inference_profile.get("models", [])
 
-        if len(profileModels) == 0:
+        if len(profile_models) == 0:
             return None
 
-        model_arn = profileModels[0].get("modelArn", None)
+        model_arn = profile_models[0].get("modelArn", None)
 
         return model_arn.split("/")[-1]
 
@@ -88,7 +88,7 @@ class BedrockInferenceService:
         usage = response.get("usage", {})
         input_tokens = usage.get("input_tokens", 0)
         output_tokens = usage.get("output_tokens", 0)
-        
+
         return TokenUsage(
             input_tokens=input_tokens,
             output_tokens=output_tokens,

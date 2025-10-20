@@ -3,12 +3,10 @@ from uuid import UUID, uuid4
 from app.conversation_history.models import (
     ChatMessage,
     ConversationHistory,
-    ConversationNotFoundError
+    ConversationNotFoundError,
 )
-
-from app.v2_chat.models import StageTokenUsage
-
 from app.conversation_history.repository import AbstractConversationHistoryRepository
+from app.v2_chat.models import StageTokenUsage
 
 
 class ConversationHistoryService:

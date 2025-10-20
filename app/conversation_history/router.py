@@ -2,12 +2,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.conversation_history.dependencies import get_conversation_history_service
 from app.conversation_history.api_schemas import (
     ConversationHistoryResponse,
     MessageResponse,
-    TokenUsageResponse
+    TokenUsageResponse,
 )
+from app.conversation_history.dependencies import get_conversation_history_service
 from app.conversation_history.models import (
     ConversationNotFoundError,
 )
@@ -23,7 +23,7 @@ async def get_conversation_history(
 ):
     try:
         conversation = await history_service.get_history(conversation_id)
-        
+
         return ConversationHistoryResponse(
             conversation_id=str(conversation.conversation_id),
             messages=[

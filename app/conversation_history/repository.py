@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.v2_chat.models import StageTokenUsage
 from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
 
 from app.conversation_history.models import ChatMessage, ConversationHistory
+from app.v2_chat.models import StageTokenUsage
 
 
 class AbstractConversationHistoryRepository(ABC):
@@ -79,7 +79,7 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
                     content=message["content"]
                 ) for message in doc.get("messages", [])
             ]
-            
+
             token_usage = [
                 StageTokenUsage(
                     stage_name=usage["stageName"],

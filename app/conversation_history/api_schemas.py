@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 
+
 class MessageResponse(BaseModel):
     role: str = Field(..., description="Role of the message sender (e.g., user, assistant)")
     content: str = Field(..., description="Content of the message")
-    
+
 
 class TokenUsageResponse(BaseModel):
     input_tokens: int = Field(..., description="Number of input tokens used", serialization_alias="inputTokens")

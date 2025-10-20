@@ -6,7 +6,12 @@ from fastapi.params import Depends
 from app.conversation_history.dependencies import get_conversation_history_service
 from app.conversation_history.service import ConversationHistoryService
 from app.v2_chat.agent import LangGraphChatAgent
-from app.v2_chat.api_schemas import ChatRequest, ChatResponse, ContextDocumentResponse, TokenUsageResponse
+from app.v2_chat.api_schemas import (
+    ChatRequest,
+    ChatResponse,
+    ContextDocumentResponse,
+    TokenUsageResponse,
+)
 from app.v2_chat.service import ChatService
 
 logger = getLogger(__name__)
