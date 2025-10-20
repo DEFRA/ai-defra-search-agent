@@ -1,12 +1,12 @@
+import boto3
 import json
 from dataclasses import dataclass, field
 from logging import getLogger
 
-import boto3
-
 from app.config import get_config
 
 bedrock_runtime_client: boto3.client = None
+bedrock_client: boto3.client = None
 
 logger = getLogger(__name__)
 
