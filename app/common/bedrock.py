@@ -6,7 +6,7 @@ import boto3
 
 from app.config import get_config
 
-bedrock_client: boto3.client = None
+bedrock_runtime_client: boto3.client = None
 
 logger = getLogger(__name__)
 
@@ -126,12 +126,12 @@ def _create_bedrock_client():
 
 
 def get_bedrock_runtime_client():
-    global bedrock_client
+    global bedrock_runtime_client
 
-    if bedrock_client is None:
-        bedrock_client = _create_bedrock_runtime_client()
+    if bedrock_runtime_client is None:
+        bedrock_runtime_client = _create_bedrock_runtime_client()
 
-    return bedrock_client
+    return bedrock_runtime_client
 
 def get_bedrock_client():
     global bedrock_client
