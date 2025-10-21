@@ -1,18 +1,16 @@
-from dataclasses import dataclass
+import dataclasses
 
-from app.common.bedrock import BedrockInferenceService
-from app.common.http_client import create_async_client
-from app.config import get_config
-from app.v2_chat.repository import AbstractPromptRepository
-from app.v2_chat.state_models import ChatState, KnowledgeDocument
+from app import config
+from app.common import bedrock, http_client
+from app.v2_chat import models, repository, state_models
 
-config = get_config()
+app_config = config.get_config()
 
 
-@dataclass
+@dataclasses.dataclass
 class NodeDependencies:
-    inference_service: BedrockInferenceService
-    prompt_repository: AbstractPromptRepository
+    inference_service: bedrock.BedrockInferenceService
+    prompt_repository: repository.AbstractPromptRepository
 
 
 class GraphNodes:
@@ -24,19 +22,19 @@ class GraphNodes:
     def __init__(self, dependencies: NodeDependencies):
         self.dependencies = dependencies
 
-    async def retrieve(self, state: ChatState) -> ChatState:
+    async def retrieve(self, state: state_models.ChatState) -> state_models.ChatState:
         request = {
-            "groupId": config.workflow.default_knowledge_group_id,
+            "groupId": app_config.workflow.default_knowledge_group_id,
             "query": state.question,
             "maxResults": 5
         }
 
-        async with create_async_client() as client:
-            response = await client.post(f"{config.workflow.data_service_url}snapshots/query", json=request)
+        async with http_client.create_async_client() as client:
+            response = await client.post(f"{app_config.workflow.data_service_url}snapshots/query", json=request)
             response.raise_for_status()
 
             documents = [
-                KnowledgeDocument(
+                models.KnowledgeDocument(
                     content=doc.get("content", ""),
                     snapshot_id=doc.get("snapshotId", ""),
                     source_id=doc.get("sourceId", ""),
@@ -47,14 +45,14 @@ class GraphNodes:
 
             return { "candidate_documents": documents }
 
-    def grade_documents(self, state: ChatState) -> ChatState:
+    def grade_documents(self, state: state_models.ChatState) -> state_models.ChatState:
         prompt = self.dependencies.prompt_repository.get_prompt_by_name("retrieval_grader.txt")
 
         context = []
 
         for doc in state.candidate_documents:
             grade_result = self.dependencies.inference_service.invoke_anthropic(
-                config.bedrock.grading_model,
+                app_config.bedrock.grading_model,
                 system_prompt=prompt,
                 messages=[{"role": "user", "content": f"Retrieved document: {doc.content}"}]
             )
@@ -62,9 +60,18 @@ class GraphNodes:
             if grade_result.content[-1]["text"].strip().lower() == "yes":
                 context.append(doc)
 
-        return { "context": context }
+            stage_token_usage = models.StageTokenUsage(
+                model=grade_result.model,
+                stage_name="grade_documents",
+                input_tokens=grade_result.token_usage.input_tokens,
+                output_tokens=grade_result.token_usage.output_tokens
+            )
 
-    def generate(self, state: ChatState) -> ChatState:
+            state.token_usage.append(stage_token_usage)
+
+        return { "context": context, "token_usage": state.token_usage }
+
+    def generate(self, state: state_models.ChatState) -> state_models.ChatState:
         prompt = self.dependencies.prompt_repository.get_prompt_by_name("qa_system.txt")
 
         if len(state.context) == 0:
@@ -74,15 +81,23 @@ class GraphNodes:
 
         full_prompt = prompt.format(context=joined_context)
 
-        # Include the user's question as a message
         messages = [{"role": "user", "content": state.question}]
 
         generation = self.dependencies.inference_service.invoke_anthropic(
-            config.bedrock.generation_model,
+            app_config.bedrock.generation_model,
             system_prompt=full_prompt,
             messages=messages
         )
 
+        state_token_usage = models.StageTokenUsage(
+            model=generation.model,
+            stage_name="generate",
+            input_tokens=generation.token_usage.input_tokens,
+            output_tokens=generation.token_usage.output_tokens
+        )
+
+        state.token_usage.append(state_token_usage)
+
         answer = generation.content[0]["text"]
 
-        return { "answer": answer }
+        return { "answer": answer, "token_usage": state.token_usage }

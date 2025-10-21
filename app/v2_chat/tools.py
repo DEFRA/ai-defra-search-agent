@@ -1,15 +1,15 @@
-from abc import ABC, abstractmethod
+import abc
 
-from app.common.http_client import create_async_client
+from app.common import http_client
 
 
-class AbstractKnowledgeSearchTool(ABC):
-    @abstractmethod
+class AbstractKnowledgeSearchTool(abc.ABC):
+    @abc.abstractmethod
     async def search(self, query: str) -> list[dict[str, any]]:
         pass
 
 
 class KnowledgeSearchTool(AbstractKnowledgeSearchTool):
     def __init__(self):
-        self._client = create_async_client()
+        self._client = http_client.create_async_client()
 

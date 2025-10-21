@@ -1,23 +1,25 @@
-from dataclasses import dataclass, field
+import dataclasses
 
-from app.v2_chat.models import ChatMessage, KnowledgeDocument
+from app.v2_chat import models
 
 
-@dataclass
+@dataclasses.dataclass
 class InputState:
     question: str
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class OutputState:
     answer: str
-    context: list[KnowledgeDocument] = field(default_factory=list)
+    context: list[models.KnowledgeDocument] = dataclasses.field(default_factory=list)
+    token_usage: list[models.StageTokenUsage] = dataclasses.field(default_factory=list)
 
 
-@dataclass
+@dataclasses.dataclass
 class ChatState:
     question: str
     answer: str = ""
-    candidate_documents: list[KnowledgeDocument] = field(default_factory=list)
-    context: list[KnowledgeDocument] = field(default_factory=list)
-    conversation_history: list[ChatMessage] = field(default_factory=list)
+    candidate_documents: list[models.KnowledgeDocument] = dataclasses.field(default_factory=list)
+    context: list[models.KnowledgeDocument] = dataclasses.field(default_factory=list)
+    conversation_history: list[models.ChatMessage] = dataclasses.field(default_factory=list)
+    token_usage: list[models.StageTokenUsage] = dataclasses.field(default_factory=list)

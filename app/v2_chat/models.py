@@ -1,18 +1,32 @@
-from dataclasses import dataclass, field
+import dataclasses
+import datetime
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class KnowledgeDocument:
     content: str
     snapshot_id: str
     source_id: str
-    metadata: dict[str, any] = field(default_factory=dict)
+    metadata: dict[str, any] = dataclasses.field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ChatMessage:
     role: str
     content: str
+
+
+@dataclasses.dataclass(frozen=True)
+class StageTokenUsage:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    timestamp: datetime.datetime = dataclasses.field(default_factory=lambda: datetime.datetime.now(tz=datetime.UTC))
+    model: str = "Unknown"
+    stage_name: str = "Unknown"
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
 
 
 class ConversationHistory:
