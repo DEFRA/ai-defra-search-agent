@@ -1,20 +1,20 @@
-from dataclasses import dataclass, field
-from uuid import UUID
+import dataclasses
+import uuid
 
-from app.v2_chat.models import StageTokenUsage
+from app.v2_chat import models as chat_models
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ChatMessage:
     role: str
     content: str
 
 
-@dataclass
+@dataclasses.dataclass
 class ConversationHistory:
-    conversation_id: UUID
-    messages: list[ChatMessage] = field(default_factory=list)
-    token_usage: list[StageTokenUsage] = field(default_factory=list)
+    conversation_id: uuid.UUID
+    messages: list[ChatMessage] = dataclasses.field(default_factory=list)
+    token_usage: list[chat_models.StageTokenUsage] = dataclasses.field(default_factory=list)
 
     def add_message(self, role: str, content: str):
         self.messages.append(ChatMessage(role=role, content=content))

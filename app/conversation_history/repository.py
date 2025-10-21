@@ -1,51 +1,51 @@
-from abc import ABC, abstractmethod
-from datetime import UTC, datetime
-from uuid import UUID
+import abc
+import datetime
+import uuid
 
-from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
+import pymongo.asynchronous.database
 
-from app.conversation_history.models import ChatMessage, ConversationHistory
-from app.v2_chat.models import StageTokenUsage
+from app.conversation_history import models
+from app.v2_chat import models as v2_chat_models
 
 
-class AbstractConversationHistoryRepository(ABC):
-    @abstractmethod
-    async def add_message(self, conversation_id: UUID, message: ChatMessage) -> None:
+class AbstractConversationHistoryRepository(abc.ABC):
+    @abc.abstractmethod
+    async def add_message(self, conversation_id: uuid.UUID, message: models.ChatMessage) -> None:
         pass
 
-    @abstractmethod
-    async def add_token_usage(self, conversation_id: UUID, token_usage: StageTokenUsage) -> None:
+    @abc.abstractmethod
+    async def add_token_usage(self, conversation_id: uuid.UUID, token_usage: v2_chat_models.StageTokenUsage) -> None:
         pass
 
-    @abstractmethod
-    async def reset_token_usage(self, conversation_id: UUID) -> None:
+    @abc.abstractmethod
+    async def reset_token_usage(self, conversation_id: uuid.UUID) -> None:
         pass
 
-    @abstractmethod
-    async def get_history(self, conversation_id: UUID) -> ConversationHistory | None:
+    @abc.abstractmethod
+    async def get_history(self, conversation_id: uuid.UUID) -> models.ConversationHistory | None:
         pass
 
-    @abstractmethod
-    async def create_conversation(self, conversation_id: UUID) -> ConversationHistory:
+    @abc.abstractmethod
+    async def create_conversation(self, conversation_id: uuid.UUID) -> models.ConversationHistory:
         pass
 
 
 class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
-    def __init__(self, db: AsyncDatabase):
-        self.db: AsyncDatabase = db
-        self.conversation_history: AsyncCollection = self.db.conversationHistory
+    def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
+        self.db: pymongo.asynchronous.database.AsyncDatabase = db
+        self.conversation_history: pymongo.asynchronous.database.AsyncCollection = self.db.conversationHistory
 
-    async def add_message(self, conversation_id: UUID, message: ChatMessage) -> None:
+    async def add_message(self, conversation_id: uuid.UUID, message: models.ChatMessage) -> None:
         await self.conversation_history.update_one(
             {"conversationId": conversation_id},
             {
                 "$push": {"messages": message.__dict__},
-                "$setOnInsert": {"createdAt": datetime.now(tz=UTC)},
+                "$setOnInsert": {"createdAt": datetime.datetime.now(tz=datetime.UTC)},
             },
             upsert=True,
         )
 
-    async def add_token_usage(self, conversation_id: UUID, token_usage: StageTokenUsage) -> None:
+    async def add_token_usage(self, conversation_id: uuid.UUID, token_usage: v2_chat_models.StageTokenUsage) -> None:
         await self.conversation_history.update_one(
             {"conversationId": conversation_id},
             {
@@ -56,12 +56,12 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
                     "outputTokens": token_usage.output_tokens,
                     "timestamp": token_usage.timestamp
                 }},
-                "$setOnInsert": {"createdAt": datetime.now(tz=UTC)},
+                "$setOnInsert": {"createdAt": datetime.datetime.now(tz=datetime.UTC)},
             },
             upsert=True,
         )
 
-    async def reset_token_usage(self, conversation_id: UUID) -> None:
+    async def reset_token_usage(self, conversation_id: uuid.UUID) -> None:
         await self.conversation_history.update_one(
             {"conversationId": conversation_id},
             {
@@ -69,19 +69,19 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
             }
         )
 
-    async def get_history(self, conversation_id: UUID) -> ConversationHistory | None:
+    async def get_history(self, conversation_id: uuid.UUID) -> models.ConversationHistory | None:
         doc = await self.conversation_history.find_one({"conversationId": conversation_id})
 
         if doc:
             messages = [
-                ChatMessage(
+                models.ChatMessage(
                     role=message["role"],
                     content=message["content"]
                 ) for message in doc.get("messages", [])
             ]
 
             token_usage = [
-                StageTokenUsage(
+                v2_models.StageTokenUsage(
                     stage_name=usage["stageName"],
                     model=usage["model"],
                     input_tokens=usage["inputTokens"],
@@ -90,7 +90,7 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
                 ) for usage in doc.get("tokenUsage", [])
             ]
 
-            return ConversationHistory(
+            return models.ConversationHistory(
                 conversation_id=conversation_id,
                 messages=messages,
                 token_usage=token_usage
@@ -98,13 +98,13 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
 
         return None
 
-    async def create_conversation(self, conversation_id: UUID) -> ConversationHistory:
+    async def create_conversation(self, conversation_id: uuid.UUID) -> models.ConversationHistory:
         await self.conversation_history.insert_one(
             {
                 "conversationId": conversation_id,
                 "messages": [],
-                "createdAt": datetime.now(tz=UTC)
+                "createdAt": datetime.datetime.now(tz=datetime.UTC)
             }
         )
 
-        return ConversationHistory(conversation_id=conversation_id, messages=[], token_usage=[])
+        return models.ConversationHistory(conversation_id=conversation_id, messages=[], token_usage=[])

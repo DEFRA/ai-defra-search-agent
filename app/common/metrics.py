@@ -1,10 +1,9 @@
-from logging import getLogger
+import logging
 
 from aws_embedded_metrics import metric_scope
 from aws_embedded_metrics.storage_resolution import StorageResolution
 
-logger = getLogger(__name__)
-
+logger = logging.getLogger(__name__)
 
 # This is using the aws_embedded_metrics library, which doesn't seem to be playing nicely with fastapi
 # metrics.put_metric always seems to thrown an exception, even though the metrics are being sent to cloudwatch

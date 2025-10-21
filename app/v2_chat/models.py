@@ -1,26 +1,26 @@
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+import dataclasses
+import datetime
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class KnowledgeDocument:
     content: str
     snapshot_id: str
     source_id: str
-    metadata: dict[str, any] = field(default_factory=dict)
+    metadata: dict[str, any] = dataclasses.field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ChatMessage:
     role: str
     content: str
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class StageTokenUsage:
     input_tokens: int = 0
     output_tokens: int = 0
-    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    timestamp: datetime.datetime = dataclasses.field(default_factory=lambda: datetime.datetime.now(tz=datetime.UTC))
     model: str = "Unknown"
     stage_name: str = "Unknown"
 

@@ -1,24 +1,24 @@
-from logging import getLogger
+import logging
 
 import httpx
 
-from app.common.tracing import ctx_trace_id
-from app.config import get_config
+from app import config
+from app.common import tracing
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-config = get_config()
+app_config = config.get_config()
 
 async def async_hook_request_tracing(request):
-    trace_id = ctx_trace_id.get(None)
+    trace_id = tracing.ctx_trace_id.get(None)
     if trace_id:
-        request.headers[config.tracing_header] = trace_id
+        request.headers[app_config.tracing_header] = trace_id
 
 
 def hook_request_tracing(request):
-    trace_id = ctx_trace_id.get(None)
+    trace_id = tracing.ctx_trace_id.get(None)
     if trace_id:
-        request.headers[config.tracing_header] = trace_id
+        request.headers[app_config.tracing_header] = trace_id
 
 
 def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
@@ -36,12 +36,12 @@ def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
         "event_hooks": {"request": [async_hook_request_tracing]}
     }
 
-    if config.http_proxy:
-        logger.info("Using HTTP proxy: %s", config.http_proxy)
+    if app_config.http_proxy:
+        logger.info("Using HTTP proxy: %s", app_config.http_proxy)
 
         proxy_mounts = {
-            "http://": httpx.AsyncHTTPTransport(proxy=config.http_proxy),
-            "https://": httpx.AsyncHTTPTransport(proxy=config.http_proxy)
+            "http://": httpx.AsyncHTTPTransport(proxy=app_config.http_proxy),
+            "https://": httpx.AsyncHTTPTransport(proxy=app_config.http_proxy)
         }
 
         client_kwargs["mounts"] = proxy_mounts
@@ -64,12 +64,12 @@ def create_client(request_timeout: int = 30) -> httpx.Client:
         "event_hooks": {"request": [hook_request_tracing]}
     }
 
-    if config.http_proxy:
-        logger.info("Using HTTP proxy: %s", config.http_proxy)
+    if app_config.http_proxy:
+        logger.info("Using HTTP proxy: %s", app_config.http_proxy)
 
         proxy_mounts = {
-            "http://": httpx.HTTPTransport(proxy=config.http_proxy),
-            "https://": httpx.HTTPTransport(proxy=config.http_proxy)
+            "http://": httpx.HTTPTransport(proxy=app_config.http_proxy),
+            "https://": httpx.HTTPTransport(proxy=app_config.http_proxy)
         }
 
         client_kwargs["mounts"] = proxy_mounts

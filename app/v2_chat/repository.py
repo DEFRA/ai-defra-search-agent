@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
+import abc
 
 
-class AbstractPromptRepository(ABC):
-    @abstractmethod
+class AbstractPromptRepository(abc.ABC):
+    @abc.abstractmethod
     def get_prompt_by_name(self, name: str) -> str:
         pass
 

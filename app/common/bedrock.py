@@ -1,6 +1,6 @@
 import json
+import logging
 from dataclasses import dataclass, field
-from logging import getLogger
 
 import boto3
 
@@ -9,9 +9,9 @@ from app.config import get_config
 bedrock_runtime_client: boto3.client = None
 bedrock_client: boto3.client = None
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-settings = get_config()
+app_config = get_config()
 
 
 @dataclass
@@ -53,9 +53,9 @@ class BedrockInferenceService:
             "body": json.dumps(native_request)
         }
 
-        if settings.bedrock.guardrail_identifier and settings.bedrock.guardrail_version:
-            invoke_args["guardrailIdentifier"] = settings.bedrock.guardrail_identifier
-            invoke_args["guardrailVersion"] = settings.bedrock.guardrail_version
+        if app_config.bedrock.guardrail_identifier and app_config.bedrock.guardrail_version:
+            invoke_args["guardrailIdentifier"] = app_config.bedrock.guardrail_identifier
+            invoke_args["guardrailVersion"] = app_config.bedrock.guardrail_version
 
         response = self.runtime_client.invoke_model(**invoke_args)
 
@@ -97,32 +97,32 @@ class BedrockInferenceService:
         )
 
 def _create_bedrock_runtime_client():
-    if settings.bedrock.use_credentials:
+    if app_config.bedrock.use_credentials:
         return boto3.client(
             "bedrock-runtime",
-            aws_access_key_id=settings.bedrock.access_key_id,
-            aws_secret_access_key=settings.bedrock.secret_access_key,
-            region_name=settings.aws_region
+            aws_access_key_id=app_config.bedrock.access_key_id,
+            aws_secret_access_key=app_config.bedrock.secret_access_key,
+            region_name=app_config.aws_region
         )
 
     return boto3.client(
         "bedrock-runtime",
-        region_name=settings.aws_region
+        region_name=app_config.aws_region
     )
 
 
 def _create_bedrock_client():
-    if settings.bedrock.use_credentials:
+    if app_config.bedrock.use_credentials:
         return boto3.client(
             "bedrock",
-            aws_access_key_id=settings.bedrock.access_key_id,
-            aws_secret_access_key=settings.bedrock.secret_access_key,
-            region_name=settings.aws_region
+            aws_access_key_id=app_config.bedrock.access_key_id,
+            aws_secret_access_key=app_config.bedrock.secret_access_key,
+            region_name=app_config.aws_region
         )
 
     return boto3.client(
         "bedrock",
-        region_name=settings.aws_region
+        region_name=app_config.aws_region
     )
 
 

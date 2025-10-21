@@ -1,40 +1,31 @@
-from uuid import UUID
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+import fastapi
 
-from app.conversation_history.api_schemas import (
-    ConversationHistoryResponse,
-    MessageResponse,
-    TokenUsageResponse,
-)
-from app.conversation_history.dependencies import get_conversation_history_service
-from app.conversation_history.models import (
-    ConversationNotFoundError,
-)
-from app.conversation_history.service import ConversationHistoryService
+from app.conversation_history import api_schemas, dependencies, models, service
 
-router = APIRouter(tags=["conversation-history"])
+router = fastapi.APIRouter(tags=["conversation-history"])
 
 
 @router.get("/conversation-history/{conversation_id}")
 async def get_conversation_history(
-    conversation_id: UUID,
-    history_service: ConversationHistoryService = Depends(get_conversation_history_service)
+    conversation_id: uuid.UUID,
+    history_service: service.ConversationHistoryService = fastapi.Depends(dependencies.get_conversation_history_service)
 ):
     try:
         conversation = await history_service.get_history(conversation_id)
 
-        return ConversationHistoryResponse(
+        return api_schemas.ConversationHistoryResponse(
             conversation_id=str(conversation.conversation_id),
             messages=[
-                MessageResponse(
+                api_schemas.MessageResponse(
                     role=message.role,
                     content=message.content
                 )
                 for message in conversation.messages
             ],
             token_usage=[
-                TokenUsageResponse(
+                api_schemas.TokenUsageResponse(
                     input_tokens=usage.input_tokens,
                     output_tokens=usage.output_tokens,
                     total_tokens=usage.input_tokens + usage.output_tokens,
@@ -44,5 +35,5 @@ async def get_conversation_history(
                 for usage in conversation.token_usage
             ]
         )
-    except ConversationNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from None
+    except models.ConversationNotFoundError as e:
+        raise fastapi.HTTPException(status_code=404, detail=str(e)) from None

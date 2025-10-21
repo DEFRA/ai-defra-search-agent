@@ -1,11 +1,10 @@
-from fastapi import Depends
-from pymongo.asynchronous.database import AsyncDatabase
+import fastapi
+import pymongo.asynchronous.database
 
-from app.common.mongo import get_db
-from app.conversation_history.repository import MongoConversationHistoryRepository
-from app.conversation_history.service import ConversationHistoryService
+from app.common import mongo
+from app.conversation_history import repository, service
 
 
-def get_conversation_history_service(db: AsyncDatabase = Depends(get_db)) -> ConversationHistoryService:
-    repository = MongoConversationHistoryRepository(db)
-    return ConversationHistoryService(repository)
+def get_conversation_history_service(db: pymongo.asynchronous.database.AsyncDatabase = fastapi.Depends(mongo.get_db)) -> service.ConversationHistoryService:
+    repo = repository.MongoConversationHistoryRepository(db)
+    return service.ConversationHistoryService(repo)

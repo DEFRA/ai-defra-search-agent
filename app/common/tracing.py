@@ -1,14 +1,14 @@
 import contextvars
-from logging import getLogger
+import logging
 
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+import fastapi
+import starlette.middleware.base
 
-from app.config import get_config
+from app import config
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-config = get_config()
+app_config = config.get_config()
 
 ctx_trace_id = contextvars.ContextVar("trace_id")
 ctx_request = contextvars.ContextVar("request")
@@ -19,9 +19,9 @@ ctx_response = contextvars.ContextVar("response")
 # This can be used to follow a single request across multiple services.
 # TraceIdMiddleware handles extracting the tracing header and persisting it
 # for the duration of the request in the ContextVar `ctx_trace_id`.
-class TraceIdMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        req_trace_id = request.headers.get(config.tracing_header, None)
+class TraceIdMiddleware(starlette.middleware.base.BaseHTTPMiddleware):
+    async def dispatch(self, request: fastapi.Request, call_next):
+        req_trace_id = request.headers.get(app_config.tracing_header, None)
         if req_trace_id:
             ctx_trace_id.set(req_trace_id)
 
