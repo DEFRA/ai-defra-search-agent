@@ -34,7 +34,7 @@ class GraphNodes:
             response.raise_for_status()
 
             documents = [
-                state_models.KnowledgeDocument(
+                models.KnowledgeDocument(
                     content=doc.get("content", ""),
                     snapshot_id=doc.get("snapshotId", ""),
                     source_id=doc.get("sourceId", ""),

@@ -81,7 +81,7 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
             ]
 
             token_usage = [
-                v2_models.StageTokenUsage(
+                v2_chat_models.StageTokenUsage(
                     stage_name=usage["stageName"],
                     model=usage["model"],
                     input_tokens=usage["inputTokens"],
