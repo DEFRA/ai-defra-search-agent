@@ -37,7 +37,11 @@ class ChatService:
 
         await self.history_service.add_message(
             conversation.conversation_id,
-            conv_models.ChatMessage(role="assistant", content=response.get("answer"))
+            conv_models.ChatMessage(
+                role="assistant",
+                content=response.get("answer"),
+                context=response.get("context")
+            )
         )
 
         await self.history_service.reset_token_usage(conversation.conversation_id)

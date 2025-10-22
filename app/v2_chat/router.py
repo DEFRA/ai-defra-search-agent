@@ -27,7 +27,8 @@ async def chat(request: api_schemas.ChatRequest, chat_service: service.ChatServi
     context_documents = [
         api_schemas.ContextDocumentResponse(
             content=doc.content,
-            title=doc.metadata.get("title", "Unknown Title"),
+            name=doc.name,
+            location=doc.location,
             snapshot_id=doc.snapshot_id,
             source_id=doc.source_id
         )

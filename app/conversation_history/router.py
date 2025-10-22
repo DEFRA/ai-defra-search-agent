@@ -20,7 +20,15 @@ async def get_conversation_history(
             messages=[
                 api_schemas.MessageResponse(
                     role=message.role,
-                    content=message.content
+                    content=message.content,
+                    sources=[
+                        {
+                            "content": doc.get("content", ""),
+                            "name": doc.get("name", ""),
+                            "location": doc.get("location", "")
+                        }
+                        for doc in message.context
+                    ] if message.context else None
                 )
                 for message in conversation.messages
             ],

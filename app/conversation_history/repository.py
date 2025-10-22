@@ -37,9 +37,26 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
 
     async def add_message(self, conversation_id: uuid.UUID, message: models.ChatMessage) -> None:
         await self.conversation_history.update_one(
-            {"conversationId": conversation_id},
             {
-                "$push": {"messages": message.__dict__},
+                "conversationId": conversation_id
+            },
+            {
+                "$push": {
+                    "messages": {
+                        "role": message.role,
+                        "content": message.content,
+                        "context": [
+                            {
+                                "content": document.content,
+                                "snapshotId": document.snapshot_id,
+                                "sourceId": document.source_id,
+                                "name": document.name,
+                                "location": document.location
+                            }
+                            for document in message.context
+                        ] if message.context else None
+                    }
+                },
                 "$setOnInsert": {"createdAt": datetime.datetime.now(tz=datetime.UTC)},
             },
             upsert=True,
@@ -47,15 +64,19 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
 
     async def add_token_usage(self, conversation_id: uuid.UUID, token_usage: v2_chat_models.StageTokenUsage) -> None:
         await self.conversation_history.update_one(
-            {"conversationId": conversation_id},
             {
-                "$push": {"tokenUsage": {
-                    "model": token_usage.model,
-                    "stageName": token_usage.stage_name,
-                    "inputTokens": token_usage.input_tokens,
-                    "outputTokens": token_usage.output_tokens,
-                    "timestamp": token_usage.timestamp
-                }},
+                "conversationId": conversation_id
+            },
+            {
+                "$push": {
+                    "tokenUsage": {
+                        "model": token_usage.model,
+                        "stageName": token_usage.stage_name,
+                        "inputTokens": token_usage.input_tokens,
+                        "outputTokens": token_usage.output_tokens,
+                        "timestamp": token_usage.timestamp
+                    }
+                },
                 "$setOnInsert": {"createdAt": datetime.datetime.now(tz=datetime.UTC)},
             },
             upsert=True,
@@ -63,7 +84,9 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
 
     async def reset_token_usage(self, conversation_id: uuid.UUID) -> None:
         await self.conversation_history.update_one(
-            {"conversationId": conversation_id},
+            {
+                "conversationId": conversation_id
+            },
             {
                 "$set": {"tokenUsage": []}
             }
@@ -76,7 +99,8 @@ class MongoConversationHistoryRepository(AbstractConversationHistoryRepository):
             messages = [
                 models.ChatMessage(
                     role=message["role"],
-                    content=message["content"]
+                    content=message["content"],
+                    context=message.get("context", None)
                 ) for message in doc.get("messages", [])
             ]
 

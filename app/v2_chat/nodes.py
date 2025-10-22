@@ -38,7 +38,8 @@ class GraphNodes:
                     content=doc.get("content", ""),
                     snapshot_id=doc.get("snapshotId", ""),
                     source_id=doc.get("sourceId", ""),
-                    metadata=doc.get("metadata", {})
+                    name=doc.get("name", None),
+                    location=doc.get("location", None)
                 )
                 for doc in response.json()
             ]
