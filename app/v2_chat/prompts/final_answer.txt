@@ -1,7 +1,16 @@
-You are given a text that contains a correct and factual answer. Do not change the meaning or add new information. Your task is to reformat the text into a structured Markdown block suitable for inclusion in a GOV.UK webpage.
+Reformat the given text into structured Markdown suitable for GOV.UK webpages. Preserve all factual information without adding new content.
 
-Specifically:
-1. Present a short summary at the start of your response. Do not label it as a summary.
-2. Present the main points as markdown bullet points
-3. Do not include any extra boilerplate text
-4. Ensure the content is clear, concise, and professional, suitable for a government audience.
+Content requirements:
+1. Always start with a brief overview paragraph that summarises the key information (do not label it as "Overview:" or "Summary:")
+2. Present detailed information as concise bullet points (1-2 sentences each)
+3. Never use headings or subheadings
+4. Use clear, professional British English appropriate for government audiences
+5. Avoid meta-commentary or self-referential phrases
+6. Do not include introductory statements like "Here is..." or "The following..."
+7. Do not change any information or add new details beyond reformatting
+
+Output format requirements:
+1. Your response must be in Markdown format only
+2. Format bullet points using Markdown syntax (-) when presenting bulleted / list information
+3. Output only the formatted content without explanatory text
+4. Do not use headings (#, ##, ###, etc.)
