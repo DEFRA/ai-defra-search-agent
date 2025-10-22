@@ -35,10 +35,12 @@ class LangGraphChatAgent(AbstractChatAgent):
         workflow.add_node(nodes.GraphNodes.RETRIEVE, node_container.retrieve)
         workflow.add_node(nodes.GraphNodes.GRADE_DOCUMENTS, node_container.grade_documents)
         workflow.add_node(nodes.GraphNodes.GENERATE, node_container.generate)
+        workflow.add_node(nodes.GraphNodes.FINAL_ANSWER, node_container.format_final_answer)
 
         workflow.add_edge(nodes.GraphNodes.RETRIEVE, nodes.GraphNodes.GRADE_DOCUMENTS)
         workflow.add_edge(nodes.GraphNodes.GRADE_DOCUMENTS, nodes.GraphNodes.GENERATE)
-        workflow.add_edge(nodes.GraphNodes.GENERATE, graph.END)
+        workflow.add_edge(nodes.GraphNodes.GENERATE, nodes.GraphNodes.FINAL_ANSWER)
+        workflow.add_edge(nodes.GraphNodes.FINAL_ANSWER, graph.END)
 
         workflow.set_entry_point(nodes.GraphNodes.RETRIEVE)
 

@@ -39,7 +39,7 @@ class ChatService:
             conversation.conversation_id,
             conv_models.ChatMessage(
                 role="assistant",
-                content=response.get("answer"),
+                content=response.get("final_answer"),
                 context=response.get("context")
             )
         )
