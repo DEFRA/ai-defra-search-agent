@@ -1,7 +1,6 @@
 import logging
 
 import fastapi
-import fastapi.params
 
 from app.conversation_history import dependencies as conv_deps
 from app.conversation_history import service as conv_service
@@ -12,13 +11,13 @@ logger = logging.getLogger(__name__)
 router = fastapi.APIRouter(tags=["chat"])
 
 
-def get_chat_service(history_service: conv_service.ConversationHistoryService = fastapi.params.Depends(conv_deps.get_conversation_history_service)):
+def get_chat_service(history_service: conv_service.ConversationHistoryService = fastapi.Depends(conv_deps.get_conversation_history_service)):
     orchestrator = agent.LangGraphChatAgent()
     return service.ChatService(orchestrator, history_service)
 
 
 @router.post("/chat", response_model=api_schemas.ChatResponse)
-async def chat(request: api_schemas.ChatRequest, chat_service: service.ChatService=fastapi.params.Depends(get_chat_service)):
+async def chat(request: api_schemas.ChatRequest, chat_service: service.ChatService=fastapi.Depends(get_chat_service)):
     response, conversation_id = await chat_service.execute_chat(
         request.question,
         request.conversation_id

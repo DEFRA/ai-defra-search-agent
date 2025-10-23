@@ -1,37 +1,41 @@
+import dataclasses
 import json
 import logging
-from dataclasses import dataclass, field
 
 import boto3
 
-from app.config import get_config
+from app import config
 
 bedrock_runtime_client: boto3.client = None
 bedrock_client: boto3.client = None
 
 logger = logging.getLogger(__name__)
 
-app_config = get_config()
+app_config = config.get_config()
 
 
-@dataclass
+@dataclasses.dataclass
 class Message:
     role: str
     content: dict[str, any]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class TokenUsage:
     input_tokens: int
     output_tokens: int
-    total_tokens: int
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
+class ChatResponse:
+    content: list[dict[str, any]] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass(frozen=True)
 class ModelResponse:
     model: str
-    content: list[dict[str, any]] = field(default_factory=list)
-    token_usage: TokenUsage = TokenUsage(0, 0, 0)
+    content: list[dict[str, any]]
+    token_usage: TokenUsage
 
 
 class BedrockInferenceService:
