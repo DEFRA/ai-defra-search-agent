@@ -2,7 +2,8 @@ import fastapi
 import pymongo.asynchronous.database
 
 from app.common import mongo
-from app.conversation_history import repository, service as conv_service
+from app.conversation_history import repository
+from app.conversation_history import service as conv_service
 from app.v2_chat import agent, service
 
 
