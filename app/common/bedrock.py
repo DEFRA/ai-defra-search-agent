@@ -25,6 +25,10 @@ class TokenUsage:
     input_tokens: int
     output_tokens: int
 
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
 
 @dataclasses.dataclass(frozen=True)
 class ChatResponse:
@@ -96,8 +100,7 @@ class BedrockInferenceService:
 
         return TokenUsage(
             input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=input_tokens + output_tokens
+            output_tokens=output_tokens
         )
 
 def _create_bedrock_runtime_client():
