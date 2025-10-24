@@ -26,7 +26,7 @@ class GraphNodes:
         request = {
             "groupId": app_config.workflow.default_knowledge_group_id,
             "query": state.question,
-            "maxResults": 5
+            "maxResults": 10
         }
 
         async with http_client.create_async_client() as client:
