@@ -1,24 +1,16 @@
 import logging
 
 import fastapi
-import fastapi.params
 
-from app.conversation_history import dependencies as conv_deps
-from app.conversation_history import service as conv_service
-from app.v2_chat import agent, api_schemas, service
+from app.v2_chat import api_schemas, dependencies, service
 
 logger = logging.getLogger(__name__)
 
 router = fastapi.APIRouter(tags=["chat"])
 
 
-def get_chat_service(history_service: conv_service.ConversationHistoryService = fastapi.params.Depends(conv_deps.get_conversation_history_service)):
-    orchestrator = agent.LangGraphChatAgent()
-    return service.ChatService(orchestrator, history_service)
-
-
 @router.post("/chat", response_model=api_schemas.ChatResponse)
-async def chat(request: api_schemas.ChatRequest, chat_service: service.ChatService=fastapi.params.Depends(get_chat_service)):
+async def chat(request: api_schemas.ChatRequest, chat_service: service.ChatService=fastapi.Depends(dependencies.get_chat_service)):
     response, conversation_id = await chat_service.execute_chat(
         request.question,
         request.conversation_id
@@ -27,7 +19,8 @@ async def chat(request: api_schemas.ChatRequest, chat_service: service.ChatServi
     context_documents = [
         api_schemas.ContextDocumentResponse(
             content=doc.content,
-            title=doc.metadata.get("title", "Unknown Title"),
+            name=doc.name,
+            location=doc.location,
             snapshot_id=doc.snapshot_id,
             source_id=doc.source_id
         )

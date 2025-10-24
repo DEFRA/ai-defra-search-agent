@@ -26,7 +26,7 @@ class GraphNodes:
         request = {
             "groupId": app_config.workflow.default_knowledge_group_id,
             "query": state.question,
-            "maxResults": 5
+            "maxResults": 10
         }
 
         async with http_client.create_async_client() as client:
@@ -38,7 +38,8 @@ class GraphNodes:
                     content=doc.get("content", ""),
                     snapshot_id=doc.get("snapshotId", ""),
                     source_id=doc.get("sourceId", ""),
-                    metadata=doc.get("metadata", {})
+                    name=doc.get("name", None),
+                    location=doc.get("location", None)
                 )
                 for doc in response.json()
             ]
@@ -101,3 +102,27 @@ class GraphNodes:
         answer = generation.content[0]["text"]
 
         return { "answer": answer, "token_usage": state.token_usage }
+
+    def format_final_answer(self, state: state_models.ChatState) -> state_models.ChatState:
+        prompt = self.dependencies.prompt_repository.get_prompt_by_name("final_answer.txt")
+
+        messages = [{"role": "user", "content": state.answer}]
+
+        generation = self.dependencies.inference_service.invoke_anthropic(
+            app_config.bedrock.grading_model,
+            system_prompt=prompt,
+            messages=messages
+        )
+
+        state_token_usage = models.StageTokenUsage(
+            model=generation.model,
+            stage_name="format_final_answer",
+            input_tokens=generation.token_usage.input_tokens,
+            output_tokens=generation.token_usage.output_tokens
+        )
+
+        state.token_usage.append(state_token_usage)
+
+        final_answer = generation.content[0]["text"]
+
+        return { "final_answer": final_answer, "token_usage": state.token_usage }

@@ -10,7 +10,7 @@ class InputState:
 
 @dataclasses.dataclass(frozen=True)
 class OutputState:
-    answer: str
+    final_answer: str
     context: list[models.KnowledgeDocument] = dataclasses.field(default_factory=list)
     token_usage: list[models.StageTokenUsage] = dataclasses.field(default_factory=list)
 
@@ -19,6 +19,7 @@ class OutputState:
 class ChatState:
     question: str
     answer: str = ""
+    final_answer: str = ""
     candidate_documents: list[models.KnowledgeDocument] = dataclasses.field(default_factory=list)
     context: list[models.KnowledgeDocument] = dataclasses.field(default_factory=list)
     conversation_history: list[models.ChatMessage] = dataclasses.field(default_factory=list)

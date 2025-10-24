@@ -4,6 +4,8 @@ import datetime
 
 @dataclasses.dataclass(frozen=True)
 class KnowledgeDocument:
+    name: str | None
+    location: str | None
     content: str
     snapshot_id: str
     source_id: str

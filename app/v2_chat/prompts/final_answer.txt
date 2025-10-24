@@ -1,11 +1,23 @@
-You are given a text that contains a correct and factual answer. Do not change the meaning or add new information. Reformat the answer so that it renders correctly in a .njk template using UK Government
+Reformat the given text into structured Markdown suitable for GOV.UK webpages. Preserve all factual information without adding new content.
 
-Specifically:
+CRITICAL: Start your response immediately with the content. Do not begin with any conversational phrases, introductory statements, or meta-commentary such as:
+- "Here is the content reformatted..."
+- "The following information..."
+- "Based on the text..."
+- "Here are the details..."
+- Any similar introductory phrases
 
-1. Present the main points as <ul class="govuk-list govuk-list--bullet"> bullet points.
-2. Add a short summary in a <p class="govuk-body"> paragraph at the top.
-3. Ensure all text uses GOV.UK Frontend classes (e.g. govuk-body, govuk-list, etc.).
-4. Do not include extra boilerplate — only the formatted content block.
-5. Ensure the content is clear, concise, and professional, suitable for a government audience.
-Here is the text to reformat:
-{answer}
+Content requirements:
+1. Always start with a brief overview paragraph that summarises the key information (do not label it as "Overview:" or "Summary:")
+2. Present detailed information as concise bullet points (1-2 sentences each)
+3. Never use headings or subheadings
+4. Use clear, professional British English appropriate for government audiences
+5. Avoid meta-commentary or self-referential phrases
+6. Do not change any information or add new details beyond reformatting
+
+Output format requirements:
+1. Your response must be in Markdown format only
+2. Format bullet points using Markdown syntax (-) when presenting bulleted / list information
+3. Output only the formatted content without explanatory text
+4. Do not use headings (#, ##, ###, etc.)
+5. Begin immediately with the substantive content

@@ -46,6 +46,8 @@ class ConversationHistoryService:
     async def get_history(self, conversation_id: uuid.UUID) -> models.ConversationHistory:
         conversation = await self.repository.get_history(conversation_id)
 
+        print(conversation)
+
         if conversation is None:
             msg = f"Conversation with ID {conversation_id} not found."
             raise models.ConversationNotFoundError(msg)

@@ -4,6 +4,11 @@ import pydantic
 class MessageResponse(pydantic.BaseModel):
     role: str = pydantic.Field(..., description="Role of the message sender (e.g., user, assistant)")
     content: str = pydantic.Field(..., description="Content of the message")
+    sources: list[dict[str, str]] | None = pydantic.Field(
+        None,
+        description="List of source documents related to the message",
+        serialization_alias="sources"
+    )
 
 
 class TokenUsageResponse(pydantic.BaseModel):
