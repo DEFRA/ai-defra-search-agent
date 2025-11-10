@@ -21,7 +21,8 @@ class ChatRequest(pydantic.BaseModel):
 
 class ContextDocumentResponse(pydantic.BaseModel):
     content: str = pydantic.Field(description="Content of matched document content")
-    title: str = pydantic.Field(description="Title of document or knowledge source")
+    location: str = pydantic.Field(description="Location of document or knowledge source")
+    name: str = pydantic.Field(description="Name of document or knowledge source")
     snapshot_id: str = pydantic.Field(
         description="Internal identifier for parent knowledge snapshot",
         serialization_alias="snapshotId",
