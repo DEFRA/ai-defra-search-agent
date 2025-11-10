@@ -8,9 +8,10 @@ from app.v2_chat import models as chat_models
 class ChatMessage:
     role: str
     content: str
+    context: chat_models.KnowledgeDocument | None = None
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class ConversationHistory:
     conversation_id: uuid.UUID
     messages: list[ChatMessage] = dataclasses.field(default_factory=list)
