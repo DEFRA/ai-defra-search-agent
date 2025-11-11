@@ -10,11 +10,10 @@ ENV LOG_CONFIG="logging-dev.json"
 
 USER root
 
-# Install curl via Debian 13 (trixie) backport to patch CVE-2025-0725
-RUN echo "deb https://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/bookworm-backports.list \
-    && apt update \
-    && apt install -t bookworm-backports -y --no-install-recommends \
-        curl \
+# Install curl - using standard version for macOS compatibility
+# TODO: Upgrade to patched version for CVE-2025-0725 when stable ARM64 builds are available
+RUN apt update \
+    && apt install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 USER nonroot
@@ -48,9 +47,10 @@ USER root
 # CDP requires a shell and curl to run health checks
 COPY --from=development /bin/sh /bin/sh
 
-# Copy curl from the development stage to production
-COPY --from=development /lib/x86_64-linux-gnu/* /lib/x86_64-linux-gnu/
+# Copy curl and its dependencies from the development stage to production
 COPY --from=development /bin/curl /bin/curl
+COPY --from=development /lib/*-linux-gnu/* /lib/
+COPY --from=development /usr/lib/*-linux-gnu/* /usr/lib/
 
 USER nonroot
 
