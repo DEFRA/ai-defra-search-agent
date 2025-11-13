@@ -33,7 +33,7 @@ services:
     volumes:
       - mongodb-data:/data
 
-  service:
+  ai-defra-search-agent:
     build:
       context: .
       target: development
@@ -48,8 +48,7 @@ services:
     profiles:
       - service
     env_file:
-      - "compose/aws.env"
-      - "compose/secrets.env"
+      - ".env"
     environment:
       PORT: ${PORT:-8086}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}

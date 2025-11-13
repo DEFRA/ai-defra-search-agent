@@ -13,10 +13,7 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     secret_access_key: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_SECRET_ACCESS_KEY")
     guardrail_identifier: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_GUARDRAIL_IDENTIFIER")
     guardrail_version: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_GUARDRAIL_VERSION")
-    generation_model: str = pydantic.Field(..., alias="AWS_BEDROCK_GENERATION_MODEL")
-    grading_model: str = pydantic.Field(default="default-grading-model", alias="AWS_BEDROCK_MODEL_GRADING")
-    provider: str = pydantic.Field(default="anthropic", alias="AWS_BEDROCK_PROVIDER")
-    embedding_model: str = pydantic.Field(..., alias="AWS_BEDROCK_EMBEDDING_MODEL")
+    default_generation_model: str = pydantic.Field(..., alias="AWS_BEDROCK_DEFAULT_GENERATION_MODEL")
 
 
 class MongoConfig(pydantic_settings.BaseSettings):
@@ -24,12 +21,6 @@ class MongoConfig(pydantic_settings.BaseSettings):
     uri: str = pydantic.Field(..., alias="MONGO_URI")
     database: str = pydantic.Field(default="ai-defra-search-agent", alias="MONGO_DATABASE")
     truststore: str = pydantic.Field(default="TRUSTSTORE_CDP_ROOT_CA", alias="MONGO_TRUSTSTORE")
-
-
-class ChatWorkflowConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict()
-    data_service_url: pydantic.HttpUrl = pydantic.Field(..., alias="DATA_SERVICE_URL")
-    default_knowledge_group_id: str = pydantic.Field(..., alias="DEFAULT_KNOWLEDGE_GROUP_ID")
 
 
 class AppConfig(pydantic_settings.BaseSettings):
@@ -46,7 +37,6 @@ class AppConfig(pydantic_settings.BaseSettings):
 
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
-    workflow: ChatWorkflowConfig = pydantic.Field(default_factory=ChatWorkflowConfig)
 
 
 config: AppConfig | None = None
