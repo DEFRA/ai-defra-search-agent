@@ -5,9 +5,9 @@ import fastapi
 import uvicorn
 
 from app import config
+from app.chat import router as chat_router
 from app.common import mongo, tracing
 from app.health import router as health_router
-from app.chat import router as chat_router
 
 logger = logging.getLogger(__name__)
 
