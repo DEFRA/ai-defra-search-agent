@@ -39,6 +39,7 @@ services:
       target: development
     ports:
       - 8086:8086
+      - 5679:5679
     links:
       - "mongodb:mongodb"
     depends_on:
