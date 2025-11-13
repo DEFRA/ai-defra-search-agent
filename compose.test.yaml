@@ -4,7 +4,7 @@ services:
       target: development
     image: ai-defra-search-agent-development
     container_name: ai-defra-search-agent-test
-    command: uv run pytest
+    entrypoint: uv run task test
     env_file:
       - path: .env
         required: false
@@ -14,7 +14,7 @@ services:
       HOST: ${HOST:-0.0.0.0}
       LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
     volumes:
-      - ./src/:/home/node/src
-      - ./test/:/home/node/test
-      - ./package.json:/home/node/package.json
-      - ./coverage:/home/node/coverage
+      - ./app/:/home/nonroot/app
+      - ./tests/:/home/nonroot/tests
+      - ./coverage:/home/nonroot/coverage:rw
+      - ./pytest.ini:/home/nonroot/pytest.ini:ro

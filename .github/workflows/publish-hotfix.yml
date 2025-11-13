@@ -25,22 +25,20 @@ jobs:
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
           cache: 'pip'
       - run: |
           pipx install uv
           uv sync --frozen
-          uv run ruff check
-#          uv run pytest
+          uv run task docker-test
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v6.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Publish Hot Fix
         uses: DEFRA/cdp-build-action/build-hotfix@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-#     - run: npm install && npm test
-#     - name: SonarCloud Scan
-#       uses: SonarSource/sonarcloud-github-action@master
-#       env:
-#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

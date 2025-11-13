@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 app_config = config.get_config()
 
+
 async def async_hook_request_tracing(request):
     trace_id = tracing.ctx_trace_id.get(None)
     if trace_id:
@@ -33,7 +34,7 @@ def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
     """
     client_kwargs = {
         "timeout": request_timeout,
-        "event_hooks": {"request": [async_hook_request_tracing]}
+        "event_hooks": {"request": [async_hook_request_tracing]},
     }
 
     if app_config.http_proxy:
@@ -41,7 +42,7 @@ def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
 
         proxy_mounts = {
             "http://": httpx.AsyncHTTPTransport(proxy=app_config.http_proxy),
-            "https://": httpx.AsyncHTTPTransport(proxy=app_config.http_proxy)
+            "https://": httpx.AsyncHTTPTransport(proxy=app_config.http_proxy),
         }
 
         client_kwargs["mounts"] = proxy_mounts
@@ -61,7 +62,7 @@ def create_client(request_timeout: int = 30) -> httpx.Client:
     """
     client_kwargs = {
         "timeout": request_timeout,
-        "event_hooks": {"request": [hook_request_tracing]}
+        "event_hooks": {"request": [hook_request_tracing]},
     }
 
     if app_config.http_proxy:
@@ -69,7 +70,7 @@ def create_client(request_timeout: int = 30) -> httpx.Client:
 
         proxy_mounts = {
             "http://": httpx.HTTPTransport(proxy=app_config.http_proxy),
-            "https://": httpx.HTTPTransport(proxy=app_config.http_proxy)
+            "https://": httpx.HTTPTransport(proxy=app_config.http_proxy),
         }
 
         client_kwargs["mounts"] = proxy_mounts

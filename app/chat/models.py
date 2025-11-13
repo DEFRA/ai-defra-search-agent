@@ -1,6 +1,7 @@
 import dataclasses
 import uuid
 
+
 @dataclasses.dataclass(frozen=True)
 class Message:
     role: str

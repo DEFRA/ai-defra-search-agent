@@ -5,7 +5,7 @@ ARG PORT_DEBUG=8086
 
 FROM defradigital/python-development:${PARENT_VERSION} AS development
 
-ENV PATH="/home/nonroot/.venv/bin:${PATH}"
+ENV PATH="/home/nonroot/.venv/bin:/home/nonroot/.local/bin:${PATH}"
 ENV LOG_CONFIG="logging-dev.json"
 
 WORKDIR /home/nonroot

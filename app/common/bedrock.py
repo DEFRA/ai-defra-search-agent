@@ -47,21 +47,23 @@ class BedrockInferenceService:
         self.runtime_client = get_bedrock_runtime_client()
         self.api_client = get_bedrock_client()
 
-    def invoke_anthropic(self, model: str, system_prompt: str, messages: list[Message]) -> ModelResponse:
+    def invoke_anthropic(
+        self, model: str, system_prompt: str, messages: list[Message]
+    ) -> ModelResponse:
         native_request = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 512,
             "temperature": 0.7,
             "system": system_prompt,
-            "messages": messages
+            "messages": messages,
         }
 
-        invoke_args = {
-            "modelId": model,
-            "body": json.dumps(native_request)
-        }
+        invoke_args = {"modelId": model, "body": json.dumps(native_request)}
 
-        if app_config.bedrock.guardrail_identifier and app_config.bedrock.guardrail_version:
+        if (
+            app_config.bedrock.guardrail_identifier
+            and app_config.bedrock.guardrail_version
+        ):
             invoke_args["guardrailIdentifier"] = app_config.bedrock.guardrail_identifier
             invoke_args["guardrailVersion"] = app_config.bedrock.guardrail_version
 
@@ -72,9 +74,8 @@ class BedrockInferenceService:
         return ModelResponse(
             model=self._get_backing_model(model) or model,
             content=response_json["content"],
-            token_usage=self._extract_token_usage(response_json)
+            token_usage=self._extract_token_usage(response_json),
         )
-
 
     def _get_backing_model(self, model_id: str) -> str | None:
         if not model_id.startswith("arn:aws:bedrock:"):
@@ -98,10 +99,8 @@ class BedrockInferenceService:
         input_tokens = usage.get("input_tokens", 0)
         output_tokens = usage.get("output_tokens", 0)
 
-        return TokenUsage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens
-        )
+        return TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens)
+
 
 def _create_bedrock_runtime_client():
     if app_config.bedrock.use_credentials:
@@ -109,13 +108,10 @@ def _create_bedrock_runtime_client():
             "bedrock-runtime",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region
+            region_name=app_config.aws_region,
         )
 
-    return boto3.client(
-        "bedrock-runtime",
-        region_name=app_config.aws_region
-    )
+    return boto3.client("bedrock-runtime", region_name=app_config.aws_region)
 
 
 def _create_bedrock_client():
@@ -124,13 +120,10 @@ def _create_bedrock_client():
             "bedrock",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region
+            region_name=app_config.aws_region,
         )
 
-    return boto3.client(
-        "bedrock",
-        region_name=app_config.aws_region
-    )
+    return boto3.client("bedrock", region_name=app_config.aws_region)
 
 
 def get_bedrock_runtime_client():
@@ -140,6 +133,7 @@ def get_bedrock_runtime_client():
         bedrock_runtime_client = _create_bedrock_runtime_client()
 
     return bedrock_runtime_client
+
 
 def get_bedrock_client():
     global bedrock_client
