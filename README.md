@@ -24,7 +24,13 @@ This is work-in-progress. See [To Do List](./TODO.md)
 
 ### Python
 
-Please install python `>= 3.12` and `pipx` in your environment. This template uses [uv](https://github.com/astral-sh/uv) to manage the environment and dependencies.
+Please install python `>= 3.13.7` and `pipx` in your environment. This template uses [uv](https://github.com/astral-sh/uv) to manage the environment and dependencies.
+
+**Apple Silicon**
+If using Apple Silicon, you will need to install the `arm64` version of python 3.13.7. (e.g. via brew: `brew install python@3.13`)
+Check you have >= 3.13.7 installed by running `python3 --version`
+Then check where python is installed by running `which python3.13`
+Then create your venv using the correct python interpreter (e.g. `uv venv --python /opt/homebrew/bin/python3.13`)
 
 ```python
 # install uv via pipx
@@ -35,9 +41,6 @@ uv sync
 
 # source python venv
 source .venv/bin/activate
-
-# install the pre-commit hooks
-pre-commit install
 ```
 
 This opinionated template uses the [`Fast API`](https://fastapi.tiangolo.com/) Python API framework.
@@ -119,6 +122,29 @@ This configuration will:
 - Fix linting issues automatically when possible
 - Organize imports according to isort rules
 
+### Intellij Configuration
+#### Configure Python Interpreter
+
+1. Open **File → Project Structure** 
+2. Navigate to **Platform settings → SDKs**
+3. Click **Add SDK → Python SDK from disk → Existing Environment**
+4. Set type to uv
+5. Select Uv env to use your local venv:
+```
+   [project-root]/ai-defra-search-agent/.venv/bin/python
+```
+6. Click **OK** to apply
+
+### Configure Test Environment
+
+1. Go to **Run → Edit Configurations**
+2. Select or create your test configuration
+3. Add required environment variables:
+    - Click the **Environment variables** field
+    - Click the folder icon to add variables
+    - Add all necessary variables (see `.env.example` for reference)
+4. Click **OK** to save
+
 #### Ruff Configuration
 
 Ruff is configured in the `.ruff.toml` file
@@ -190,7 +216,7 @@ Testing follows the [FastApi documented approach](https://fastapi.tiangolo.com/t
 To test the application run:
 
 ```bash
-uv run pytest
+ uv run task docker-test
 ```
 
 ## API endpoints
