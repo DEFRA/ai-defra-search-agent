@@ -27,6 +27,8 @@ jobs:
       - run: |
           pipx install uv
           uv sync --frozen
+          mkdir -p coverage
+          chmod -R a+rw ./coverage
           uv run task docker-test
 
       - name: SonarCloud Scan

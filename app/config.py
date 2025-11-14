@@ -26,6 +26,12 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     default_generation_model: str = pydantic.Field(
         ..., alias="AWS_BEDROCK_DEFAULT_GENERATION_MODEL"
     )
+    max_response_tokens: int = pydantic.Field(
+        default=1024, alias="AWS_BEDROCK_MAX_RESPONSE_TOKENS"
+    )
+    default_model_temprature: float = pydantic.Field(
+        default=0.7, alias="AWS_BEDROCK_DEFAULT_MODEL_TEMPERATURE"
+    )
 
 
 class MongoConfig(pydantic_settings.BaseSettings):
