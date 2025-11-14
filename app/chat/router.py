@@ -9,9 +9,24 @@ logger = logging.getLogger(__name__)
 router = fastapi.APIRouter(tags=["chat"])
 
 
-@router.post("/chat")
+@router.post("/chat", response_model=api_schemas.ChatResponse)
 async def chat(
     request: api_schemas.ChatRequest,
     chat_service: service.ChatService = fastapi.Depends(dependencies.get_chat_service),
 ):
-    pass
+    conversation = await chat_service.execute_chat(
+        question=request.question,
+        conversation_id=request.conversation_id
+    )
+
+    return api_schemas.ChatResponse(
+        conversation_id=conversation.id,
+        messages=[
+            api_schemas.MessageResponse(
+                role=message.role,
+                content=message.content,
+                model=message.model,
+            )
+            for message in conversation.messages
+        ],
+    )
