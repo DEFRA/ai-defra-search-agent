@@ -1,7 +1,7 @@
 import pytest
 
 from app.chat import models, repository, service
-from tests.fixtures import agent as agent_fixtures, mongo
+from tests.fixtures import agent as agent_fixtures
 
 
 async def test_execute_chat_new_conversation(db):

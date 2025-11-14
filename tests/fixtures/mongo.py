@@ -1,5 +1,6 @@
-import pytest
 import pymongo
+import pytest
+
 
 @pytest.fixture
 def db():
