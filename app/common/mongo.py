@@ -47,10 +47,10 @@ async def get_db(
 ) -> pymongo.asynchronous.database.AsyncDatabase:
     global db
     if db is None:
-        # Configure codec options for proper UUID handling
         codec_options = bson.codec_options.CodecOptions(
             uuid_representation=bson.binary.UuidRepresentation.STANDARD
         )
+
         db = client.get_database(app_config.mongo.database, codec_options=codec_options)
 
         await _ensure_indexes(db)

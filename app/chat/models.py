@@ -6,10 +6,14 @@ import uuid
 class Message:
     role: str
     content: str
-    model: str = "Unknown"
+    model: str | None = None
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class Conversation:
-    conversation_id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
+    id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
     messages: list[Message] = dataclasses.field(default_factory=list)
+
+
+class ConversationNotFoundError(Exception):
+    pass

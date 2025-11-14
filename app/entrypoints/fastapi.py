@@ -33,7 +33,7 @@ app.add_middleware(tracing.TraceIdMiddleware)
 
 # Setup Routes
 app.include_router(health_router.router)
-app.include_router(chat_router.router, prefix="/v2")
+app.include_router(chat_router.router)
 
 
 def main() -> None:
