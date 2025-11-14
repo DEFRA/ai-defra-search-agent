@@ -5,9 +5,12 @@ from tests.fixtures import agent as agent_fixtures
 from tests.fixtures.mongo import mongo
 
 async def test_execute_chat_new_conversation(mongo):
+    conversation_repository = repository.MongoConversationRepository(mongo.db)
+    history_service = service.ConversationHistoryService(conversation_repository)
     chat_service = service.ChatService(
         chat_agent=agent_fixtures.StubChatAgent(),
-        conversation_repository=repository.MongoConversationRepository(mongo.db),
+        conversation_repository=conversation_repository,
+        history_service=history_service,
     )
 
     conversation = await chat_service.execute_chat("Hello")
@@ -20,9 +23,12 @@ async def test_execute_chat_new_conversation(mongo):
 
 
 async def test_execute_chat_existing_conversation(mongo):
+    conversation_repository = repository.MongoConversationRepository(mongo.db)
+    history_service = service.ConversationHistoryService(conversation_repository)
     chat_service = service.ChatService(
         chat_agent=agent_fixtures.StubChatAgent(),
-        conversation_repository=repository.MongoConversationRepository(mongo.db),
+        conversation_repository=conversation_repository,
+        history_service=history_service,
     )
 
     conversation = await chat_service.execute_chat("Hello")
@@ -40,9 +46,12 @@ async def test_execute_chat_existing_conversation(mongo):
 
 
 async def test_nonexistent_conversation_raises_error(mongo):
+    conversation_repository = repository.MongoConversationRepository(mongo.db)
+    history_service = service.ConversationHistoryService(conversation_repository)
     chat_service = service.ChatService(
         chat_agent=agent_fixtures.StubChatAgent(),
-        conversation_repository=repository.MongoConversationRepository(mongo.db),
+        conversation_repository=conversation_repository,
+        history_service=history_service,
     )
 
 

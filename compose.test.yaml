@@ -1,10 +1,22 @@
 services:
+  mongodb:
+    image: mongo:6.0.13
+    networks:
+      - cdp-tenant
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb-test-data:/data
+
   ai-defra-search-agent:
     build:
       target: development
     image: ai-defra-search-agent-development
     container_name: ai-defra-search-agent-test
     entrypoint: uv run task test
+    depends_on:
+      mongodb:
+        condition: service_started
     env_file:
       - path: .env
         required: false
@@ -20,3 +32,8 @@ services:
       - ./tests/:/home/nonroot/tests
       - ./coverage:/home/nonroot/coverage:rw
       - ./pytest.ini:/home/nonroot/pytest.ini:ro
+    networks:
+      - cdp-tenant
+
+volumes:
+  mongodb-test-data:

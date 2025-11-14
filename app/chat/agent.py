@@ -17,12 +17,28 @@ class BedrockChatAgent(AbstractChatAgent):
         self.inference_service = inference_service
 
     async def execute_flow(
-        self, conversation: models.Conversation # noqa: ARG002
+        self, conversation: models.Conversation
     ) -> list[models.Message]:
+        messages = [
+            {"role": msg.role, "content": msg.content} 
+            for msg in conversation.messages
+        ]
+        
+        response = self.inference_service.invoke_anthropic(
+            model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+            system_prompt="You are a helpful assistant.",
+            messages=messages
+        )
+        
+        # Extract text content from the response
+        content = ""
+        if response.content and len(response.content) > 0:
+            content = response.content[0].get("text", "")
+        
         return [
             models.Message(
                 role="assistant",
-                content="mock response",
-                model=None,
+                content=content,
+                model=response.model,
             )
         ]

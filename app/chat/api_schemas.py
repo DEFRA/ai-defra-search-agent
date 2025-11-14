@@ -1,4 +1,5 @@
 import uuid
+from typing import Annotated
 
 import pydantic
 
@@ -9,12 +10,12 @@ class ChatRequest(pydantic.BaseModel):
         min_length=1,
         examples=["What is the weather like today?"],
     )
-    conversation_id: uuid.UUID | None = pydantic.Field(
+    conversation_id: Annotated[uuid.UUID | None, pydantic.Field(
         default=None,
         description="The ID of an existing conversation to continue. If not provided, a new conversation will be started.",
         examples=["3fa85f64-5717-4562-b374-2c963f66afa6"],
         alias="conversationId"
-    )
+    )]
 
 
 class MessageResponse(pydantic.BaseModel):

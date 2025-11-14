@@ -1,40 +1,63 @@
 import fastapi.testclient
 import pytest
+import pymongo
 
-from app.chat import dependencies
 from app.entrypoints import fastapi as fastapi_app
-from tests.fixtures import agent as agent_fixtures
+from app.common import mongo
+from app.chat import dependencies
+from tests.fixtures.mongo import mongo as mongo_fixture
+from tests.fixtures import bedrock as bedrock_fixture
 
 
 @pytest.fixture
 def client():
-    fastapi_app.app.dependency_overrides[dependencies.get_chat_agent] = (
-        lambda: agent_fixtures.StubChatAgent()
-    )
+    def get_fresh_mongo_client():
+        return pymongo.AsyncMongoClient("mongodb", uuidRepresentation="standard")
+    
+    def get_fresh_mongo_db():
+        client = get_fresh_mongo_client()
+        return client.get_database("ai_defra_search_agent")
+    
+    fastapi_app.app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
+    fastapi_app.app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
 
-    client = fastapi.testclient.TestClient(fastapi_app.app)
+    fastapi_app.app.dependency_overrides[dependencies.get_bedrock_inference_service] = lambda: bedrock_fixture.StubBedrockInferenceService()
+    
+    test_client = fastapi.testclient.TestClient(fastapi_app.app)
 
-    yield client
-
+    yield test_client
+    
+    # Clean up
     fastapi_app.app.dependency_overrides.clear()
 
 
 def test_post_chat_nonexistent_conversation_returns_404(client):
-    response = client.post(
-        "/chat", json={"question": "Hello", "conversationId": "nonexistent-id"}
-    )
+    body = {
+        "question": "Hello",
+        "conversationId": "2c29818a-4367-4114-a789-4494a527b8af",
+    }
+
+    response = client.post("/chat", json=body)
 
     assert response.status_code == 404
 
 
-def test_post_chat_empty_question_returns_404(client):
-    response = client.post("/chat", json={"question": ""})
+def test_post_chat_empty_question_returns_400(client):
+    body = {
+        "question": "",
+    }
 
-    assert response.status_code == 404
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == 400
 
 
 def test_post_sync_chat_valid_question_returns_200(client):
-    response = client.post("/chat", json={"question": "Hello, how are you?"})
+    body = {
+        "question": "Hello, how are you?"
+    }
+
+    response = client.post("/chat", json=body)
 
     assert response.status_code == 200
 
@@ -51,15 +74,22 @@ def test_post_sync_chat_valid_question_returns_200(client):
 
 
 def test_post_chat_with_existing_conversation_returns_200(client):
-    response = client.post("/chat", json={"question": "Hello!"})
+    start_body = {
+        "question": "Hello!"
+    }
+
+    response = client.post("/chat", json=start_body)
     assert response.status_code == 200
 
     conversation_id = response.json()["conversationId"]
 
-    response = client.post(
-        "/chat",
-        json={"question": "How's the weather?", "conversationId": conversation_id},
-    )
+    continue_body = {
+        "question": "How's the weather?",
+        "conversationId": conversation_id
+    }
+
+    response = client.post("/chat", json=continue_body)
+
     assert response.status_code == 200
 
     assert response.json()["conversationId"] is not None

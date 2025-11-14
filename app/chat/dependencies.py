@@ -47,9 +47,11 @@ def get_bedrock_inference_service() -> bedrock_service.BedrockInferenceService:
     )
 
 
-def get_chat_agent() -> agent.AbstractChatAgent:
+def get_chat_agent(
+    inference_service: bedrock_service.BedrockInferenceService = fastapi.Depends(get_bedrock_inference_service)
+) -> agent.AbstractChatAgent:
     return agent.BedrockChatAgent(
-        inference_service=get_bedrock_inference_service()
+        inference_service=inference_service
     )
 
 
@@ -59,12 +61,27 @@ def get_conversation_repository(
     return repository.MongoConversationRepository(db=db)
 
 
+def get_conversation_history_service(
+        conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
+            get_conversation_repository
+        ),
+) -> service.ConversationHistoryService:
+    return service.ConversationHistoryService(
+        conversation_repository=conversation_repository
+    )
+
+
 def get_chat_service(
         chat_agent: agent.AbstractChatAgent = fastapi.Depends(get_chat_agent),
         conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
             get_conversation_repository
         ),
+        history_service: service.ConversationHistoryService = fastapi.Depends(
+            get_conversation_history_service
+        ),
 ) -> service.ChatService:
     return service.ChatService(
-        chat_agent=chat_agent, conversation_repository=conversation_repository
+        chat_agent=chat_agent, 
+        conversation_repository=conversation_repository,
+        history_service=history_service
     )
