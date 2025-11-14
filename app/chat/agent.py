@@ -1,5 +1,6 @@
 import abc
 
+from app import config
 from app.bedrock import service
 from app.chat import models
 
@@ -17,28 +18,31 @@ class BedrockChatAgent(AbstractChatAgent):
         self.inference_service = inference_service
 
     async def execute_flow(
-        self, conversation: models.Conversation
+        self, question: str
     ) -> list[models.Message]:
+        model = config.get_config().bedrock.default_generation_model
+        system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
+
+        # Convert question to Anthropic message format
         messages = [
-            {"role": msg.role, "content": msg.content} 
-            for msg in conversation.messages
+            {"role": "user", "content": question}
         ]
-        
+
+        # Call inference service
         response = self.inference_service.invoke_anthropic(
-            model="anthropic.claude-3-5-sonnet-20241022-v2:0",
-            system_prompt="You are a helpful assistant.",
-            messages=messages
+            model=model,
+            system_prompt=system_prompt,
+            messages=messages,
         )
-        
-        # Extract text content from the response
-        content = ""
-        if response.content and len(response.content) > 0:
-            content = response.content[0].get("text", "")
-        
-        return [
-            models.Message(
+
+        # Convert response to list of messages
+        result_messages = []
+        for content_block in response.content:
+            message = models.Message(
                 role="assistant",
-                content=content,
+                content=content_block["text"],
                 model=response.model,
             )
-        ]
+            result_messages.append(message)
+
+        return result_messages

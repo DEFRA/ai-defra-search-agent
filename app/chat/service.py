@@ -2,53 +2,41 @@ import uuid
 
 from app.chat import agent, models, repository
 
-class ConversationHistoryService:
-    def __init__(
-        self,
-        conversation_repository: repository.AbstractConversationRepository,
-    ):
-        self.conversation_repository = conversation_repository
-
-    async def save_conversation(self, conversation: models.Conversation) -> None:
-        await self.conversation_repository.save(conversation)
-
-    async def get_conversation(self, conversation_id: uuid.UUID) -> models.Conversation:
-        conversation = await self.conversation_repository.get(conversation_id)
-
-        if not conversation:
-            msg = f"Conversation with ID {conversation_id} not found."
-            raise models.ConversationNotFoundError(msg)
-
-        return conversation
-
-
 class ChatService:
     def __init__(
-        self,
-        chat_agent: agent.AbstractChatAgent,
-        conversation_repository: repository.AbstractConversationRepository,
-        history_service: ConversationHistoryService,
+            self,
+            chat_agent: agent.AbstractChatAgent,
+            conversation_repository: repository.AbstractConversationRepository,
     ):
         self.chat_agent = chat_agent
         self.conversation_repository = conversation_repository
-        self.history_service = history_service
 
     async def execute_chat(
-        self, question: str, conversation_id: uuid.UUID = None
+            self, question: str, conversation_id: uuid.UUID = None
     ) -> models.Conversation:
+        # Get or create conversation from repository
         if conversation_id:
-            conversation = await self.history_service.get_conversation(conversation_id)
+            # If conversation_id provided, it must exist
+            conversation = await self.conversation_repository.get(conversation_id)
         else:
+            # Create new conversation if no ID provided
             conversation = models.Conversation()
 
-        conversation.add_message(
-            message=models.Message(role="user", content=question)
-        )
+        if not conversation:
+            msg = f"Conversation with id {conversation_id} not found"
+            raise models.ConversationNotFoundError(msg)
 
-        messages = await self.chat_agent.execute_flow(conversation)
+        # add message to conversation
+        user_message = models.Message(role="user", content=question)
+        conversation.add_message(user_message)
 
-        conversation.add_message(message=messages[-1])
+        # call chat agent to execute flow with question
+        agent_responses = await self.chat_agent.execute_flow(question)
 
-        await self.history_service.save_conversation(conversation)
+        # handle response - add agent messages to conversation
+        for response_message in agent_responses:
+            conversation.add_message(response_message)
+
+        await self.conversation_repository.save(conversation)
 
         return conversation
