@@ -2,8 +2,13 @@ import pymongo
 import pytest
 
 
-@pytest.fixture
-def db():
-    client = pymongo.AsyncMongoClient("mongo", uuidRepresentation="standard")
+class MongoFixture:
+    def __init__(self, db):
+        self.db = db
 
-    return client.get_database("ai_defra_search_agent")
+
+@pytest.fixture
+def mongo():
+    client = pymongo.AsyncMongoClient("mongo", uuidRepresentation="standard")
+    db = client.get_database("ai_defra_search_agent")
+    return MongoFixture(db)

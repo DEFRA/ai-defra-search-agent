@@ -3,11 +3,10 @@ import pytest
 from app.chat import models, repository, service
 from tests.fixtures import agent as agent_fixtures
 
-
-async def test_execute_chat_new_conversation(db):
+async def test_execute_chat_new_conversation(mongo):
     chat_service = service.ChatService(
         chat_agent=agent_fixtures.StubChatAgent(),
-        conversation_repository=repository.MongoConversationRepository(db),
+        conversation_repository=repository.MongoConversationRepository(mongo.db),
     )
 
     conversation = await chat_service.execute_chat("Hello")
@@ -19,10 +18,10 @@ async def test_execute_chat_new_conversation(db):
     assert conversation.messages[1].content == "This is a stub response."
 
 
-async def test_execute_chat_existing_conversation(db):
+async def test_execute_chat_existing_conversation(mongo):
     chat_service = service.ChatService(
         chat_agent=agent_fixtures.StubChatAgent(),
-        conversation_repository=repository.MongoConversationRepository(db),
+        conversation_repository=repository.MongoConversationRepository(mongo.db),
     )
 
     conversation = await chat_service.execute_chat("Hello")
@@ -39,13 +38,14 @@ async def test_execute_chat_existing_conversation(db):
     assert updated_conversation.messages[3].content == "This is a stub response."
 
 
-async def test_nonexistent_conversation_raises_error(db):
+async def test_nonexistent_conversation_raises_error(mongo):
     chat_service = service.ChatService(
         chat_agent=agent_fixtures.StubChatAgent(),
-        conversation_repository=repository.MongoConversationRepository(db),
+        conversation_repository=repository.MongoConversationRepository(mongo.db),
     )
 
-    db.conversations.delete_many({})
+
+    mongo.db.conversations.delete_many({})
 
     with pytest.raises(models.ConversationNotFoundError):
         await chat_service.execute_chat("Hello", conversation_id="nonexistent")
