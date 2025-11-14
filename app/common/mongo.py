@@ -29,15 +29,12 @@ async def get_mongo_client() -> pymongo.AsyncMongoClient:
                 app_config.mongo.truststore,
             )
             client = pymongo.AsyncMongoClient(
-                app_config.mongo.uri,
-                tlsCAFile=cert,
-                uuidRepresentation="standard"
+                app_config.mongo.uri, tlsCAFile=cert, uuidRepresentation="standard"
             )
         else:
             logger.info("Creating MongoDB client")
             client = pymongo.AsyncMongoClient(
-                app_config.mongo.uri,
-                uuidRepresentation="standard"
+                app_config.mongo.uri, uuidRepresentation="standard"
             )
 
         logger.info("Testing MongoDB connection to %s", app_config.mongo.uri)
@@ -45,11 +42,15 @@ async def get_mongo_client() -> pymongo.AsyncMongoClient:
     return client
 
 
-async def get_db(client: pymongo.AsyncMongoClient = fastapi.Depends(get_mongo_client)) -> pymongo.asynchronous.database.AsyncDatabase:
+async def get_db(
+    client: pymongo.AsyncMongoClient = fastapi.Depends(get_mongo_client),
+) -> pymongo.asynchronous.database.AsyncDatabase:
     global db
     if db is None:
-        # Configure codec options for proper UUID handling
-        codec_options = bson.codec_options.CodecOptions(uuid_representation=bson.binary.UuidRepresentation.STANDARD)
+        codec_options = bson.codec_options.CodecOptions(
+            uuid_representation=bson.binary.UuidRepresentation.STANDARD
+        )
+
         db = client.get_database(app_config.mongo.database, codec_options=codec_options)
 
         await _ensure_indexes(db)

@@ -50,3 +50,5 @@ packages = ["app"]
 
 [tool.taskipy.tasks]
 format = "uv run ruff format . && uv run ruff check . --fix"
+test = "uv run ruff check ./app && uv run pytest"
+docker-test = "docker compose down && docker compose -f compose.yaml -f compose.test.yaml run  --build --rm 'ai-defra-search-agent'"

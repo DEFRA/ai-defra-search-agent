@@ -2,13 +2,13 @@ import contextlib
 import logging
 
 import fastapi
+import fastapi.exceptions
 import uvicorn
 
 from app import config
+from app.chat import router as chat_router
 from app.common import mongo, tracing
-from app.conversation_history import router as conversation_history_router
 from app.health import router as health_router
-from app.v2_chat import router as chat_v2_router
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,20 @@ async def lifespan(_: fastapi.FastAPI):
 
 app = fastapi.FastAPI(lifespan=lifespan)
 
+@app.exception_handler(fastapi.exceptions.RequestValidationError)
+async def validation_exception_handler(request: fastapi.Request, exc: fastapi.exceptions.RequestValidationError):
+    logger.error(f"Validation error: {exc.errors()}")
+    return fastapi.responses.JSONResponse(
+        status_code=400,
+        content={"detail": exc.errors()},
+    )
+
 # Setup middleware
 app.add_middleware(tracing.TraceIdMiddleware)
 
 # Setup Routes
 app.include_router(health_router.router)
-app.include_router(chat_v2_router.router, prefix="/v2")
-app.include_router(conversation_history_router.router)
-
+app.include_router(chat_router.router)
 
 def main() -> None:
     uvicorn.run(

@@ -1,0 +1,36 @@
+import logging
+
+import fastapi
+
+from app.chat import api_schemas, dependencies, models, service
+
+logger = logging.getLogger(__name__)
+
+router = fastapi.APIRouter(tags=["chat"])
+
+
+@router.post("/chat", response_model=api_schemas.ChatResponse)
+async def chat(
+    request: api_schemas.ChatRequest,
+    chat_service: service.ChatService = fastapi.Depends(dependencies.get_chat_service),
+):
+    try:
+        conversation = await chat_service.execute_chat(
+            question=request.question,
+            conversation_id=request.conversation_id
+        )
+    except models.ConversationNotFoundError as e:
+        logger.error(f"Conversation not found: {e}")
+        raise fastapi.HTTPException(status_code=404, detail=str(e))
+
+    return api_schemas.ChatResponse(
+        conversation_id=conversation.id,
+        messages=[
+            api_schemas.MessageResponse(
+                role=message.role,
+                content=message.content,
+                model=message.model,
+            )
+            for message in conversation.messages
+        ],
+    )

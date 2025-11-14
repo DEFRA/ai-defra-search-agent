@@ -1,0 +1,101 @@
+from unittest.mock import MagicMock
+
+import pytest
+
+from app.bedrock import models as bedrock_models
+from app.chat import agent
+
+# Mock test data
+MOCK_QUESTION = "What is the question?"
+MOCK_MODEL_ID = "anthropic.claude-3-sonnet"
+MOCK_RESPONSE_TEXT_1 = "First response text"
+MOCK_RESPONSE_TEXT_2 = "Second response text"
+
+SYSTEM_PROMPT = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
+
+
+@pytest.fixture
+def mock_inference_service():
+    """Mock BedrockInferenceService"""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_config(monkeypatch):
+    """Mock app config"""
+    mock_config_obj = MagicMock()
+    mock_config_obj.bedrock.default_generation_model = MOCK_MODEL_ID
+    monkeypatch.setattr("app.config.get_config", lambda: mock_config_obj)
+    return mock_config_obj
+
+
+@pytest.fixture
+def bedrock_agent(mock_inference_service, mock_config):
+    """BedrockChatAgent with mocked dependencies"""
+    return agent.BedrockChatAgent(inference_service=mock_inference_service)
+
+
+@pytest.mark.asyncio
+async def test_executes_flow_with_correct_parameters(bedrock_agent, mock_inference_service, mock_config):
+    # Setup
+    mock_response_content = [
+        {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
+        {"type": "text", "text": MOCK_RESPONSE_TEXT_2},
+    ]
+    mock_model_response = bedrock_models.ModelResponse(
+        model=MOCK_MODEL_ID,
+        content=mock_response_content,
+    )
+    mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
+
+    # Execute
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION)
+
+    # Assert invoke_anthropic called with correct parameters
+    mock_inference_service.invoke_anthropic.assert_called_once()
+    call_args = mock_inference_service.invoke_anthropic.call_args
+
+    # Assert model parameter
+    assert call_args[1]["model"] == MOCK_MODEL_ID
+
+    # Assert system prompt parameter
+    assert call_args[1]["system_prompt"] == SYSTEM_PROMPT
+
+    # Assert messages parameter
+    mock_messages = call_args[1]["messages"]
+    assert len(mock_messages) == 1
+    assert mock_messages[0]["role"] == "user"
+    assert mock_messages[0]["content"] == MOCK_QUESTION
+
+    # Assert response converted to messages correctly
+    assert len(result) == 2  # 2 response messages
+
+    # Verify each message matches the mock response content
+    for i, mock_content in enumerate(mock_response_content):
+        actual_message = result[i]
+        assert actual_message.role == "assistant"
+        assert actual_message.content == mock_content["text"]
+        assert actual_message.model == MOCK_MODEL_ID
+
+
+@pytest.mark.asyncio
+async def test_handles_single_response_message(bedrock_agent, mock_inference_service, mock_config):
+    # Setup
+    mock_response_content = [
+        {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
+    ]
+    mock_model_response = bedrock_models.ModelResponse(
+        model=MOCK_MODEL_ID,
+        content=mock_response_content,
+    )
+    mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
+
+    # Execute
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION)
+
+    # Assert single message returned
+    assert len(result) == 1
+    actual_message = result[0]
+    assert actual_message.role == "assistant"
+    assert actual_message.content == MOCK_RESPONSE_TEXT_1
+    assert actual_message.model == MOCK_MODEL_ID

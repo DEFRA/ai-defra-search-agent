@@ -8,28 +8,41 @@ logger = logging.getLogger(__name__)
 
 class BedrockConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict()
-    use_credentials: bool = pydantic.Field(default=False, alias="AWS_BEDROCK_USE_CREDENTIALS")
-    access_key_id: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_ACCESS_KEY_ID")
-    secret_access_key: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_SECRET_ACCESS_KEY")
-    guardrail_identifier: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_GUARDRAIL_IDENTIFIER")
-    guardrail_version: str | None = pydantic.Field(default=None, alias="AWS_BEDROCK_GUARDRAIL_VERSION")
-    generation_model: str = pydantic.Field(..., alias="AWS_BEDROCK_GENERATION_MODEL")
-    grading_model: str = pydantic.Field(default="default-grading-model", alias="AWS_BEDROCK_MODEL_GRADING")
-    provider: str = pydantic.Field(default="anthropic", alias="AWS_BEDROCK_PROVIDER")
-    embedding_model: str = pydantic.Field(..., alias="AWS_BEDROCK_EMBEDDING_MODEL")
+    use_credentials: bool = pydantic.Field(
+        default=False, alias="AWS_BEDROCK_USE_CREDENTIALS"
+    )
+    access_key_id: str | None = pydantic.Field(
+        default=None, alias="AWS_BEDROCK_ACCESS_KEY_ID"
+    )
+    secret_access_key: str | None = pydantic.Field(
+        default=None, alias="AWS_BEDROCK_SECRET_ACCESS_KEY"
+    )
+    guardrail_identifier: str | None = pydantic.Field(
+        default=None, alias="AWS_BEDROCK_GUARDRAIL_IDENTIFIER"
+    )
+    guardrail_version: str | None = pydantic.Field(
+        default=None, alias="AWS_BEDROCK_GUARDRAIL_VERSION"
+    )
+    default_generation_model: str = pydantic.Field(
+        ..., alias="AWS_BEDROCK_DEFAULT_GENERATION_MODEL"
+    )
+    max_response_tokens: int = pydantic.Field(
+        default=1024, alias="AWS_BEDROCK_MAX_RESPONSE_TOKENS"
+    )
+    default_model_temprature: float = pydantic.Field(
+        default=0.7, alias="AWS_BEDROCK_DEFAULT_MODEL_TEMPERATURE"
+    )
 
 
 class MongoConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict()
     uri: str = pydantic.Field(..., alias="MONGO_URI")
-    database: str = pydantic.Field(default="ai-defra-search-agent", alias="MONGO_DATABASE")
-    truststore: str = pydantic.Field(default="TRUSTSTORE_CDP_ROOT_CA", alias="MONGO_TRUSTSTORE")
-
-
-class ChatWorkflowConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict()
-    data_service_url: pydantic.HttpUrl = pydantic.Field(..., alias="DATA_SERVICE_URL")
-    default_knowledge_group_id: str = pydantic.Field(..., alias="DEFAULT_KNOWLEDGE_GROUP_ID")
+    database: str = pydantic.Field(
+        default="ai-defra-search-agent", alias="MONGO_DATABASE"
+    )
+    truststore: str = pydantic.Field(
+        default="TRUSTSTORE_CDP_ROOT_CA", alias="MONGO_TRUSTSTORE"
+    )
 
 
 class AppConfig(pydantic_settings.BaseSettings):
@@ -46,7 +59,6 @@ class AppConfig(pydantic_settings.BaseSettings):
 
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
-    workflow: ChatWorkflowConfig = pydantic.Field(default_factory=ChatWorkflowConfig)
 
 
 config: AppConfig | None = None
@@ -63,7 +75,7 @@ def get_config() -> AppConfig:
                     "field": ".".join(str(loc) for loc in error["loc"]),
                     "type": error["type"],
                     "message": error["msg"],
-                    "url": error["url"]
+                    "url": error["url"],
                 }
                 for error in e.errors()
             ]
