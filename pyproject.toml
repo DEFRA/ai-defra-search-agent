@@ -48,7 +48,18 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
+[tool.coverage.run]
+branch = true
+include = ["app/*"]
+omit = ["tests/*"]
+
+[tool.coverage.html]
+directory = "coverage/coverage_html"
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"
+
 [tool.taskipy.tasks]
 format = "uv run ruff format . && uv run ruff check . --fix"
-test = "uv run ruff check ./app && uv run pytest"
+test = "uv run ruff check ./app && uv run coverage run -m pytest && uv run coverage html && uv run coverage xml"
 docker-test = "docker compose down && docker compose -f compose.yaml -f compose.test.yaml run  --build --rm 'ai-defra-search-agent'"
