@@ -32,10 +32,7 @@ jobs:
           mkdir -p coverage
           chmod -R a+rw ./coverage
           uv run task docker-test
-
-      - name: Fix coverage XML source paths for SonarCloud
-        run: |
-          sed -i 's|<source>/home/nonroot/|<source>|g' coverage/coverage.xml
+          sed -i "s|<source>/home/nonroot/app</source>|<source>${GITHUB_WORKSPACE}</source>|g" coverage/coverage.xml
 
       - name: Publish coverage artifacts
         uses: actions/upload-artifact@v4
