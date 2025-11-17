@@ -52,7 +52,7 @@ class BedrockInferenceService:
             raise ValueError(msg)
 
         inference_profile = self.api_client.get_inference_profile(
-            inferenceProfileId=inference_profile_id
+            inferenceProfileIdentifier=inference_profile_id
         )
 
         return models.InferenceProfile(
