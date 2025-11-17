@@ -56,8 +56,8 @@ class BedrockInferenceService:
         )
 
         return models.InferenceProfile(
-            id=inference_profile["id"],
-            name=inference_profile["name"],
+            id=inference_profile["inferenceProfileId"],
+            name=inference_profile["inferenceProfileName"],
             models=inference_profile["models"],
         )
 
