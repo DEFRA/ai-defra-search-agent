@@ -51,6 +51,7 @@ packages = ["app"]
 [tool.coverage.run]
 branch = true
 include = ["app/*"]
+omit = ["tests/*"]
 
 [tool.coverage.html]
 directory = "coverage/coverage_html"
