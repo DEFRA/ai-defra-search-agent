@@ -37,6 +37,7 @@ jobs:
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
+          path: coverage/
           name: coverage-reports
 
       - name: SonarCloud Scan
