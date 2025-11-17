@@ -32,7 +32,7 @@ jobs:
           mkdir -p coverage
           chmod -R a+rw ./coverage
           uv run task docker-test
-          sed -i "s|<source>/home/nonroot</source>|<source>${GITHUB_WORKSPACE}</source>|g" coverage/coverage.xml
+          sed -i "s|<source>/home/nonroot</source>|<source>${GITHUB_WORKSPACE}/app</source>|g" coverage/coverage.xml
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
