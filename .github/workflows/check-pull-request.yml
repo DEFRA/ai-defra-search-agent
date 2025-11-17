@@ -19,12 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test code and Create Test Coverage Reports
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.13
           cache: 'pip'
-      - run: |
+
+      - name: Test code and Create Test Coverage Reports
+        run: |
           pipx install uv
           uv sync --frozen
           mkdir -p coverage
