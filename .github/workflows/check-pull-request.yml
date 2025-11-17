@@ -31,6 +31,12 @@ jobs:
           chmod -R a+rw ./coverage
           uv run task docker-test
 
+      - name: Publish coverage artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: coverage/
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
