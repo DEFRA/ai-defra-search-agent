@@ -15,6 +15,7 @@ class BedrockGuardrailConfig(pydantic.BaseModel):
 
 class BedrockModelConfig(pydantic.BaseModel):
     name: str
+    description: str
     id: str
     guardrails: BedrockGuardrailConfig | None = None
 
@@ -71,6 +72,7 @@ class BedrockConfig(pydantic_settings.BaseSettings):
                 models[model_info["name"]] = BedrockModelConfig(
                     name=model_info["name"],
                     id=model_info["id"],
+                    description=model_info["description"],
                     guardrails=guardrails,
                 )
 

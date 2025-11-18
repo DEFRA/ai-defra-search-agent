@@ -6,6 +6,7 @@ import fastapi.exceptions
 import uvicorn
 
 from app import config
+from app.models import router as models_router
 from app.chat import router as chat_router
 from app.common import mongo, tracing
 from app.health import router as health_router
@@ -42,6 +43,7 @@ app.add_middleware(tracing.TraceIdMiddleware)
 
 # Setup Routes
 app.include_router(health_router.router)
+app.include_router(models_router.router)
 app.include_router(chat_router.router)
 
 def main() -> None:

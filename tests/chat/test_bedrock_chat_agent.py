@@ -29,6 +29,7 @@ def mock_config(monkeypatch):
         "anthropic.claude-3-sonnet": config.BedrockModelConfig(
             name="anthropic.claude-3-sonnet",
             id="anthropic.claude-3-sonnet",
+            description="A conversational AI model optimized for dialogue.",
             guardrails=None,
         )
     }

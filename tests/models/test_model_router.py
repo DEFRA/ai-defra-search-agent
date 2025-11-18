@@ -5,6 +5,7 @@ import pytest
 from app.chat import dependencies
 from app.common import mongo
 from app.entrypoints import fastapi as fastapi_app
+from app.models import dependencies as model_dependencies
 from tests.fixtures import bedrock as bedrock_fixture
 
 
@@ -29,6 +30,17 @@ def test_get_models_returns_model_list(client):
 
 
 def test_get_models_returns_204_when_no_models_configured(client):
-    response = client.get("/models")
-
-    assert response.status_code == 204
+    # Create a mock service that returns no models
+    class EmptyModelResolutionService:
+        def get_available_models(self):
+            return []
+    
+    # Override the dependency for this test
+    fastapi_app.app.dependency_overrides[model_dependencies.get_model_resolution_service] = lambda: EmptyModelResolutionService()
+    
+    try:
+        response = client.get("/models")
+        assert response.status_code == 204
+    finally:
+        # Clean up the override after the test
+        fastapi_app.app.dependency_overrides.clear()
