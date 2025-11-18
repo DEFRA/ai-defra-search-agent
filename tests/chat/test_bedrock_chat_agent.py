@@ -116,4 +116,4 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
     with pytest.raises(models.InvalidModelError) as exc_info:
         await bedrock_agent.execute_flow(MOCK_QUESTION, model=unsupported_model_id)
 
-    assert str(exc_info.value) == f"Requested model '{unsupported_model_id}' is not available in available models."
+    assert str(exc_info.value) == f"Requested model '{unsupported_model_id}' is not supported."
