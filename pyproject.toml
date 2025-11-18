@@ -60,6 +60,6 @@ directory = "coverage/coverage_html"
 output = "coverage/coverage.xml"
 
 [tool.taskipy.tasks]
-lint = "uv run ruff lint && uv run ruff check"
+lint = "uv run ruff format --check && uv run ruff check"
 test = "uv run task lint && uv run coverage run -m pytest -vv && uv run coverage html && uv run coverage xml"
 docker-test = "docker compose down && docker compose -f compose.yaml -f compose.test.yaml run  --build --rm 'ai-defra-search-agent'"

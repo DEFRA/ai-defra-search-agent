@@ -76,6 +76,7 @@ The following environment variables can be configured for the application:
 | `AWS_EMF_SERVICE_TYPE` | Yes | `python-backend-service` | Service type identifier |
 | `AWS_BEARER_TOKEN_BEDROCK` | No | N/A | Bearer token for AWS Bedrock authentication |
 | `AWS_BEDROCK_DEFAULT_GENERATION_MODEL` | Yes | N/A | Default AI model to use for generation |
+| `AWS_BEDROCK_AVAILABLE_GENERATION_MODELS` | Yes | N/A | JSON array of available AI models for generation |
 
 In CDP, environment variables and secrets need to be set using CDP conventions:
 - [CDP App Config](https://github.com/DEFRA/cdp-documentation/blob/main/how-to/config.md)
@@ -148,13 +149,13 @@ To run Ruff from the command line:
 
 ```bash
 # Run linting with auto-fix
-uv run ruff check . --fix
+uv run ruff check --fix
 
 # Run formatting
-uv run ruff format .
+uv run ruff format
 
 # Or use the taskipy shortcut
-uv run task format
+uv run task lint
 ```
 
 ### VS Code Configuration
