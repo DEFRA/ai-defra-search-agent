@@ -20,3 +20,7 @@ class Conversation:
 
 class ConversationNotFoundError(Exception):
     pass
+
+
+class InvalidModelError(Exception):
+    pass

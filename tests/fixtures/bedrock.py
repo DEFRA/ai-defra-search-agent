@@ -19,6 +19,6 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
     ) -> models.InferenceProfile:
         return models.InferenceProfile(
             id=inference_profile_id,
-            name="geni-ai-3.5", 
+            name="geni-ai-3.5",
             models=["geni-ai-3.5"]
         )

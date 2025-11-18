@@ -1,11 +1,10 @@
 import fastapi.testclient
-import pytest
 import pymongo
+import pytest
 
-from app.entrypoints import fastapi as fastapi_app
-from app.common import mongo
 from app.chat import dependencies
-from tests.fixtures.mongo import mongo as mongo_fixture
+from app.common import mongo
+from app.entrypoints import fastapi as fastapi_app
 from tests.fixtures import bedrock as bedrock_fixture
 
 
@@ -13,20 +12,20 @@ from tests.fixtures import bedrock as bedrock_fixture
 def client():
     def get_fresh_mongo_client():
         return pymongo.AsyncMongoClient("mongodb", uuidRepresentation="standard")
-    
+
     def get_fresh_mongo_db():
         client = get_fresh_mongo_client()
         return client.get_database("ai_defra_search_agent")
-    
+
     fastapi_app.app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     fastapi_app.app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
 
     fastapi_app.app.dependency_overrides[dependencies.get_bedrock_inference_service] = lambda: bedrock_fixture.StubBedrockInferenceService()
-    
+
     test_client = fastapi.testclient.TestClient(fastapi_app.app)
 
     yield test_client
-    
+
     # Clean up
     fastapi_app.app.dependency_overrides.clear()
 

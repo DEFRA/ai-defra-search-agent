@@ -2,6 +2,7 @@ import uuid
 
 from app.chat import agent, models, repository
 
+
 class ChatService:
     def __init__(
             self,

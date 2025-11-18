@@ -43,7 +43,7 @@ class MongoConversationRepository(AbstractConversationRepository):
 
         if not conversation:
             return None
-        
+
         return models.Conversation(
             id=conversation["conversation_id"],
             messages=[
