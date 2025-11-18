@@ -9,8 +9,8 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
     def invoke_anthropic(
         self,
         model_config: models.ModelConfig,
-        system_prompt: str,
-        messages: list[dict[str, any]],
+        system_prompt: str,  # noqa: ARG001
+        messages: list[dict[str, any]],  # noqa: ARG001
     ) -> models.ModelResponse:
         return models.ModelResponse(
             model=model_config.id, content=[{"text": "This is a stub response."}]

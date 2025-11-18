@@ -39,14 +39,15 @@ def mock_config(monkeypatch):
 
 
 @pytest.fixture
-def bedrock_agent(mock_inference_service, mock_config):
+def bedrock_agent(mock_inference_service):
     """BedrockChatAgent with mocked dependencies"""
     return agent.BedrockChatAgent(inference_service=mock_inference_service)
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_config")
 async def test_executes_flow_with_correct_parameters(
-    bedrock_agent, mock_inference_service, mock_config
+    bedrock_agent, mock_inference_service
 ):
     # Setup
     mock_response_content = [
@@ -94,9 +95,8 @@ async def test_executes_flow_with_correct_parameters(
 
 
 @pytest.mark.asyncio
-async def test_handles_single_response_message(
-    bedrock_agent, mock_inference_service, mock_config
-):
+@pytest.mark.usefixtures("mock_config")
+async def test_handles_single_response_message(bedrock_agent, mock_inference_service):
     # Setup
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},

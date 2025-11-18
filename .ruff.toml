@@ -36,6 +36,7 @@ select = [
 
 # Exclude a variety of commonly ignored directories
 exclude = [
+    ".cache",
     ".git",
     ".github",
     ".pytest_cache",

@@ -33,9 +33,8 @@ app = fastapi.FastAPI(lifespan=lifespan)
 
 @app.exception_handler(fastapi.exceptions.RequestValidationError)
 async def validation_exception_handler(
-    request: fastapi.Request, exc: fastapi.exceptions.RequestValidationError
+    _: fastapi.Request, exc: fastapi.exceptions.RequestValidationError
 ):
-    logger.error(f"Validation error: {exc.errors()}")
     return fastapi.responses.JSONResponse(
         status_code=400,
         content={"detail": exc.errors()},

@@ -7,9 +7,7 @@ from app.models import dependencies as model_dependencies
 
 @pytest.fixture
 def client():
-    test_client = fastapi.testclient.TestClient(fastapi_app.app)
-
-    return test_client
+    return fastapi.testclient.TestClient(fastapi_app.app)
 
 
 def test_get_models_returns_model_list(client):
