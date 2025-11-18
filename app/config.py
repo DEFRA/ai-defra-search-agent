@@ -34,8 +34,10 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     secret_access_key: str | None = pydantic.Field(
         default=None, alias="AWS_BEDROCK_SECRET_ACCESS_KEY"
     )
-    available_generation_models: Annotated[dict[str, BedrockModelConfig], pydantic_settings.NoDecode] = pydantic.Field(
-        ..., 
+    available_generation_models: Annotated[
+        dict[str, BedrockModelConfig], pydantic_settings.NoDecode
+    ] = pydantic.Field(
+        ...,
         alias="AWS_BEDROCK_AVAILABLE_GENERATION_MODELS",
     )
     default_generation_model: str = pydantic.Field(

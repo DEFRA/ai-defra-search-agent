@@ -45,7 +45,9 @@ def bedrock_agent(mock_inference_service, mock_config):
 
 
 @pytest.mark.asyncio
-async def test_executes_flow_with_correct_parameters(bedrock_agent, mock_inference_service, mock_config):
+async def test_executes_flow_with_correct_parameters(
+    bedrock_agent, mock_inference_service, mock_config
+):
     # Setup
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
@@ -55,10 +57,14 @@ async def test_executes_flow_with_correct_parameters(bedrock_agent, mock_inferen
         model=MOCK_MODEL_ID,
         content=mock_response_content,
     )
-    mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
+    mock_inference_service.invoke_anthropic = MagicMock(
+        return_value=mock_model_response
+    )
 
     # Execute
-    result = await bedrock_agent.execute_flow(question=MOCK_QUESTION, model_name=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(
+        question=MOCK_QUESTION, model_name=MOCK_MODEL_ID
+    )
 
     # Assert invoke_anthropic called with correct parameters
     mock_inference_service.invoke_anthropic.assert_called_once()
@@ -88,7 +94,9 @@ async def test_executes_flow_with_correct_parameters(bedrock_agent, mock_inferen
 
 
 @pytest.mark.asyncio
-async def test_handles_single_response_message(bedrock_agent, mock_inference_service, mock_config):
+async def test_handles_single_response_message(
+    bedrock_agent, mock_inference_service, mock_config
+):
     # Setup
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
@@ -97,7 +105,9 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
         model=MOCK_MODEL_ID,
         content=mock_response_content,
     )
-    mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
+    mock_inference_service.invoke_anthropic = MagicMock(
+        return_value=mock_model_response
+    )
 
     # Execute
     result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
@@ -117,4 +127,7 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
     with pytest.raises(models.UnsupportedModelError) as exc_info:
         await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=unsupported_model_id)
 
-    assert str(exc_info.value) == f"Requested model '{unsupported_model_id}' is not supported."
+    assert (
+        str(exc_info.value)
+        == f"Requested model '{unsupported_model_id}' is not supported."
+    )

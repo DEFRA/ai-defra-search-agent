@@ -19,7 +19,9 @@ class AbstractConversationRepository(abc.ABC):
 class MongoConversationRepository(AbstractConversationRepository):
     def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
         self.db = db
-        self.conversations: pymongo.asynchronous.collection.AsyncCollection = self.db.conversations
+        self.conversations: pymongo.asynchronous.collection.AsyncCollection = (
+            self.db.conversations
+        )
 
     async def save(self, conversation: models.Conversation) -> None:
         await self.conversations.update_one(
@@ -36,10 +38,14 @@ class MongoConversationRepository(AbstractConversationRepository):
                         for msg in conversation.messages
                     ],
                 }
-            }, upsert=True)
+            },
+            upsert=True,
+        )
 
     async def get(self, conversation_id: uuid.UUID) -> models.Conversation | None:
-        conversation = await self.conversations.find_one({"conversation_id": conversation_id})
+        conversation = await self.conversations.find_one(
+            {"conversation_id": conversation_id}
+        )
 
         if not conversation:
             return None
@@ -50,7 +56,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                 models.Message(
                     role=msg["role"],
                     content=msg["content"],
-                    model=msg.get("model", None)
+                    model=msg.get("model", None),
                 )
                 for msg in conversation["messages"]
             ],

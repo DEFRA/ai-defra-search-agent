@@ -15,7 +15,10 @@ class BedrockInferenceService:
         self.runtime_client = runtime_client
 
     def invoke_anthropic(
-        self, model_config: models.ModelConfig, system_prompt: str, messages: list[dict[str, any]]
+        self,
+        model_config: models.ModelConfig,
+        system_prompt: str,
+        messages: list[dict[str, any]],
     ) -> models.ModelResponse:
         native_request = {
             "anthropic_version": "bedrock-2023-05-31",
@@ -34,7 +37,7 @@ class BedrockInferenceService:
 
         invoke_args = {"modelId": model_id, "body": json.dumps(native_request)}
 
-        if (guardrail_id and guardrail_version):
+        if guardrail_id and guardrail_version:
             invoke_args["guardrailIdentifier"] = guardrail_id
             invoke_args["guardrailVersion"] = guardrail_version
 

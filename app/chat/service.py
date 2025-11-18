@@ -5,14 +5,16 @@ from app.chat import agent, models, repository
 
 class ChatService:
     def __init__(
-            self,
-            chat_agent: agent.AbstractChatAgent,
-            conversation_repository: repository.AbstractConversationRepository,
+        self,
+        chat_agent: agent.AbstractChatAgent,
+        conversation_repository: repository.AbstractConversationRepository,
     ):
         self.chat_agent = chat_agent
         self.conversation_repository = conversation_repository
 
-    async def execute_chat(self, question: str, model_name: str, conversation_id: uuid.UUID = None) -> models.Conversation:
+    async def execute_chat(
+        self, question: str, model_name: str, conversation_id: uuid.UUID = None
+    ) -> models.Conversation:
         # Get or create conversation from repository
         if conversation_id:
             # If conversation_id provided, it must exist
@@ -30,7 +32,9 @@ class ChatService:
         conversation.add_message(user_message)
 
         # call chat agent to execute flow with question
-        agent_responses = await self.chat_agent.execute_flow(question=question, model_name=model_name)
+        agent_responses = await self.chat_agent.execute_flow(
+            question=question, model_name=model_name
+        )
 
         # handle response - add agent messages to conversation
         for response_message in agent_responses:

@@ -18,9 +18,13 @@ def client():
         return client.get_database("ai_defra_search_agent")
 
     fastapi_app.app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
-    fastapi_app.app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+    fastapi_app.app.dependency_overrides[mongo.get_mongo_client] = (
+        get_fresh_mongo_client
+    )
 
-    fastapi_app.app.dependency_overrides[dependencies.get_bedrock_inference_service] = lambda: bedrock_fixture.StubBedrockInferenceService()
+    fastapi_app.app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
+        lambda: bedrock_fixture.StubBedrockInferenceService()
+    )
 
     test_client = fastapi.testclient.TestClient(fastapi_app.app)
 
@@ -34,7 +38,7 @@ def test_post_chat_nonexistent_conversation_returns_404(client):
     body = {
         "question": "Hello",
         "conversationId": "2c29818a-4367-4114-a789-4494a527b8af",
-        "modelName": "Geni AI 3.5"
+        "modelName": "Geni AI 3.5",
     }
 
     response = client.post("/chat", json=body)
@@ -43,10 +47,7 @@ def test_post_chat_nonexistent_conversation_returns_404(client):
 
 
 def test_post_chat_empty_question_returns_400(client):
-    body = {
-        "question": "",
-        "modelName": "Geni AI 3.5"
-    }
+    body = {"question": "", "modelName": "Geni AI 3.5"}
 
     response = client.post("/chat", json=body)
 
@@ -54,9 +55,7 @@ def test_post_chat_empty_question_returns_400(client):
 
 
 def test_post_chat_missing_model_name_returns_400(client):
-    body = {
-        "question": "Hello"
-    }
+    body = {"question": "Hello"}
 
     response = client.post("/chat", json=body)
 
@@ -64,10 +63,7 @@ def test_post_chat_missing_model_name_returns_400(client):
 
 
 def test_post_chat_nonsupported_model_returns_400(client):
-    body = {
-        "question": "Hello",
-        "modelName": "Nonexistent Model"
-    }
+    body = {"question": "Hello", "modelName": "Nonexistent Model"}
 
     response = client.post("/chat", json=body)
 
@@ -75,10 +71,7 @@ def test_post_chat_nonsupported_model_returns_400(client):
 
 
 def test_post_sync_chat_valid_question_returns_200(client):
-    body = {
-        "question": "Hello, how are you?",
-        "modelName": "Geni AI 3.5"
-    }
+    body = {"question": "Hello, how are you?", "modelName": "Geni AI 3.5"}
 
     response = client.post("/chat", json=body)
 
@@ -97,10 +90,7 @@ def test_post_sync_chat_valid_question_returns_200(client):
 
 
 def test_post_chat_with_existing_conversation_returns_200(client):
-    start_body = {
-        "question": "Hello!",
-        "modelName": "Geni AI 3.5"
-    }
+    start_body = {"question": "Hello!", "modelName": "Geni AI 3.5"}
 
     response = client.post("/chat", json=start_body)
     assert response.status_code == 200
@@ -110,7 +100,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     continue_body = {
         "question": "How's the weather?",
         "conversationId": conversation_id,
-        "modelName": "Geni AI 3.5"
+        "modelName": "Geni AI 3.5",
     }
 
     response = client.post("/chat", json=continue_body)

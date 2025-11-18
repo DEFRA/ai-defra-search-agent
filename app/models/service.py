@@ -1,7 +1,6 @@
 import abc
 
 from app import config
-
 from app.models import models
 
 app_config = config.get_config()
@@ -11,7 +10,6 @@ class AbstractModelResolutionService(abc.ABC):
     @abc.abstractmethod
     def get_available_models(self) -> list[models.ModelInfo]:
         """Retrieve a list of available models."""
-        pass
 
 
 class ConfigModelResolutionService(AbstractModelResolutionService):

@@ -10,21 +10,26 @@ class ChatRequest(pydantic.BaseModel):
         min_length=1,
         examples=["What is the weather like today?"],
     )
-    conversation_id: Annotated[uuid.UUID | None, pydantic.Field(
-        default=None,
-        description="The ID of an existing conversation to continue. If not provided, a new conversation will be started.",
-        examples=["3fa85f64-5717-4562-b374-2c963f66afa6"],
-        alias="conversationId"
-    )]
+    conversation_id: Annotated[
+        uuid.UUID | None,
+        pydantic.Field(
+            default=None,
+            description="The ID of an existing conversation to continue. If not provided, a new conversation will be started.",
+            examples=["3fa85f64-5717-4562-b374-2c963f66afa6"],
+            alias="conversationId",
+        ),
+    ]
     model_name: str = pydantic.Field(
         description="The name of the model to use for generating the response",
         examples=["Claude 3 Haiku"],
-        alias="modelName"
+        alias="modelName",
     )
 
 
 class MessageResponse(pydantic.BaseModel):
-    role: str = pydantic.Field(description="The role of the message sender, e.g., 'user' or 'assistant'")
+    role: str = pydantic.Field(
+        description="The role of the message sender, e.g., 'user' or 'assistant'"
+    )
     content: str = pydantic.Field(description="The content of the message")
     model: str | None = pydantic.Field(
         default=None,
@@ -35,8 +40,7 @@ class MessageResponse(pydantic.BaseModel):
 
 class ChatResponse(pydantic.BaseModel):
     conversation_id: uuid.UUID = pydantic.Field(
-        description="The ID of the conversation",
-        serialization_alias="conversationId"
+        description="The ID of the conversation", serialization_alias="conversationId"
     )
     messages: list[MessageResponse] = pydantic.Field(
         description="The list of messages in the conversation",

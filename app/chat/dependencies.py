@@ -48,24 +48,24 @@ def get_bedrock_inference_service() -> bedrock_service.BedrockInferenceService:
 
 
 def get_chat_agent(
-    inference_service: bedrock_service.BedrockInferenceService = fastapi.Depends(get_bedrock_inference_service)
+    inference_service: bedrock_service.BedrockInferenceService = fastapi.Depends(
+        get_bedrock_inference_service
+    ),
 ) -> agent.AbstractChatAgent:
-    return agent.BedrockChatAgent(
-        inference_service=inference_service
-    )
+    return agent.BedrockChatAgent(inference_service=inference_service)
 
 
 def get_conversation_repository(
-        db: pymongo.asynchronous.database.AsyncDatabase = fastapi.Depends(mongo.get_db),
+    db: pymongo.asynchronous.database.AsyncDatabase = fastapi.Depends(mongo.get_db),
 ) -> repository.AbstractConversationRepository:
     return repository.MongoConversationRepository(db=db)
 
 
 def get_chat_service(
-        chat_agent: agent.AbstractChatAgent = fastapi.Depends(get_chat_agent),
-        conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
-            get_conversation_repository
-        ),
+    chat_agent: agent.AbstractChatAgent = fastapi.Depends(get_chat_agent),
+    conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
+        get_conversation_repository
+    ),
 ) -> service.ChatService:
     return service.ChatService(
         chat_agent=chat_agent,

@@ -13,7 +13,9 @@ app_config = config.get_config()
 
 class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
-    async def execute_flow(self, question: str, model_name: str) -> list[models.Message]:
+    async def execute_flow(
+        self, question: str, model_name: str
+    ) -> list[models.Message]:
         pass
 
 
@@ -21,15 +23,15 @@ class BedrockChatAgent(AbstractChatAgent):
     def __init__(self, inference_service: service.BedrockInferenceService):
         self.inference_service = inference_service
 
-    async def execute_flow(self, question: str, model_name: str) -> list[models.Message]:
+    async def execute_flow(
+        self, question: str, model_name: str
+    ) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
         model_config = self._build_model_config(model_name)
 
         # Convert question to Anthropic message format
-        messages = [
-            {"role": "user", "content": question}
-        ]
+        messages = [{"role": "user", "content": question}]
 
         # Call inference service
         response = self.inference_service.invoke_anthropic(
