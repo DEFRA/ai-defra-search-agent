@@ -26,7 +26,8 @@ services:
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
       LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
-      AWS_BEDROCK_DEFAULT_GENERATION_MODEL: 'genai-3-turbo'
+      AWS_BEDROCK_DEFAULT_GENERATION_MODEL: 'GeniAI-3.5'
+      AWS_BEDROCK_AVAILABLE_GENERATION_MODELS: '[{"name": "GeniAI-3.5", "id": "geni-ai-3.5"}]'
     volumes:
       - ./app/:/home/nonroot/app
       - ./tests/:/home/nonroot/tests

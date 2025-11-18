@@ -2,8 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app import config
 from app.bedrock import models as bedrock_models
-from app.chat import agent
+from app.chat import agent, models
 
 # Mock test data
 MOCK_QUESTION = "What is the question?"
@@ -24,8 +25,15 @@ def mock_inference_service():
 def mock_config(monkeypatch):
     """Mock app config"""
     mock_config_obj = MagicMock()
+    mock_config_obj.bedrock.available_generation_models = {
+        "anthropic.claude-3-sonnet": config.BedrockModelConfig(
+            name="anthropic.claude-3-sonnet",
+            id="anthropic.claude-3-sonnet",
+            guardrails=None,
+        )
+    }
     mock_config_obj.bedrock.default_generation_model = MOCK_MODEL_ID
-    monkeypatch.setattr("app.config.get_config", lambda: mock_config_obj)
+    monkeypatch.setattr("app.chat.agent.app_config", mock_config_obj)
     return mock_config_obj
 
 
@@ -49,14 +57,14 @@ async def test_executes_flow_with_correct_parameters(bedrock_agent, mock_inferen
     mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
 
     # Execute
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION)
+    result = await bedrock_agent.execute_flow(question=MOCK_QUESTION, model=MOCK_MODEL_ID)
 
     # Assert invoke_anthropic called with correct parameters
     mock_inference_service.invoke_anthropic.assert_called_once()
     call_args = mock_inference_service.invoke_anthropic.call_args
 
     # Assert model parameter
-    assert call_args[1]["model"] == MOCK_MODEL_ID
+    assert call_args[1]["model_config"].id == MOCK_MODEL_ID
 
     # Assert system prompt parameter
     assert call_args[1]["system_prompt"] == SYSTEM_PROMPT
@@ -91,7 +99,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
 
     # Execute
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION)
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model=MOCK_MODEL_ID)
 
     # Assert single message returned
     assert len(result) == 1
@@ -99,3 +107,13 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     assert actual_message.role == "assistant"
     assert actual_message.content == MOCK_RESPONSE_TEXT_1
     assert actual_message.model == MOCK_MODEL_ID
+
+
+@pytest.mark.asyncio
+async def test_unsupported_model_raises_exception(bedrock_agent):
+    unsupported_model_id = "unsupported-model-123"
+
+    with pytest.raises(models.InvalidModelError) as exc_info:
+        await bedrock_agent.execute_flow(MOCK_QUESTION, model=unsupported_model_id)
+
+    assert str(exc_info.value) == f"Requested model '{unsupported_model_id}' is not available in available models."
