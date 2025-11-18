@@ -31,7 +31,7 @@ async def chat(
             api_schemas.MessageResponse(
                 role=message.role,
                 content=message.content,
-                model=message.model,
+                model_id=message.model_id,
             )
             for message in conversation.messages
         ],

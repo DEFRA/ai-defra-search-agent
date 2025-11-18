@@ -46,7 +46,7 @@ class BedrockInferenceService:
         response_json = json.loads(response["body"].read().decode("utf-8"))
 
         return models.ModelResponse(
-            model=self._get_backing_model(model_id),
+            model_id=self._get_backing_model(model_id),
             content=response_json["content"],
         )
 
@@ -72,4 +72,6 @@ class BedrockInferenceService:
         if not model_id.startswith("arn:aws:bedrock"):
             return model_id
 
-        return self.get_inference_profile_details(model_id).name
+        profile = self.get_inference_profile_details(model_id)
+
+        return profile.models[0].modelArn.split("/")[-1]

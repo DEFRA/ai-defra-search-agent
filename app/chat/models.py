@@ -6,7 +6,7 @@ import uuid
 class Message:
     role: str
     content: str
-    model: str | None = None
+    model_id: str | None = None
 
 
 @dataclasses.dataclass

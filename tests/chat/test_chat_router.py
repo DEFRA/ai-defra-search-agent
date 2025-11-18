@@ -85,7 +85,7 @@ def test_post_sync_chat_valid_question_returns_200(client):
     assert response.json()["messages"][1] == {
         "role": "assistant",
         "content": "This is a stub response.",
-        "model": "geni-ai-3.5",
+        "modelId": "geni-ai-3.5",
     }
 
 
@@ -112,7 +112,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][1] == {
         "role": "assistant",
         "content": "This is a stub response.",
-        "model": "geni-ai-3.5",
+        "modelId": "geni-ai-3.5",
     }
     assert response.json()["messages"][2] == {
         "role": "user",
@@ -121,5 +121,5 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][3] == {
         "role": "assistant",
         "content": "This is a stub response.",
-        "model": "geni-ai-3.5",
+        "modelId": "geni-ai-3.5",
     }

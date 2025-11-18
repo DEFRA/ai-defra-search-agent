@@ -33,7 +33,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                         {
                             "role": msg.role,
                             "content": msg.content,
-                            "model": msg.model,
+                            "model": msg.model_id,
                         }
                         for msg in conversation.messages
                     ],
@@ -56,7 +56,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                 models.Message(
                     role=msg["role"],
                     content=msg["content"],
-                    model=msg.get("model", None),
+                    model_id=msg.get("model", None),
                 )
                 for msg in conversation["messages"]
             ],

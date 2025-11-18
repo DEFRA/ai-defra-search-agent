@@ -31,10 +31,11 @@ class MessageResponse(pydantic.BaseModel):
         description="The role of the message sender, e.g., 'user' or 'assistant'"
     )
     content: str = pydantic.Field(description="The content of the message")
-    model: str | None = pydantic.Field(
+    model_id: str | None = pydantic.Field(
         default=None,
         description="The model used to generate the message, if applicable",
         exclude_if=lambda v: v is None,
+        serialization_alias="modelId",
     )
 
 

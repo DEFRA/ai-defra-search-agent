@@ -13,7 +13,7 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
         messages: list[dict[str, any]],  # noqa: ARG001
     ) -> models.ModelResponse:
         return models.ModelResponse(
-            model=model_config.id, content=[{"text": "This is a stub response."}]
+            model_id=model_config.id, content=[{"text": "This is a stub response."}]
         )
 
     def get_inference_profile_details(

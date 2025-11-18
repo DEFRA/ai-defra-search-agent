@@ -15,6 +15,6 @@ class StubChatAgent(agent.AbstractChatAgent):
             models.Message(
                 role="assistant",
                 content="This is a stub response.",
-                model="geni-ai-3.5",
+                model_id="geni-ai-3.5",
             ),
         ]

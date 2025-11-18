@@ -55,7 +55,7 @@ async def test_executes_flow_with_correct_parameters(
         {"type": "text", "text": MOCK_RESPONSE_TEXT_2},
     ]
     mock_model_response = bedrock_models.ModelResponse(
-        model=MOCK_MODEL_ID,
+        model_id=MOCK_MODEL_ID,
         content=mock_response_content,
     )
     mock_inference_service.invoke_anthropic = MagicMock(
@@ -91,7 +91,7 @@ async def test_executes_flow_with_correct_parameters(
         actual_message = result[i]
         assert actual_message.role == "assistant"
         assert actual_message.content == mock_content["text"]
-        assert actual_message.model == MOCK_MODEL_ID
+        assert actual_message.model_id == MOCK_MODEL_ID
 
 
 @pytest.mark.asyncio
@@ -102,7 +102,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
     ]
     mock_model_response = bedrock_models.ModelResponse(
-        model=MOCK_MODEL_ID,
+        model_id=MOCK_MODEL_ID,
         content=mock_response_content,
     )
     mock_inference_service.invoke_anthropic = MagicMock(
@@ -117,7 +117,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     actual_message = result[0]
     assert actual_message.role == "assistant"
     assert actual_message.content == MOCK_RESPONSE_TEXT_1
-    assert actual_message.model == MOCK_MODEL_ID
+    assert actual_message.model_id == MOCK_MODEL_ID
 
 
 @pytest.mark.asyncio

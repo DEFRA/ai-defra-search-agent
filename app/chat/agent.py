@@ -30,28 +30,22 @@ class BedrockChatAgent(AbstractChatAgent):
 
         model_config = self._build_model_config(model_name)
 
-        # Convert question to Anthropic message format
         messages = [{"role": "user", "content": question}]
 
-        # Call inference service
         response = self.inference_service.invoke_anthropic(
             model_config=model_config,
             system_prompt=system_prompt,
             messages=messages,
         )
 
-        # Convert response to list of messages
-        result_messages = []
-
-        for content_block in response.content:
-            message = models.Message(
+        return [
+            models.Message(
                 role="assistant",
                 content=content_block["text"],
-                model=response.model,
+                model_id=response.model_id,
             )
-            result_messages.append(message)
-
-        return result_messages
+            for content_block in response.content
+        ]
 
     def _build_model_config(self, model: str) -> bedrock_models.ModelConfig:
         available_models = app_config.bedrock.available_generation_models

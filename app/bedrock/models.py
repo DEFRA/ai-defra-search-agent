@@ -10,7 +10,7 @@ class ModelConfig:
 
 @dataclasses.dataclass(frozen=True)
 class ModelResponse:
-    model: str
+    model_id: str
     content: list[dict[str, any]]
 
 
