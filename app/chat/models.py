@@ -22,5 +22,5 @@ class ConversationNotFoundError(Exception):
     pass
 
 
-class InvalidModelError(Exception):
+class UnsupportedModelError(Exception):
     pass

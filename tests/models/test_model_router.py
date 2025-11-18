@@ -24,8 +24,8 @@ def test_get_models_returns_model_list(client):
     data = response.json()
 
     assert data == [
-        {"modelName": "Geni AI-3.5", "modelDescription": "A powerful conversational AI model suitable for a wide range of tasks."},
-        {"modelName": "Geni AI-4", "modelDescription": "An advanced conversational AI model with enhanced understanding and generation capabilities."}
+        {"modelName": "Geni AI 3.5", "modelDescription": "A powerful conversational AI model suitable for a wide range of tasks."},
+        {"modelName": "Geni AI 4", "modelDescription": "An advanced conversational AI model with enhanced understanding and generation capabilities."}
     ]
 
 

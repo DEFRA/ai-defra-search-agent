@@ -16,6 +16,11 @@ class ChatRequest(pydantic.BaseModel):
         examples=["3fa85f64-5717-4562-b374-2c963f66afa6"],
         alias="conversationId"
     )]
+    model_name: str = pydantic.Field(
+        description="The name of the model to use for generating the response",
+        examples=["Claude 3 Haiku"],
+        alias="modelName"
+    )
 
 
 class MessageResponse(pydantic.BaseModel):

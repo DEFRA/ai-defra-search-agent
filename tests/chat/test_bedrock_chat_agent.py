@@ -58,7 +58,7 @@ async def test_executes_flow_with_correct_parameters(bedrock_agent, mock_inferen
     mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
 
     # Execute
-    result = await bedrock_agent.execute_flow(question=MOCK_QUESTION, model=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(question=MOCK_QUESTION, model_name=MOCK_MODEL_ID)
 
     # Assert invoke_anthropic called with correct parameters
     mock_inference_service.invoke_anthropic.assert_called_once()
@@ -100,7 +100,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     mock_inference_service.invoke_anthropic = MagicMock(return_value=mock_model_response)
 
     # Execute
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
 
     # Assert single message returned
     assert len(result) == 1
@@ -114,7 +114,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
 async def test_unsupported_model_raises_exception(bedrock_agent):
     unsupported_model_id = "unsupported-model-123"
 
-    with pytest.raises(models.InvalidModelError) as exc_info:
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model=unsupported_model_id)
+    with pytest.raises(models.UnsupportedModelError) as exc_info:
+        await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=unsupported_model_id)
 
     assert str(exc_info.value) == f"Requested model '{unsupported_model_id}' is not supported."

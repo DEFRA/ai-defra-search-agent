@@ -76,7 +76,8 @@ def test_post_chat_nonsupported_model_returns_400(client):
 
 def test_post_sync_chat_valid_question_returns_200(client):
     body = {
-        "question": "Hello, how are you?"
+        "question": "Hello, how are you?",
+        "modelName": "Geni AI 3.5"
     }
 
     response = client.post("/chat", json=body)
@@ -91,13 +92,14 @@ def test_post_sync_chat_valid_question_returns_200(client):
     assert response.json()["messages"][1] == {
         "role": "assistant",
         "content": "This is a stub response.",
-        "model": "Geni AI 3.5",
+        "model": "geni-ai-3.5",
     }
 
 
 def test_post_chat_with_existing_conversation_returns_200(client):
     start_body = {
-        "question": "Hello!"
+        "question": "Hello!",
+        "modelName": "Geni AI 3.5"
     }
 
     response = client.post("/chat", json=start_body)

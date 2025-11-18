@@ -13,9 +13,7 @@ app_config = config.get_config()
 
 class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
-    async def execute_flow(
-        self, question: str
-    ) -> list[models.Message]:
+    async def execute_flow(self, question: str, model_name: str) -> list[models.Message]:
         pass
 
 
@@ -23,10 +21,10 @@ class BedrockChatAgent(AbstractChatAgent):
     def __init__(self, inference_service: service.BedrockInferenceService):
         self.inference_service = inference_service
 
-    async def execute_flow(self, question: str, model: str = app_config.bedrock.default_generation_model) -> list[models.Message]:
+    async def execute_flow(self, question: str, model_name: str) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
-        model_config = self._build_model_config(model)
+        model_config = self._build_model_config(model_name)
 
         # Convert question to Anthropic message format
         messages = [
@@ -42,6 +40,7 @@ class BedrockChatAgent(AbstractChatAgent):
 
         # Convert response to list of messages
         result_messages = []
+
         for content_block in response.content:
             message = models.Message(
                 role="assistant",
@@ -56,8 +55,8 @@ class BedrockChatAgent(AbstractChatAgent):
         available_models = app_config.bedrock.available_generation_models
 
         if model not in available_models:
-            msg = f"Requested model '{model}' is not in available models: {list(available_models.keys())}"
-            raise models.InvalidModelError(msg)
+            msg = f"Requested model '{model}' is not supported."
+            raise models.UnsupportedModelError(msg)
 
         model_info = available_models[model]
         guardrails = model_info.guardrails

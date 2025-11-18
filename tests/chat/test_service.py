@@ -57,13 +57,13 @@ async def test_executes_with_existing_conversation(chat_service, mock_agent, moc
     mock_repository.get.return_value = mock_existing_conversation
 
     # Execute
-    result = await chat_service.execute_chat(MOCK_QUESTION, mock_existing_conversation.id)
+    result = await chat_service.execute_chat(MOCK_QUESTION, 'Geni AI-3.5', mock_existing_conversation.id)
 
     # Assert repository.get called correctly
     mock_repository.get.assert_called_once_with(mock_existing_conversation.id)
 
-    # Assert agent called with question string
-    mock_agent.execute_flow.assert_called_once_with(MOCK_QUESTION)
+    # Assert agent called with question string and model name
+    mock_agent.execute_flow.assert_called_once_with(question=MOCK_QUESTION, model_name='Geni AI-3.5')
 
     # Assert user message added
     assert len(result.messages) == 4  # 1 prior + 1 user + 2 agent
@@ -95,13 +95,13 @@ async def test_creates_new_conversation_when_none_provided(chat_service, mock_ag
     mock_agent.execute_flow.return_value = mock_agent_responses
 
     # Execute - no conversation_id provided
-    result = await chat_service.execute_chat(MOCK_QUESTION)
+    result = await chat_service.execute_chat(MOCK_QUESTION, 'Geni AI-3.5')
 
     # Assert repository.get NOT called
     mock_repository.get.assert_not_called()
 
-    # Assert agent called with question string
-    mock_agent.execute_flow.assert_called_once_with(MOCK_QUESTION)
+    # Assert agent called with question string and model name
+    mock_agent.execute_flow.assert_called_once_with(question=MOCK_QUESTION, model_name='Geni AI-3.5')
 
     # Assert new conversation created
     assert result.id is not None
@@ -132,7 +132,7 @@ async def test_raises_when_conversation_not_found(chat_service, mock_agent, mock
 
     # Execute & Assert
     with pytest.raises(models.ConversationNotFoundError):
-        await chat_service.execute_chat(MOCK_QUESTION, mock_conversation_id)
+        await chat_service.execute_chat(MOCK_QUESTION, 'Geni AI-3.5', mock_conversation_id)
 
     # Assert repository.get was called
     mock_repository.get.assert_called_once_with(mock_conversation_id)
@@ -156,10 +156,10 @@ async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repositor
     mock_repository.get.return_value = mock_conversation
 
     # Execute
-    result = await chat_service.execute_chat(MOCK_QUESTION, mock_conversation.id)
+    result = await chat_service.execute_chat(MOCK_QUESTION, 'Geni AI-3.5', mock_conversation.id)
 
-    # Assert agent called with question string
-    mock_agent.execute_flow.assert_called_once_with(MOCK_QUESTION)
+    # Assert agent called with question string and model name
+    mock_agent.execute_flow.assert_called_once_with(question=MOCK_QUESTION, model_name='Geni AI-3.5')
 
     # Assert all agent messages added in order
     assert len(result.messages) == 5  # 1 user + 4 agent
