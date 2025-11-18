@@ -15,7 +15,6 @@ Agent service for the AI DEFRA Search application. This service provides the AI 
   - [Debugging](#debugging)
 - [Development Tools](#development-tools)
   - [Linting and Formatting](#linting-and-formatting)
-  - [Pre-commit Hooks](#pre-commit-hooks)
   - [VS Code Configuration](#vs-code-configuration)
   - [IntelliJ Configuration](#intellij-configuration)
 - [Tests](#tests)
@@ -244,7 +243,6 @@ uv run task test
 | `GET: /docs`                | Automatic API Swagger documentation   |
 | `GET: /health`              | Health check endpoint                 |
 | `POST: /chat`               | Chat interaction with AI assistant    |
-| `GET: /chat/history/{id}`   | Retrieve chat history by ID           |
 
 ## Custom CloudWatch Metrics
 
