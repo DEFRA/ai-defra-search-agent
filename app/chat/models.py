@@ -6,7 +6,7 @@ import uuid
 class Message:
     role: str
     content: str
-    model: str | None = None
+    model_id: str | None = None
 
 
 @dataclasses.dataclass
@@ -19,4 +19,8 @@ class Conversation:
 
 
 class ConversationNotFoundError(Exception):
+    pass
+
+
+class UnsupportedModelError(Exception):
     pass

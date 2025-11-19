@@ -1,9 +1,26 @@
+import json
 import logging
+from typing import Annotated
 
 import pydantic
 import pydantic_settings
 
 logger = logging.getLogger(__name__)
+
+
+class BedrockGuardrailConfig(pydantic.BaseModel):
+    guardrail_id: str
+    guardrail_version: str
+
+
+class BedrockModelConfig(pydantic.BaseModel):
+    name: str
+    description: str
+    id: str
+    guardrails: BedrockGuardrailConfig | None = None
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 class BedrockConfig(pydantic_settings.BaseSettings):
@@ -17,11 +34,11 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     secret_access_key: str | None = pydantic.Field(
         default=None, alias="AWS_BEDROCK_SECRET_ACCESS_KEY"
     )
-    guardrail_identifier: str | None = pydantic.Field(
-        default=None, alias="AWS_BEDROCK_GUARDRAIL_IDENTIFIER"
-    )
-    guardrail_version: str | None = pydantic.Field(
-        default=None, alias="AWS_BEDROCK_GUARDRAIL_VERSION"
+    available_generation_models: Annotated[
+        dict[str, BedrockModelConfig], pydantic_settings.NoDecode
+    ] = pydantic.Field(
+        ...,
+        alias="AWS_BEDROCK_AVAILABLE_GENERATION_MODELS",
     )
     default_generation_model: str = pydantic.Field(
         ..., alias="AWS_BEDROCK_DEFAULT_GENERATION_MODEL"
@@ -32,6 +49,38 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     default_model_temprature: float = pydantic.Field(
         default=0.7, alias="AWS_BEDROCK_DEFAULT_MODEL_TEMPERATURE"
     )
+
+    @pydantic.field_validator("available_generation_models", mode="before")
+    @classmethod
+    def parse_bedrock_model(cls, v):
+        if isinstance(v, str):
+            parsed = json.loads(v)
+
+            models = {}
+
+            for model_info in parsed:
+                if model_info["name"] in models:
+                    msg = f"Duplicate model name found in configuration: {model_info['name']}"
+                    raise ValueError(msg)
+
+                guardrails = None
+
+                if "guardrails" in model_info:
+                    guardrails = BedrockGuardrailConfig(
+                        guardrail_id=model_info["guardrails"]["guardrail_id"],
+                        guardrail_version=model_info["guardrails"]["guardrail_version"],
+                    )
+
+                models[model_info["name"]] = BedrockModelConfig(
+                    name=model_info["name"],
+                    id=model_info["id"],
+                    description=model_info["description"],
+                    guardrails=guardrails,
+                )
+
+            return models
+
+        return v
 
 
 class MongoConfig(pydantic_settings.BaseSettings):

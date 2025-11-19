@@ -15,7 +15,10 @@ class BedrockInferenceService:
         self.runtime_client = runtime_client
 
     def invoke_anthropic(
-        self, model: str, system_prompt: str, messages: list[dict[str, any]]
+        self,
+        model_config: models.ModelConfig,
+        system_prompt: str,
+        messages: list[dict[str, any]],
     ) -> models.ModelResponse:
         native_request = {
             "anthropic_version": "bedrock-2023-05-31",
@@ -25,21 +28,28 @@ class BedrockInferenceService:
             "messages": messages,
         }
 
-        invoke_args = {"modelId": model, "body": json.dumps(native_request)}
+        model_id = model_config.id
 
-        if (
-            app_config.bedrock.guardrail_identifier
-            and app_config.bedrock.guardrail_version
-        ):
-            invoke_args["guardrailIdentifier"] = app_config.bedrock.guardrail_identifier
-            invoke_args["guardrailVersion"] = app_config.bedrock.guardrail_version
+        (guardrail_id, guardrail_version) = (
+            model_config.guardrail_id,
+            model_config.guardrail_version,
+        )
+
+        invoke_args = {"modelId": model_id, "body": json.dumps(native_request)}
+
+        if (guardrail_id is None) ^ (guardrail_version is None):
+            raise ValueError("The guardrail ID and version must be provided together")
+
+        if guardrail_id:
+            invoke_args["guardrailIdentifier"] = guardrail_id
+            invoke_args["guardrailVersion"] = guardrail_version
 
         response = self.runtime_client.invoke_model(**invoke_args)
 
         response_json = json.loads(response["body"].read().decode("utf-8"))
 
         return models.ModelResponse(
-            model=self._get_backing_model(model) or model,
+            model_id=self._get_backing_model(model_id),
             content=response_json["content"],
         )
 
@@ -65,4 +75,6 @@ class BedrockInferenceService:
         if not model_id.startswith("arn:aws:bedrock"):
             return model_id
 
-        return self.get_inference_profile_details(model_id).name
+        profile = self.get_inference_profile_details(model_id)
+
+        return profile.models[0]["modelArn"].split("/")[-1]
