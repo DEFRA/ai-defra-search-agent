@@ -37,7 +37,10 @@ class BedrockInferenceService:
 
         invoke_args = {"modelId": model_id, "body": json.dumps(native_request)}
 
-        if guardrail_id and guardrail_version:
+        if (guardrail_id is None) ^ (guardrail_version is None):
+            raise ValueError("The guardrail ID and version must be provided together")
+
+        if guardrail_id:
             invoke_args["guardrailIdentifier"] = guardrail_id
             invoke_args["guardrailVersion"] = guardrail_version
 
@@ -74,4 +77,4 @@ class BedrockInferenceService:
 
         profile = self.get_inference_profile_details(model_id)
 
-        return profile.models[0].modelArn.split("/")[-1]
+        return profile.models[0]["modelArn"].split("/")[-1]

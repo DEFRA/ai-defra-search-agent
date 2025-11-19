@@ -1,4 +1,11 @@
+import json
+import re
+
 from app.bedrock import models, service
+
+guardrail_arn_regex = (
+    r"^arn:aws:bedrock:[a-z]{2}-[a-z]+-\d{1}:\d{12}:guardrail/[a-z0-9]+$"
+)
 
 
 class StubBedrockInferenceService(service.BedrockInferenceService):
@@ -22,3 +29,61 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
         return models.InferenceProfile(
             id=inference_profile_id, name="geni-ai-3.5", models=["geni-ai-3.5"]
         )
+
+
+class FakeStreamingBody:
+    def __init__(self, content: bytes):
+        self._content = content
+
+    def read(self) -> bytes:
+        return self._content
+
+
+class StubBedrockRuntimeClient:
+    def invoke_model(self, **kwargs) -> dict:
+        guardrail_id = kwargs.get("guardrailIdentifier", None)
+        guardrail_version = kwargs.get("guardrailVersion", None)
+
+        if guardrail_id:
+            if not re.match(guardrail_arn_regex, guardrail_id):
+                raise ValueError("Invalid guardrail ARN format")
+
+            if guardrail_version <= 0:
+                raise ValueError("Guardrail version must be a positive integer")
+
+        response = {
+            "id": "stub-response-id",
+            "model": kwargs.get("modelId", "unknown-model"),
+            "type": "message",
+            "role": "assistant",
+            "content": [{"text": "This is a stub response."}],
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 15,
+            },
+        }
+
+        encoded_response = FakeStreamingBody(
+            content=json.dumps(response).encode("utf-8")
+        )
+
+        return {"body": encoded_response, "contentType": "application/json"}
+
+
+class StubBedrockClient:
+    def get_inference_profile(self, **kwargs) -> dict:
+        inference_profile_id = kwargs.get("inferenceProfileIdentifier")
+
+        return {
+            "inferenceProfileName": "Stub Inference Profile",
+            "description": "This is a stub inference profile.",
+            "models": [
+                {
+                    "modelArn": "arn:aws:bedrock:eu-central-1::foundation-model/geni-ai-3.5",
+                }
+            ],
+            "inferenceProfileArn": f"arn:aws:bedrock:eu-central-1::inference-profile/{inference_profile_id}",
+            "inferenceProfileId": inference_profile_id,
+            "status": "ACTIVE",
+            "type": "APPLICATION",
+        }

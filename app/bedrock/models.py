@@ -4,8 +4,8 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class ModelConfig:
     id: str
-    guardrail_id: str | None
-    guardrail_version: str | None
+    guardrail_id: str | None = None
+    guardrail_version: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
