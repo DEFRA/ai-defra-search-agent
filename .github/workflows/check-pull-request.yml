@@ -40,9 +40,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Clean workspace
-        run: rm -rf .venv
-
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/python@master
         env:
