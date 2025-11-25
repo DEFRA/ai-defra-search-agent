@@ -40,12 +40,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Run Snyk to check for vulnerabilities
+      - name: Snyk scan
         uses: snyk/actions/python@master
+        working-directory: ai-defra-search-agent
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --skip-unresolved
 
       - name: Test Docker Image Build
         run: |

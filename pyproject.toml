@@ -3,7 +3,7 @@ name = "ai-defra-search-agent"
 version = "0.1.0"
 description = "ai-defra-search-agent"
 readme = "README.md"
-requires-python = ">=3.12, <4.0"
+requires-python = ">=3.12"
 dependencies = [
     "anthropic==0.64.0",
     "asgi-logger==0.1.0",
