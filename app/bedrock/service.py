@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 from app import config
 from app.bedrock import models
@@ -18,7 +19,7 @@ class BedrockInferenceService:
         self,
         model_config: models.ModelConfig,
         system_prompt: str,
-        messages: list[dict[str, any]],
+        messages: list[dict[str, Any]],
     ) -> models.ModelResponse:
         native_request = {
             "anthropic_version": "bedrock-2023-05-31",
@@ -38,9 +39,10 @@ class BedrockInferenceService:
         invoke_args = {"modelId": model_id, "body": json.dumps(native_request)}
 
         if (guardrail_id is None) ^ (guardrail_version is None):
-            raise ValueError("The guardrail ID and version must be provided together")
+            msg = "The guardrail ID and version must be provided together"
+            raise ValueError(msg)
 
-        if guardrail_id:
+        if guardrail_id and guardrail_version is not None:
             invoke_args["guardrailIdentifier"] = guardrail_id
             invoke_args["guardrailVersion"] = guardrail_version
 
@@ -48,8 +50,13 @@ class BedrockInferenceService:
 
         response_json = json.loads(response["body"].read().decode("utf-8"))
 
+        backing_model = self._get_backing_model(model_id)
+        if not backing_model:
+            msg = f"Backing model not found for model ID: {model_id}"
+            raise ValueError(msg)
+
         return models.ModelResponse(
-            model_id=self._get_backing_model(model_id),
+            model_id=backing_model,
             content=response_json["content"],
         )
 
@@ -58,12 +65,15 @@ class BedrockInferenceService:
     ) -> models.InferenceProfile:
         if not inference_profile_id.startswith("arn:aws:bedrock"):
             msg = f"Invalid inference profile ID format: {inference_profile_id}"
-
             raise ValueError(msg)
 
         inference_profile = self.api_client.get_inference_profile(
             inferenceProfileIdentifier=inference_profile_id
         )
+
+        if not inference_profile:
+            msg = f"Inference profile not found: {inference_profile_id}"
+            raise ValueError(msg)
 
         return models.InferenceProfile(
             id=inference_profile["inferenceProfileId"],

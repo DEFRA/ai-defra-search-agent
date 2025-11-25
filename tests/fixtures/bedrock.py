@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 
 from app.bedrock import models, service
 
@@ -16,8 +17,8 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
     def invoke_anthropic(
         self,
         model_config: models.ModelConfig,
-        system_prompt: str,  # noqa: ARG001
-        messages: list[dict[str, any]],  # noqa: ARG001
+        system_prompt: str,  # noqa: ARG002
+        messages: list[dict[str, Any]],  # noqa: ARG002
     ) -> models.ModelResponse:
         return models.ModelResponse(
             model_id=model_config.id, content=[{"text": "This is a stub response."}]
@@ -41,15 +42,17 @@ class FakeStreamingBody:
 
 class StubBedrockRuntimeClient:
     def invoke_model(self, **kwargs) -> dict:
-        guardrail_id = kwargs.get("guardrailIdentifier", None)
-        guardrail_version = kwargs.get("guardrailVersion", None)
+        guardrail_id = kwargs.get("guardrailIdentifier")
+        guardrail_version = kwargs.get("guardrailVersion")
 
         if guardrail_id:
             if not re.match(guardrail_arn_regex, guardrail_id):
-                raise ValueError("Invalid guardrail ARN format")
+                msg = "Invalid guardrail ARN format"
+                raise ValueError(msg)
 
-            if guardrail_version <= 0:
-                raise ValueError("Guardrail version must be a positive integer")
+            if guardrail_version is not None and guardrail_version <= 0:
+                msg = "Guardrail version must be a positive integer"
+                raise ValueError(msg)
 
         response = {
             "id": "stub-response-id",

@@ -1,7 +1,7 @@
 import pytest
+from pytest_mock import MockerFixture
 
 from app.bedrock import models, service
-
 from tests.fixtures import bedrock as bedrock_fixtures
 
 
@@ -61,7 +61,7 @@ def test_with_valid_guardrails_should_return_bedrock_response(
 def test_invalid_guardrail_arn_should_raise_error(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="Invalid guardrail ARN format"):
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(
                 id="geni-ai-3.5", guardrail_id="invalid-arn", guardrail_version=1
@@ -70,13 +70,13 @@ def test_invalid_guardrail_arn_should_raise_error(
             messages=[{"role": "user", "content": "What is the weather today?"}],
         )
 
-    assert "Invalid guardrail ARN format" in str(exc_info.value)
-
 
 def test_invalid_guardrail_version_should_raise_error(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(
+        ValueError, match="Guardrail version must be a positive integer"
+    ):
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(
                 id="geni-ai-3.5",
@@ -87,13 +87,13 @@ def test_invalid_guardrail_version_should_raise_error(
             messages=[{"role": "user", "content": "What is the weather today?"}],
         )
 
-    assert "Guardrail version must be a positive integer" in str(exc_info.value)
-
 
 def test_guardrail_id_with_no_version_should_raise_error(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(
+        ValueError, match="The guardrail ID and version must be provided together"
+    ):
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(
                 id="geni-ai-3.5",
@@ -104,15 +104,13 @@ def test_guardrail_id_with_no_version_should_raise_error(
             messages=[{"role": "user", "content": "What is the weather today?"}],
         )
 
-    assert "The guardrail ID and version must be provided together" in str(
-        exc_info.value
-    )
-
 
 def test_guardrail_version_with_no_id_should_raise_error(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(
+        ValueError, match="The guardrail ID and version must be provided together"
+    ):
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(
                 id="geni-ai-3.5", guardrail_id=None, guardrail_version=1
@@ -121,9 +119,23 @@ def test_guardrail_version_with_no_id_should_raise_error(
             messages=[{"role": "user", "content": "What is the weather today?"}],
         )
 
-    assert "The guardrail ID and version must be provided together" in str(
-        exc_info.value
+
+def test_missing_backing_model_should_raise_error(
+    mocker: MockerFixture,
+    bedrock_inference_service: service.BedrockInferenceService,
+):
+    mocker.patch.object(
+        bedrock_inference_service, "_get_backing_model", return_value=None
     )
+
+    with pytest.raises(
+        ValueError, match="Backing model not found for model ID: invalid-model-id"
+    ):
+        bedrock_inference_service.invoke_anthropic(
+            model_config=models.ModelConfig(id="invalid-model-id"),
+            system_prompt="This is not a real prompt",
+            messages=[{"role": "user", "content": "What is the weather today?"}],
+        )
 
 
 def test_get_inference_profile_details_with_valid_arn_should_return_profile(
@@ -146,9 +158,21 @@ def test_get_inference_profile_details_with_valid_arn_should_return_profile(
 def test_get_inference_profile_details_with_model_id_should_raise_error(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="Invalid inference profile ID format"):
         bedrock_inference_service.get_inference_profile_details(
             inference_profile_id="geni-ai-3.5"
         )
 
-    assert "Invalid inference profile ID format" in str(exc_info.value)
+
+def test_get_inference_profile_details_with_non_existent_profile_should_raise_error(
+    mocker: MockerFixture,
+    bedrock_inference_service: service.BedrockInferenceService,
+):
+    mocker.patch.object(
+        bedrock_inference_service.api_client, "get_inference_profile", return_value=None
+    )
+
+    with pytest.raises(ValueError, match="Inference profile not found"):
+        bedrock_inference_service.get_inference_profile_details(
+            inference_profile_id="arn:aws:bedrock:us-west-2:123456789012:inference-profile/non-existent-profile"
+        )
