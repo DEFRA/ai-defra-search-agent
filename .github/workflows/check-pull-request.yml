@@ -45,7 +45,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=ai-defra-search-agent/pyproject.toml
+          args: --file=pyproject.toml
 
       - name: Test Docker Image Build
         run: |
