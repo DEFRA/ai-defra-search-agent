@@ -44,15 +44,12 @@ jobs:
       - name: Export requirements for Snyk
         run: uv export --no-hashes --format requirements-txt > requirements.txt
 
-      - name: Install Snyk CLI
-        run: npm install -g snyk
-
       - name: Snyk scan
-        run: |
-          source .venv/bin/activate
-          snyk test --file=requirements.txt
+        uses: snyk/actions/python@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --file=requirements.txt --skip-unresolved
 
       - name: Publish Hot Fix
         uses: DEFRA/cdp-build-action/build-hotfix@main
