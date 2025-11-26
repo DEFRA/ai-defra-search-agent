@@ -43,7 +43,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Export requirements for Snyk
-        run: uv pip freeze > requirements.txt
+        run: uv export --no-hashes --format requirements-txt > requirements.txt
 
       - name: Install Snyk CLI
         run: npm install -g snyk
