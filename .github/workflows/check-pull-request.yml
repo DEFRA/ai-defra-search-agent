@@ -45,7 +45,8 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=pyproject.toml
+          command: test
+          args: --file=uv.lock --package-manager=pip
 
       - name: Test Docker Image Build
         run: |

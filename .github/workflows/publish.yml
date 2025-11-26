@@ -47,7 +47,8 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=ai-defra-search-agent/pyproject.toml
+          command: test
+          args: --file=uv.lock --package-manager=pip
 
       - name: Build and Publish
         uses: DEFRA/cdp-build-action/build@main
