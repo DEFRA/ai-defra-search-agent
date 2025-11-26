@@ -42,6 +42,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: Export requirements for Snyk
+        run: uv export --no-hashes --format requirements-txt > requirements.txt
+
+      - name: Snyk scan
+        uses: snyk/actions/python@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --file=requirements.txt --skip-unresolved
+
       - name: Build and Publish
         uses: DEFRA/cdp-build-action/build@main
         with:
