@@ -46,11 +46,11 @@ jobs:
         run: uv pip freeze > requirements.txt
 
       - name: Snyk scan
-        uses: snyk/actions/python@master
+        run: |
+          source .venv/bin/activate
+          snyk test --file=requirements.txt
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --file=requirements.txt
 
       - name: Build and Publish
         uses: DEFRA/cdp-build-action/build@main
