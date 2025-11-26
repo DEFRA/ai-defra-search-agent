@@ -24,7 +24,7 @@ class BedrockModelConfig(pydantic.BaseModel):
 
 
 class BedrockConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict()
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     use_credentials: bool = pydantic.Field(
         default=False, alias="AWS_BEDROCK_USE_CREDENTIALS"
     )
@@ -84,7 +84,7 @@ class BedrockConfig(pydantic_settings.BaseSettings):
 
 
 class MongoConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict()
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     uri: str = pydantic.Field(..., alias="MONGO_URI")
     database: str = pydantic.Field(
         default="ai-defra-search-agent", alias="MONGO_DATABASE"
@@ -95,12 +95,12 @@ class MongoConfig(pydantic_settings.BaseSettings):
 
 
 class AppConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict()
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
     host: str | None = None
-    port: int
-    log_config: str
-    aws_region: str
+    port: int = pydantic.Field(...)
+    log_config: str = pydantic.Field(...)
+    aws_region: str = pydantic.Field(...)
     localstack_url: str | None = None
     http_proxy: str | None = None
     enable_metrics: bool = False
@@ -124,7 +124,7 @@ def get_config() -> AppConfig:
                     "field": ".".join(str(loc) for loc in error["loc"]),
                     "type": error["type"],
                     "message": error["msg"],
-                    "url": error["url"],
+                    "url": error.get("url"),
                 }
                 for error in e.errors()
             ]

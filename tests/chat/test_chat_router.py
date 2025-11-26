@@ -1,3 +1,5 @@
+import re
+
 import fastapi.testclient
 import pymongo
 import pytest
@@ -11,7 +13,13 @@ from tests.fixtures import bedrock as bedrock_fixture
 @pytest.fixture
 def client():
     def get_fresh_mongo_client():
-        return pymongo.AsyncMongoClient("mongodb", uuidRepresentation="standard")
+        match = re.search(
+            r"mongodb://(?:[^@]+@)?([^:/]+)", fastapi_app.app_config.mongo.uri
+        )
+        host = match.group(1) if match else "localhost"
+        return pymongo.AsyncMongoClient(
+            host, uuidRepresentation="standard", timeoutMS=5000
+        )
 
     def get_fresh_mongo_db():
         client = get_fresh_mongo_client()
