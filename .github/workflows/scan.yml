@@ -45,6 +45,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check for unpinned dependencies
+        run: |
+          chmod +x ./scripts/check-unpinned-dependencies.sh
+          ./scripts/check-unpinned-dependencies.sh
+
       - name: Check for expired Trivy ignores
         run: |
           chmod +x ./scripts/check-trivy-ignores.sh
