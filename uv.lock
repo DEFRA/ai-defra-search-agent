@@ -55,7 +55,7 @@ requires-dist = [
     { name = "dnspython", specifier = "==2.7.0" },
     { name = "ecs-logging", specifier = "==2.2.0" },
     { name = "fastapi", specifier = "==0.121.2" },
-    { name = "fastmcp", specifier = ">=2.13.0.2" },
+    { name = "fastmcp", specifier = "==2.13.0.2" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "langchain", specifier = "==0.3.27" },
     { name = "langchain-aws", specifier = "==0.2.31" },
