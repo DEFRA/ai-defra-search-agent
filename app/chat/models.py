@@ -14,8 +14,8 @@ class TokenUsage:
 class Message:
     role: str
     content: str
+    usage: TokenUsage
     model_id: str | None = None
-    usage: TokenUsage | None = None
     created_at: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )

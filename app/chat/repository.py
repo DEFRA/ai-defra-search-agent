@@ -35,9 +35,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                             "role": msg.role,
                             "content": msg.content,
                             "model": msg.model_id,
-                            "usage": dataclasses.asdict(msg.usage)
-                            if msg.usage
-                            else None,
+                            "usage": dataclasses.asdict(msg.usage),
                         }
                         for msg in conversation.messages
                     ],
@@ -61,9 +59,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                     role=msg["role"],
                     content=msg["content"],
                     model_id=msg.get("model", None),
-                    usage=models.TokenUsage(**msg.get("usage", {}))
-                    if msg.get("usage")
-                    else None,
+                    usage=models.TokenUsage(**msg["usage"]),
                 )
                 for msg in conversation["messages"]
             ],

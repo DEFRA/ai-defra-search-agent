@@ -57,6 +57,7 @@ async def test_executes_flow_with_correct_parameters(
     mock_model_response = bedrock_models.ModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
+        usage={"input_tokens": 10, "output_tokens": 20},
     )
     mock_inference_service.invoke_anthropic = MagicMock(
         return_value=mock_model_response
@@ -104,6 +105,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     mock_model_response = bedrock_models.ModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
+        usage={"input_tokens": 10, "output_tokens": 20},
     )
     mock_inference_service.invoke_anthropic = MagicMock(
         return_value=mock_model_response

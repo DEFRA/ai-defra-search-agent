@@ -21,7 +21,9 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
         messages: list[dict[str, Any]],  # noqa: ARG002
     ) -> models.ModelResponse:
         return models.ModelResponse(
-            model_id=model_config.id, content=[{"text": "This is a stub response."}]
+            model_id=model_config.id,
+            content=[{"text": "This is a stub response."}],
+            usage={"input_tokens": 10, "output_tokens": 15},
         )
 
     def get_inference_profile_details(

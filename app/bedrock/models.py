@@ -13,7 +13,7 @@ class ModelConfig:
 class ModelResponse:
     model_id: str
     content: list[dict[str, Any]]
-    usage: dict[str, int] | None = None
+    usage: dict[str, int]
 
 
 @dataclasses.dataclass(frozen=True)
