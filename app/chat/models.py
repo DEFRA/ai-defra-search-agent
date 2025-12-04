@@ -1,12 +1,24 @@
 import dataclasses
+import datetime
 import uuid
+
+
+@dataclasses.dataclass(frozen=True)
+class TokenUsage:
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
 
 
 @dataclasses.dataclass(frozen=True)
 class Message:
     role: str
     content: str
+    usage: TokenUsage
     model_id: str | None = None
+    created_at: datetime.datetime = dataclasses.field(
+        default_factory=lambda: datetime.datetime.now(datetime.UTC)
+    )
 
 
 @dataclasses.dataclass

@@ -58,6 +58,7 @@ class BedrockInferenceService:
         return models.ModelResponse(
             model_id=backing_model,
             content=response_json["content"],
+            usage=response_json.get("usage"),
         )
 
     def get_inference_profile_details(

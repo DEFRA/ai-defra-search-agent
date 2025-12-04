@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import bson.binary
 import bson.codec_options
@@ -47,8 +48,11 @@ async def get_db(
 ) -> pymongo.asynchronous.database.AsyncDatabase:
     global db
     if db is None:
-        codec_options = bson.codec_options.CodecOptions(
-            uuid_representation=bson.binary.UuidRepresentation.STANDARD
+        # TODO: remove "Any" type by defining custom types for the databases collections.
+        codec_options: bson.codec_options.CodecOptions[dict[str, Any]] = (
+            bson.codec_options.CodecOptions(
+                uuid_representation=bson.binary.UuidRepresentation.STANDARD
+            )
         )
 
         db = client.get_database(app_config.mongo.database, codec_options=codec_options)

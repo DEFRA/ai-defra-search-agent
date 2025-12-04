@@ -50,7 +50,7 @@ app.include_router(models_router.router)
 app.include_router(chat_router.router)
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     uvicorn.run(
         "app.entrypoints.fastapi:app",
         host=app_config.host,
@@ -60,5 +60,5 @@ def main() -> None:
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

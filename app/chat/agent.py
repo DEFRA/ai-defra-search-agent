@@ -38,11 +38,20 @@ class BedrockChatAgent(AbstractChatAgent):
             messages=messages,
         )
 
+        input_tokens = response.usage["input_tokens"]
+        output_tokens = response.usage["output_tokens"]
+        usage = models.TokenUsage(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=input_tokens + output_tokens,
+        )
+
         return [
             models.Message(
                 role="assistant",
                 content=content_block["text"],
                 model_id=response.model_id,
+                usage=usage,
             )
             for content_block in response.content
         ]

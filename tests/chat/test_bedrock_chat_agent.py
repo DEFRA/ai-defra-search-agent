@@ -57,6 +57,7 @@ async def test_executes_flow_with_correct_parameters(
     mock_model_response = bedrock_models.ModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
+        usage={"input_tokens": 10, "output_tokens": 20},
     )
     mock_inference_service.invoke_anthropic = MagicMock(
         return_value=mock_model_response
@@ -104,6 +105,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     mock_model_response = bedrock_models.ModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
+        usage={"input_tokens": 10, "output_tokens": 20},
     )
     mock_inference_service.invoke_anthropic = MagicMock(
         return_value=mock_model_response
@@ -118,6 +120,36 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
     assert actual_message.role == "assistant"
     assert actual_message.content == MOCK_RESPONSE_TEXT_1
     assert actual_message.model_id == MOCK_MODEL_ID
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_config")
+async def test_executes_flow_returns_usage_data(bedrock_agent, mock_inference_service):
+    mock_response_content = [
+        {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
+    ]
+    mock_usage = {
+        "input_tokens": 10,
+        "output_tokens": 20,
+    }
+    mock_model_response = bedrock_models.ModelResponse(
+        model_id=MOCK_MODEL_ID,
+        content=mock_response_content,
+        usage=mock_usage,
+    )
+    mock_inference_service.invoke_anthropic = MagicMock(
+        return_value=mock_model_response
+    )
+
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
+
+    assert len(result) == 1
+    actual_message = result[0]
+    assert actual_message.usage is not None
+    assert actual_message.usage.input_tokens == 10
+    assert actual_message.usage.output_tokens == 20
+    # total_tokens is sum of input + output
+    assert actual_message.usage.total_tokens == 30
 
 
 @pytest.mark.asyncio
