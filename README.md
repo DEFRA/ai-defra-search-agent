@@ -265,7 +265,7 @@ Vulnerabilities can be ignored by adding them to the `.trivyignore` file in the 
 All entries into the `.trivyignore` file **must** follow this format:
 
 ```
-# package_name: Description of the vulnerability to ignore
+# `package_name`: Description of the vulnerability to ignore
 # Reason: Justification for ignoring the vulnerability
 # Created: YYYY-MM-DDTHH:MM:SSZ
 # Expires: YYYY-MM-DDTHH:MM:SSZ
