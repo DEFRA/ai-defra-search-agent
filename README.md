@@ -3,6 +3,7 @@
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-agent&metric=security_rating)](https://sonarcloud.io/summary/overall_code?id=DEFRA_ai-defra-search-agent)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-agent&metric=alert_status)](https://sonarcloud.io/summary/overall_code?id=DEFRA_ai-defra-search-agent)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-agent&metric=coverage)](https://sonarcloud.io/summary/overall_code?id=DEFRA_ai-defra-search-agent)
+[![CI Build](https://github.com/DEFRA/ai-defra-search-agent/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/DEFRA/ai-defra-search-agent/actions/workflows/publish.yml)
 [![Vulnerability Scan](https://github.com/DEFRA/ai-defra-search-agent/actions/workflows/scan.yml/badge.svg?branch=main)](https://github.com/DEFRA/ai-defra-search-agent/actions/workflows/scan.yml)
 
 Agent service for the AI DEFRA Search application. This service provides the AI Assistant backend, handling chat interactions and knowledge retrieval.
