@@ -1,8 +1,9 @@
 # ai-defra-search-agent
 
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-frontend&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=DEFRA_ai-defra-search-agent)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-frontend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DEFRA_ai-defra-search-agent)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-frontend&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DEFRA_ai-defra-search-agent)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-agent&metric=security_rating)](https://sonarcloud.io/summary/overall_code?id=DEFRA_ai-defra-search-agent)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-agent&metric=alert_status)](https://sonarcloud.io/summary/overall_code?id=DEFRA_ai-defra-search-agent)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_ai-defra-search-agent&metric=coverage)](https://sonarcloud.io/summary/overall_code?id=DEFRA_ai-defra-search-agent)
+[![Vulnerability Scan](https://github.com/DEFRA/ai-defra-search-agent/actions/workflows/scan.yml/badge.svg?branch=main)](https://github.com/DEFRA/ai-defra-search-agent/actions/workflows/scan.yml)
 
 Agent service for the AI DEFRA Search application. This service provides the AI Assistant backend, handling chat interactions and knowledge retrieval.
 
@@ -18,6 +19,9 @@ Agent service for the AI DEFRA Search application. This service provides the AI 
   - [VS Code Configuration](#vs-code-configuration)
   - [IntelliJ Configuration](#intellij-configuration)
 - [Tests](#tests)
+- [Security Scanning](#security-scanning)
+  - [Trivy Vulnerability Scan](#trivy-vulnerability-scan)
+  - [Running Trivy Locally](#running-trivy-locally)
 - [API Endpoints](#api-endpoints)
 - [Custom CloudWatch Metrics](#custom-cloudwatch-metrics)
 - [Licence](#licence)
@@ -236,6 +240,53 @@ To run tests locally without Docker:
 ```bash
 uv run task test
 ```
+
+## Security Scanning
+
+### Workflows
+
+The [scan.yml](.github/workflows/scan.yml) GitHub Actions workflow runs a range of security scans as part of:
+- [check-pull-request.yml](.github/workflows/check-pull-request.yml) workflow on pull requests into `main` branch
+- [publish.yml](.github/workflows/publish.yml) workflow on pushes to the `main` branch
+- [publish-hotfix.yml](.github/workflows/publish-hotfix.yml) workflow on pushes to hotfix branches
+- Cron schedule (everyday at 01:00 UTC)
+
+The workflow includes:
+- Trivy vulnerability scanning
+- Checking for unpinned dependencies
+- SonarCloud analysis (if workflow is called by another workflow)
+
+### Trivy Vulnerability Scan
+
+Trivy is used to scan for security vulnerabilities in dependencies and the filesystem. The scan runs automatically via the [scan.yml](.github/workflows/scan.yml) workflow and checks for CRITICAL, HIGH, MEDIUM, and LOW severity issues.
+
+Vulnerabilities can be ignored by adding them to the `.trivyignore` file in the project root but should only be done with proper justification and with a reasonable expiry period (by default one month from creation date).
+
+All entries into the `.trivyignore` file **must** follow this format:
+
+```
+# package_name: Description of the vulnerability to ignore
+# Reason: Justification for ignoring the vulnerability
+# Created: YYYY-MM-DDTHH:MM:SSZ
+# Expires: YYYY-MM-DDTHH:MM:SSZ
+VULNERABILITY_ID
+```
+
+### Running Trivy Locally
+
+To run the Trivy scan locally, first install Trivy by following the [installation instructions](https://aquasecurity.github.io/trivy/latest/getting-started/installation/).
+
+Once installed, run the scan from the project root:
+
+```bash
+trivy repository --include-dev-deps --format table --exit-code 1 --severity CRITICAL,HIGH,MEDIUM,LOW --ignorefile .trivyignore .
+```
+
+The scan will:
+
+- Check the entire repository for vulnerabilities
+- Respect ignore rules defined in `.trivyignore`
+- Exit with code 1 if any vulnerabilities are found
 
 ## API Endpoints
 
