@@ -50,11 +50,6 @@ jobs:
           chmod +x ./scripts/check-unpinned-dependencies.sh
           ./scripts/check-unpinned-dependencies.sh
 
-      - name: Check for expired Trivy ignores
-        run: |
-          chmod +x ./scripts/check-trivy-ignores.sh
-          ./scripts/check-trivy-ignores.sh
-
       - name: Run Aqua Trivy scan
         id: trivy-scan
         uses: aquasecurity/trivy-action@0.33.1

@@ -269,9 +269,10 @@ All entries into the `.trivyignore` file **must** follow this format:
 # `package_name`: Description of the vulnerability to ignore
 # Reason: Justification for ignoring the vulnerability
 # Created: YYYY-MM-DDTHH:MM:SSZ
-# Expires: YYYY-MM-DDTHH:MM:SSZ
-VULNERABILITY_ID
+VULNERABILITY_ID exp:YYYY-MM-DD
 ```
+
+See https://trivy.dev/docs/latest/guide/configuration/filtering/#trivyignore for more details.
 
 ### Running Trivy Locally
 

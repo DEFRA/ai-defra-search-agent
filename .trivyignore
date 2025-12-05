@@ -1,5 +1,4 @@
 # langgraph-checkpoint: LangGraph Checkpoint affected by RCE in "json" mode of JsonPlusSerializer
 # Reason: Version 3.0.0 does not appear to be available yet on PyPI The latest langgraph (1.0.1) depends on langgraph-checkpoint 2.1.2
 # Created: 2025-11-26T15:00:00.000Z
-# Expires: 2025-12-26T15:00:00.000Z
-CVE-2025-64439
+CVE-2025-64439 exp:2025-12-26
