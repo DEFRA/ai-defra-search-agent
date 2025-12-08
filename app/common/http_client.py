@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import httpx
 
@@ -7,34 +8,43 @@ from app.common import tracing
 
 logger = logging.getLogger(__name__)
 
-app_config = config.get_config()
+
+def create_async_tracing_hook(tracing_header: str):
+    async def async_hook_request_tracing(request):
+        trace_id = tracing.ctx_trace_id.get(None)
+        if trace_id:
+            request.headers[tracing_header] = trace_id
+
+    return async_hook_request_tracing
 
 
-async def async_hook_request_tracing(request):
-    trace_id = tracing.ctx_trace_id.get(None)
-    if trace_id:
-        request.headers[app_config.tracing_header] = trace_id
+def create_tracing_hook(tracing_header: str):
+    def hook_request_tracing(request):
+        trace_id = tracing.ctx_trace_id.get(None)
+        if trace_id:
+            request.headers[tracing_header] = trace_id
+
+    return hook_request_tracing
 
 
-def hook_request_tracing(request):
-    trace_id = tracing.ctx_trace_id.get(None)
-    if trace_id:
-        request.headers[app_config.tracing_header] = trace_id
-
-
-def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
+def create_async_client(
+    app_config: config.AppConfig, request_timeout: int = 30
+) -> httpx.AsyncClient:
     """
     Create an async HTTP client with configurable timeout.
 
     Args:
+        app_config: Application configuration
         request_timeout: Request timeout in seconds
 
     Returns:
         Configured httpx.AsyncClient instance
     """
-    client_kwargs = {
+    client_kwargs: dict[str, Any] = {
         "timeout": request_timeout,
-        "event_hooks": {"request": [async_hook_request_tracing]},
+        "event_hooks": {
+            "request": [create_async_tracing_hook(app_config.tracing_header)]
+        },
     }
 
     if app_config.http_proxy:
@@ -50,19 +60,22 @@ def create_async_client(request_timeout: int = 30) -> httpx.AsyncClient:
     return httpx.AsyncClient(**client_kwargs)
 
 
-def create_client(request_timeout: int = 30) -> httpx.Client:
+def create_client(
+    app_config: config.AppConfig, request_timeout: int = 30
+) -> httpx.Client:
     """
     Create a sync HTTP client with configurable timeout.
 
     Args:
+        app_config: Application configuration
         request_timeout: Request timeout in seconds
 
     Returns:
         Configured httpx.Client instance
     """
-    client_kwargs = {
+    client_kwargs: dict[str, Any] = {
         "timeout": request_timeout,
-        "event_hooks": {"request": [hook_request_tracing]},
+        "event_hooks": {"request": [create_tracing_hook(app_config.tracing_header)]},
     }
 
     if app_config.http_proxy:

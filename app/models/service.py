@@ -3,8 +3,6 @@ import abc
 from app import config
 from app.models import models
 
-app_config = config.get_config()
-
 
 class AbstractModelResolutionService(abc.ABC):
     @abc.abstractmethod
@@ -13,10 +11,13 @@ class AbstractModelResolutionService(abc.ABC):
 
 
 class ConfigModelResolutionService(AbstractModelResolutionService):
+    def __init__(self, app_config: config.AppConfig):
+        self.app_config = app_config
+
     def get_available_models(self) -> list[models.ModelInfo]:
         # TODO: Project multiple guardrails as separate available models
 
-        available_models = app_config.bedrock.available_generation_models.values()
+        available_models = self.app_config.bedrock.available_generation_models.values()
 
         return [
             models.ModelInfo(

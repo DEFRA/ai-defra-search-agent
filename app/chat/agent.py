@@ -8,8 +8,6 @@ from app.chat import models
 
 logger = logging.getLogger(__name__)
 
-app_config = config.get_config()
-
 
 class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
@@ -20,8 +18,13 @@ class AbstractChatAgent(abc.ABC):
 
 
 class BedrockChatAgent(AbstractChatAgent):
-    def __init__(self, inference_service: service.BedrockInferenceService):
+    def __init__(
+        self,
+        inference_service: service.BedrockInferenceService,
+        app_config: config.AppConfig,
+    ):
         self.inference_service = inference_service
+        self.app_config = app_config
 
     async def execute_flow(
         self, question: str, model_name: str
@@ -58,7 +61,7 @@ class BedrockChatAgent(AbstractChatAgent):
         ]
 
     def _build_model_config(self, model: str) -> bedrock_models.ModelConfig:
-        available_models = app_config.bedrock.available_generation_models
+        available_models = self.app_config.bedrock.available_generation_models
 
         if model not in available_models:
             msg = f"Requested model '{model}' is not supported."

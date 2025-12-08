@@ -7,18 +7,18 @@ import fastapi
 import pymongo
 import pymongo.asynchronous.database
 
-from app import config
+from app import config, dependencies
 from app.common import tls
 
 logger = logging.getLogger(__name__)
-
-app_config = config.get_config()
 
 client: pymongo.AsyncMongoClient | None = None
 db: pymongo.asynchronous.database.AsyncDatabase | None = None
 
 
-async def get_mongo_client() -> pymongo.AsyncMongoClient:
+async def get_mongo_client(
+    app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
+) -> pymongo.AsyncMongoClient:
     global client
     if client is None:
         # Use the custom CA Certs from env vars if set.
@@ -39,12 +39,13 @@ async def get_mongo_client() -> pymongo.AsyncMongoClient:
             )
 
         logger.info("Testing MongoDB connection to %s", app_config.mongo.uri)
-        await check_connection(client)
+        await check_connection(client, app_config)
     return client
 
 
 async def get_db(
     client: pymongo.AsyncMongoClient = fastapi.Depends(get_mongo_client),
+    app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> pymongo.asynchronous.database.AsyncDatabase:
     global db
     if db is None:
@@ -61,10 +62,16 @@ async def get_db(
     return db
 
 
-async def check_connection(client: pymongo.AsyncMongoClient):
-    database = await get_db(client)
-    response = await database.command("ping")
-    logger.info("MongoDB PING %s", response)
+async def check_connection(
+    client: pymongo.AsyncMongoClient, app_config: config.AppConfig
+):
+    await get_db(client, app_config)
+    try:
+        await client.admin.command("ping")
+        logger.info("MongoDB connection successful")
+    except Exception as e:
+        logger.error("MongoDB connection failed: %s", e)
+        raise e
 
 
 async def _ensure_indexes(db: pymongo.asynchronous.database.AsyncDatabase):

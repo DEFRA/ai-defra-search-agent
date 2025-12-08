@@ -7,13 +7,12 @@ from app.bedrock import models
 
 logger = logging.getLogger(__name__)
 
-app_config = config.get_config()
-
 
 class BedrockInferenceService:
-    def __init__(self, api_client, runtime_client):
+    def __init__(self, api_client, runtime_client, app_config: config.AppConfig):
         self.api_client = api_client
         self.runtime_client = runtime_client
+        self.app_config = app_config
 
     def invoke_anthropic(
         self,
@@ -23,8 +22,8 @@ class BedrockInferenceService:
     ) -> models.ModelResponse:
         native_request = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": app_config.bedrock.max_response_tokens,
-            "temperature": app_config.bedrock.default_model_temprature,
+            "max_tokens": self.app_config.bedrock.max_response_tokens,
+            "temperature": self.app_config.bedrock.default_model_temprature,
             "system": system_prompt,
             "messages": messages,
         }

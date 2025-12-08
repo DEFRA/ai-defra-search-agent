@@ -12,10 +12,9 @@ def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
     mock_config.bedrock.use_credentials = False
     mock_config.aws_region = "us-east-1"
 
-    mocker.patch("app.chat.dependencies.app_config", mock_config)
     mock_boto3 = mocker.patch("boto3.client")
 
-    client = dependencies.get_bedrock_runtime_client()
+    client = dependencies.get_bedrock_runtime_client(app_config=mock_config)
 
     mock_boto3.assert_called_with("bedrock-runtime", region_name="us-east-1")
     assert client == mock_boto3.return_value
@@ -31,10 +30,9 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
     mock_config.aws_region = "us-east-1"
 
-    mocker.patch("app.chat.dependencies.app_config", mock_config)
     mock_boto3 = mocker.patch("boto3.client")
 
-    client = dependencies.get_bedrock_runtime_client()
+    client = dependencies.get_bedrock_runtime_client(app_config=mock_config)
 
     mock_boto3.assert_called_with(
         "bedrock-runtime",
@@ -53,10 +51,9 @@ def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
     mock_config.bedrock.use_credentials = False
     mock_config.aws_region = "us-east-1"
 
-    mocker.patch("app.chat.dependencies.app_config", mock_config)
     mock_boto3 = mocker.patch("boto3.client")
 
-    client = dependencies.get_bedrock_client()
+    client = dependencies.get_bedrock_client(app_config=mock_config)
 
     mock_boto3.assert_called_with("bedrock", region_name="us-east-1")
     assert client == mock_boto3.return_value
@@ -72,10 +69,9 @@ def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
     mock_config.aws_region = "us-east-1"
 
-    mocker.patch("app.chat.dependencies.app_config", mock_config)
     mock_boto3 = mocker.patch("boto3.client")
 
-    client = dependencies.get_bedrock_client()
+    client = dependencies.get_bedrock_client(app_config=mock_config)
 
     mock_boto3.assert_called_with(
         "bedrock",
@@ -89,27 +85,29 @@ def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
 def test_get_bedrock_inference_service(mocker: MockerFixture):
     mock_client = mocker.Mock()
     mock_runtime_client = mocker.Mock()
+    mock_config = mocker.Mock()
 
-    mocker.patch("app.chat.dependencies.get_bedrock_client", return_value=mock_client)
-    mocker.patch(
-        "app.chat.dependencies.get_bedrock_runtime_client",
-        return_value=mock_runtime_client,
+    service_instance = dependencies.get_bedrock_inference_service(
+        api_client=mock_client,
+        runtime_client=mock_runtime_client,
+        app_config=mock_config,
     )
-
-    service_instance = dependencies.get_bedrock_inference_service()
 
     assert isinstance(service_instance, bedrock_service.BedrockInferenceService)
     assert service_instance.api_client == mock_client
     assert service_instance.runtime_client == mock_runtime_client
+    assert service_instance.app_config == mock_config
 
 
 def test_get_chat_agent(mocker: MockerFixture):
     mock_inference_service = mocker.Mock(spec=bedrock_service.BedrockInferenceService)
+    mock_config = mocker.Mock()
 
-    agent_instance = dependencies.get_chat_agent(mock_inference_service)
+    agent_instance = dependencies.get_chat_agent(mock_inference_service, mock_config)
 
     assert isinstance(agent_instance, agent.BedrockChatAgent)
     assert agent_instance.inference_service == mock_inference_service
+    assert agent_instance.app_config == mock_config
 
 
 def test_get_conversation_repository(mocker: MockerFixture):
