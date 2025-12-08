@@ -10,11 +10,11 @@ from app.chat import models
 class AbstractConversationRepository(abc.ABC):
     @abc.abstractmethod
     async def save(self, conversation: models.Conversation) -> None:
-        pass
+        """Save the conversation to the repository."""
 
     @abc.abstractmethod
     async def get(self, conversation_id: uuid.UUID) -> models.Conversation | None:
-        pass
+        """Get the conversation from the repository."""
 
 
 class MongoConversationRepository(AbstractConversationRepository):
