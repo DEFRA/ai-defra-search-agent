@@ -16,7 +16,7 @@ class Message:
     role: str
     content: str
     model_id: str
-    created_at: datetime.datetime = dataclasses.field(
+    timestamp: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
 
