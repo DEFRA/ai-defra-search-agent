@@ -5,7 +5,6 @@ import pytest
 
 from app.chat import agent, models, repository, service
 
-# Mock test data
 MOCK_QUESTION = "What is the question?"
 MOCK_RESPONSE_1 = "First response"
 MOCK_RESPONSE_2 = "Second response"
@@ -39,9 +38,7 @@ def chat_service(mock_agent, mock_repository):
 @pytest.fixture
 def mock_existing_conversation():
     """Conversation with prior messages"""
-    prior_messages = [
-        models.Message(role="user", content=MOCK_PRIOR_MESSAGE, usage=MOCK_USAGE)
-    ]
+    prior_messages = [models.UserMessage(content=MOCK_PRIOR_MESSAGE, model_id="gpt-4")]
     return models.Conversation(id=str(uuid.uuid4()), messages=prior_messages.copy())
 
 
@@ -51,8 +48,12 @@ async def test_executes_with_existing_conversation(
 ):
     # Setup
     mock_agent_responses = [
-        models.Message(role="assistant", content=MOCK_RESPONSE_1, usage=MOCK_USAGE),
-        models.Message(role="assistant", content=MOCK_RESPONSE_2, usage=MOCK_USAGE),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_1, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_2, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
     ]
     mock_agent.execute_flow.return_value = mock_agent_responses
     mock_repository.get.return_value = mock_existing_conversation
@@ -97,7 +98,9 @@ async def test_creates_new_conversation_when_none_provided(
 ):
     # Setup
     mock_agent_responses = [
-        models.Message(role="assistant", content=MOCK_RESPONSE_1, usage=MOCK_USAGE),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_1, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
     ]
     mock_agent.execute_flow.return_value = mock_agent_responses
 
@@ -159,10 +162,18 @@ async def test_raises_when_conversation_not_found(
 async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repository):
     # Setup
     mock_agent_responses = [
-        models.Message(role="assistant", content=MOCK_RESPONSE_1, usage=MOCK_USAGE),
-        models.Message(role="assistant", content=MOCK_RESPONSE_2, usage=MOCK_USAGE),
-        models.Message(role="assistant", content=MOCK_RESPONSE_3, usage=MOCK_USAGE),
-        models.Message(role="assistant", content=MOCK_RESPONSE_4, usage=MOCK_USAGE),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_1, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_2, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_3, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_4, usage=MOCK_USAGE, model_id="gpt-4"
+        ),
     ]
     mock_conversation = models.Conversation(id=str(uuid.uuid4()))
     mock_agent.execute_flow.return_value = mock_agent_responses

@@ -89,6 +89,7 @@ def test_post_sync_chat_valid_question_returns_200(client):
     assert response.json()["messages"][0] == {
         "role": "user",
         "content": "Hello, how are you?",
+        "modelId": "Geni AI 3.5",
     }
     assert response.json()["messages"][1] == {
         "role": "assistant",
@@ -116,7 +117,11 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.status_code == 200
 
     assert response.json()["conversationId"] is not None
-    assert response.json()["messages"][0] == {"role": "user", "content": "Hello!"}
+    assert response.json()["messages"][0] == {
+        "role": "user",
+        "content": "Hello!",
+        "modelId": "Geni AI 3.5",
+    }
     assert response.json()["messages"][1] == {
         "role": "assistant",
         "content": "This is a stub response.",
@@ -125,6 +130,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][2] == {
         "role": "user",
         "content": "How's the weather?",
+        "modelId": "Geni AI 3.5",
     }
     assert response.json()["messages"][3] == {
         "role": "assistant",
