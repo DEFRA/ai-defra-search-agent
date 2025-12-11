@@ -106,3 +106,35 @@ async def test_get_db(mocker):
     result2 = await mongo.get_db(client=mock_client, app_config=mock_config)
     assert result2 == mock_db
     assert mock_client.get_database.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_check_connection_success(mocker):
+    mock_client = mocker.MagicMock()
+    mock_config = mocker.Mock()
+    mock_client.admin.command = mocker.AsyncMock(return_value={"ok": 1})
+
+    # Mock get_db to prevent side effects and focus on check_connection logic
+    mock_get_db = mocker.patch("app.common.mongo.get_db", new_callable=mocker.AsyncMock)
+
+    await mongo.check_connection(mock_client, mock_config)
+
+    mock_get_db.assert_awaited_once_with(mock_client, mock_config)
+    mock_client.admin.command.assert_awaited_once_with("ping")
+
+
+@pytest.mark.asyncio
+async def test_check_connection_failure(mocker):
+    mock_client = mocker.MagicMock()
+    mock_config = mocker.Mock()
+    test_exception = Exception("Connection failed")
+    mock_client.admin.command = mocker.AsyncMock(side_effect=test_exception)
+
+    mock_get_db = mocker.patch("app.common.mongo.get_db", new_callable=mocker.AsyncMock)
+
+    with pytest.raises(Exception, match="Connection failed") as exc_info:
+        await mongo.check_connection(mock_client, mock_config)
+
+    assert exc_info.value == test_exception
+    mock_get_db.assert_awaited_once_with(mock_client, mock_config)
+    mock_client.admin.command.assert_awaited_once_with("ping")
