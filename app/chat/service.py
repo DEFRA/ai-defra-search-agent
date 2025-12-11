@@ -24,13 +24,14 @@ class ChatService:
             msg = f"Conversation with id {conversation_id} not found"
             raise models.ConversationNotFoundError(msg)
 
-        user_message = models.Message(
-            role="user",
+        user_message = models.UserMessage(
             content=question,
-            usage=models.TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0),
+            model_id=model_name,  # TODO: this should be model id but we don't have it yet
         )
         conversation.add_message(user_message)
 
+        # TODO: maybe execute_flow should return both question and response so we can add
+        # token count and model-id to the user message?
         agent_responses = await self.chat_agent.execute_flow(
             question=question, model_name=model_name
         )

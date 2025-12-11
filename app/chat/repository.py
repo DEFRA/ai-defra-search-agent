@@ -10,11 +10,11 @@ from app.chat import models
 class AbstractConversationRepository(abc.ABC):
     @abc.abstractmethod
     async def save(self, conversation: models.Conversation) -> None:
-        pass
+        """Save the conversation to the repository."""
 
     @abc.abstractmethod
     async def get(self, conversation_id: uuid.UUID) -> models.Conversation | None:
-        pass
+        """Get the conversation from the repository."""
 
 
 class MongoConversationRepository(AbstractConversationRepository):
@@ -35,7 +35,9 @@ class MongoConversationRepository(AbstractConversationRepository):
                             "role": msg.role,
                             "content": msg.content,
                             "model": msg.model_id,
-                            "usage": dataclasses.asdict(msg.usage),
+                            "usage": dataclasses.asdict(msg.usage)
+                            if isinstance(msg, models.AssistantMessage)
+                            else None,
                         }
                         for msg in conversation.messages
                     ],
@@ -52,15 +54,35 @@ class MongoConversationRepository(AbstractConversationRepository):
         if not conversation:
             return None
 
+        messages: list[models.Message] = []
+        for msg in conversation["messages"]:
+            role = msg["role"]
+            content = msg["content"]
+            model_id = msg["model"]
+
+            if role == "user":
+                messages.append(
+                    models.UserMessage(
+                        role=role,
+                        content=content,
+                        model_id=model_id,
+                    )
+                )
+            elif role == "assistant":
+                usage = models.TokenUsage(**msg["usage"])
+                messages.append(
+                    models.AssistantMessage(
+                        role=role,
+                        content=content,
+                        model_id=model_id,
+                        usage=usage,
+                    )
+                )
+            else:
+                msg = f"Unknown role: {role}"
+                raise ValueError(msg)
+
         return models.Conversation(
             id=conversation["conversation_id"],
-            messages=[
-                models.Message(
-                    role=msg["role"],
-                    content=msg["content"],
-                    model_id=msg.get("model", None),
-                    usage=models.TokenUsage(**msg["usage"]),
-                )
-                for msg in conversation["messages"]
-            ],
+            messages=messages,
         )

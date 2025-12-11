@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import uuid
+from typing import Literal
 
 
 @dataclasses.dataclass(frozen=True)
@@ -10,15 +11,28 @@ class TokenUsage:
     total_tokens: int
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class Message:
     role: str
     content: str
-    usage: TokenUsage
-    model_id: str | None = None
+    model_id: str
     created_at: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
+
+    def to_dict(self) -> dict[str, str]:
+        return {"role": self.role, "content": self.content}
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class UserMessage(Message):
+    role: Literal["user"] = "user"
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class AssistantMessage(Message):
+    usage: TokenUsage
+    role: Literal["assistant"] = "assistant"
 
 
 @dataclasses.dataclass

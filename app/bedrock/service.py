@@ -36,7 +36,10 @@ class BedrockInferenceService:
             model_config.guardrail_version,
         )
 
-        invoke_args = {"modelId": model_id, "body": json.dumps(native_request)}
+        invoke_args: dict[str, str | int] = {
+            "modelId": model_id,
+            "body": json.dumps(native_request),
+        }
 
         if (guardrail_id is None) ^ (guardrail_version is None):
             msg = "The guardrail ID and version must be provided together"
