@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
@@ -73,6 +74,7 @@ async def test_get_retrieves_usage_data(mongo_repository, mock_db):
                 "content": "Response",
                 "model": "claude-3",
                 "usage": usage_dict,
+                "timestamp": datetime.datetime.now(datetime.UTC),
             }
         ],
     }
@@ -97,8 +99,57 @@ async def test_get_raises_when_unknown_role(mongo_repository, mock_db):
     conversation_id = uuid.uuid4()
     mock_doc = {
         "conversation_id": conversation_id,
-        "messages": [{"role": "unknown", "content": "Response", "model": "gpt-4"}],
+        "messages": [
+            {
+                "role": "unknown",
+                "content": "Response",
+                "model": "gpt-4",
+                "timestamp": datetime.datetime.now(datetime.UTC),
+            }
+        ],
     }
     mock_db.conversations.find_one.return_value = mock_doc
     with pytest.raises(ValueError, match="Unknown role: unknown"):
         await mongo_repository.get(conversation_id)
+
+
+@pytest.mark.asyncio
+async def test_save_stores_timestamp(mongo_repository, mock_db):
+    conversation_id = uuid.uuid4()
+    timestamp = datetime.datetime(2025, 8, 30, 12, 0, 0, tzinfo=datetime.UTC)
+    message = models.UserMessage(content="Hello", model_id="gpt-4", timestamp=timestamp)
+    conversation = models.Conversation(id=conversation_id, messages=[message])
+
+    await mongo_repository.save(conversation)
+
+    mock_db.conversations.update_one.assert_called_once()
+    call_args = mock_db.conversations.update_one.call_args
+
+    update_doc = call_args[0][1]
+    saved_msg = update_doc["$set"]["messages"][0]
+    assert saved_msg["timestamp"] == timestamp
+
+
+@pytest.mark.asyncio
+async def test_get_retrieves_timestamp(mongo_repository, mock_db):
+    conversation_id = uuid.uuid4()
+    timestamp = datetime.datetime(2025, 8, 30, 12, 0, 0, tzinfo=datetime.UTC)
+
+    mock_doc = {
+        "conversation_id": conversation_id,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hi",
+                "model": "gpt-4",
+                "timestamp": timestamp,
+            }
+        ],
+    }
+    mock_db.conversations.find_one.return_value = mock_doc
+
+    result = await mongo_repository.get(conversation_id)
+
+    assert result is not None
+    msg = result.messages[0]
+    assert msg.timestamp == timestamp

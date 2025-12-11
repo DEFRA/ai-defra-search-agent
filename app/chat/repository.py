@@ -35,6 +35,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                             "role": msg.role,
                             "content": msg.content,
                             "model": msg.model_id,
+                            "timestamp": msg.timestamp,
                             "usage": dataclasses.asdict(msg.usage)
                             if isinstance(msg, models.AssistantMessage)
                             else None,
@@ -59,23 +60,23 @@ class MongoConversationRepository(AbstractConversationRepository):
             role = msg["role"]
             content = msg["content"]
             model_id = msg["model"]
+            timestamp = msg["timestamp"]
+
+            common_args = {
+                "role": role,
+                "content": content,
+                "model_id": model_id,
+                "timestamp": timestamp,
+            }
 
             if role == "user":
-                messages.append(
-                    models.UserMessage(
-                        role=role,
-                        content=content,
-                        model_id=model_id,
-                    )
-                )
+                messages.append(models.UserMessage(**common_args))
             elif role == "assistant":
                 usage = models.TokenUsage(**msg["usage"])
                 messages.append(
                     models.AssistantMessage(
-                        role=role,
-                        content=content,
-                        model_id=model_id,
                         usage=usage,
+                        **common_args,
                     )
                 )
             else:
