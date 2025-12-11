@@ -1,4 +1,5 @@
 import httpx
+import pytest
 
 from app.common import http_client, tracing
 
@@ -68,3 +69,29 @@ def test_trace_id_set():
     )
     resp = client.get("http://localhost:1234/test")
     assert resp.text == "trace-id-value"
+
+
+@pytest.mark.asyncio
+async def test_async_trace_id_set():
+    tracing.ctx_trace_id.set("trace-id-value")
+    hook = http_client.create_async_tracing_hook("x-cdp-request-id")
+
+    async with httpx.AsyncClient(
+        event_hooks={"request": [hook]},
+        transport=httpx.MockTransport(mock_handler),
+    ) as client:
+        resp = await client.get("http://localhost:1234/test")
+        assert resp.text == "trace-id-value"
+
+
+@pytest.mark.asyncio
+async def test_async_trace_id_missing():
+    tracing.ctx_trace_id.set("")
+    hook = http_client.create_async_tracing_hook("x-cdp-request-id")
+
+    async with httpx.AsyncClient(
+        event_hooks={"request": [hook]},
+        transport=httpx.MockTransport(mock_handler),
+    ) as client:
+        resp = await client.get("http://localhost:1234/test")
+        assert resp.text == ""
