@@ -9,8 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockGuardrailConfig(pydantic.BaseModel):
-    guardrail_id: str
-    guardrail_version: str = pydantic.Field(..., pattern=r"(|([1-9][0-9]{0,7})|(DRAFT))")
+    guardrail_id: str = pydantic.Field(
+        ...,
+        pattern=r"^arn:aws:bedrock:[a-z]{2}-[a-z]+-\d{1}:\d{12}:guardrail/[a-z0-9]+$",
+    )
+    guardrail_version: str = pydantic.Field(..., pattern=r"^(([1-9][0-9]{0,7})|DRAFT)$")
 
 
 class BedrockModelConfig(pydantic.BaseModel):

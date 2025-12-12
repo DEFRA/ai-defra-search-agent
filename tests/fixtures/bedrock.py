@@ -1,12 +1,7 @@
 import json
-import re
 from typing import Any
 
 from app.bedrock import models, service
-
-guardrail_arn_regex = (
-    r"^arn:aws:bedrock:[a-z]{2}-[a-z]+-\d{1}:\d{12}:guardrail/[a-z0-9]+$"
-)
 
 
 class StubBedrockInferenceService(service.BedrockInferenceService):
@@ -44,18 +39,6 @@ class FakeStreamingBody:
 
 class StubBedrockRuntimeClient:
     def invoke_model(self, **kwargs) -> dict:
-        guardrail_id = kwargs.get("guardrailIdentifier")
-        guardrail_version = kwargs.get("guardrailVersion")
-
-        if guardrail_id:
-            if not re.match(guardrail_arn_regex, guardrail_id):
-                msg = "Invalid guardrail ARN format"
-                raise ValueError(msg)
-
-            if guardrail_version is not None and guardrail_version <= 0:
-                msg = "Guardrail version must be a positive integer"
-                raise ValueError(msg)
-
         response = {
             "id": "stub-response-id",
             "model": kwargs.get("modelId", "unknown-model"),
