@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class BedrockGuardrailConfig(pydantic.BaseModel):
     guardrail_id: str
-    guardrail_version: int
+    guardrail_version: str
 
 
 class BedrockModelConfig(pydantic.BaseModel):
