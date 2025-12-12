@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
-    async def execute_flow(
-        self, question: str, model_name: str
-    ) -> list[models.Message]:
+    async def execute_flow(self, question: str, model_id: str) -> list[models.Message]:
         pass
 
 
@@ -26,12 +24,10 @@ class BedrockChatAgent(AbstractChatAgent):
         self.inference_service = inference_service
         self.app_config = app_config
 
-    async def execute_flow(
-        self, question: str, model_name: str
-    ) -> list[models.Message]:
+    async def execute_flow(self, question: str, model_id: str) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
-        model_config = self._build_model_config(model_name)
+        model_config = self._build_model_config(model_id)
 
         messages = [
             models.UserMessage(content=question, model_id=model_config.id).to_dict()
@@ -54,7 +50,7 @@ class BedrockChatAgent(AbstractChatAgent):
         return [
             models.AssistantMessage(
                 content=content_block["text"],
-                model_id=response.model_id,
+                model_id=model_id,
                 usage=usage,
             )
             for content_block in response.content
@@ -71,7 +67,7 @@ class BedrockChatAgent(AbstractChatAgent):
         guardrails = model_info.guardrails
 
         return bedrock_models.ModelConfig(
-            id=model_info.id,
+            id=model_info.bedrock_model_id,
             guardrail_id=guardrails.guardrail_id if guardrails else None,
             guardrail_version=guardrails.guardrail_version if guardrails else None,
         )

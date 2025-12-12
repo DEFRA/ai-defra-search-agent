@@ -23,9 +23,9 @@ class ChatRequest(BaseRequestSchema):
         description="The ID of an existing conversation to continue. If not provided, a new conversation will be started.",
         examples=["3fa85f64-5717-4562-b374-2c963f66afa6"],
     )
-    model_name: str = pydantic.Field(
-        description="The name of the model to use for generating the response",
-        examples=["Claude 3 Haiku"],
+    model_id: str = pydantic.Field(
+        description="The internal id of the model to use for generating the response",
+        examples=["anthropic.claude-3-7-sonnet"],
     )
 
 
@@ -34,9 +34,15 @@ class MessageResponse(pydantic.BaseModel):
         description="The role of the message sender, e.g., 'user' or 'assistant'"
     )
     content: str = pydantic.Field(description="The content of the message")
+    model_name: str | None = pydantic.Field(
+        default=None,
+        description="The name of the model used to generate the message",
+        exclude_if=lambda v: v is None,
+        serialization_alias="modelName",
+    )
     model_id: str | None = pydantic.Field(
         default=None,
-        description="The model used to generate the message, if applicable",
+        description="The internal model id of the model used to generate the message, if applicable",
         exclude_if=lambda v: v is None,
         serialization_alias="modelId",
     )

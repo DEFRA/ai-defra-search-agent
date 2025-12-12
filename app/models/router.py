@@ -24,7 +24,9 @@ async def list_models(
 
     return [
         api_schemas.ModelInfoResponse(
-            model_name=model.name, model_description=model.description
+            model_id=model.model_id,
+            model_name=model.name,
+            model_description=model.description,
         )
         for model in models
     ]

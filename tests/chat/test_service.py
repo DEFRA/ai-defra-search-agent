@@ -3,6 +3,7 @@ import uuid
 import pytest
 
 from app.chat import agent, models, repository, service
+from app.config import BedrockModelConfig
 
 MOCK_QUESTION = "What is the question?"
 MOCK_RESPONSE_1 = "First response"
@@ -26,11 +27,28 @@ def mock_repository(mocker):
 
 
 @pytest.fixture
-def chat_service(mock_agent, mock_repository):
+def mock_model_resolution_service(mocker):
+    resolver = mocker.Mock()
+    resolver.resolve_model = mocker.Mock(
+        return_value=BedrockModelConfig(
+            name="Claude 3.5 Sonnet",
+            bedrock_model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
+            model_id="claude-3-5-sonnet",
+            description="A conversational AI model optimized for dialogue.",
+            guardrails=None,
+        )
+    )
+
+    return resolver
+
+
+@pytest.fixture
+def chat_service(mock_agent, mock_repository, mock_model_resolution_service):
     """ChatService instance with mocked dependencies"""
     return service.ChatService(
         chat_agent=mock_agent,
         conversation_repository=mock_repository,
+        model_resolution_service=mock_model_resolution_service,
     )
 
 
@@ -67,7 +85,7 @@ async def test_executes_with_existing_conversation(
 
     # Assert agent called with question string and model name
     mock_agent.execute_flow.assert_called_once_with(
-        question=MOCK_QUESTION, model_name="Geni AI-3.5"
+        question=MOCK_QUESTION, model_id="Geni AI-3.5"
     )
 
     # Assert user message added
@@ -104,14 +122,14 @@ async def test_creates_new_conversation_when_none_provided(
     mock_agent.execute_flow.return_value = mock_agent_responses
 
     # Execute - no conversation_id provided
-    result = await chat_service.execute_chat(MOCK_QUESTION, "Geni AI-3.5")
+    result = await chat_service.execute_chat(MOCK_QUESTION, "geni-ai-3.5")
 
     # Assert repository.get NOT called
     mock_repository.get.assert_not_called()
 
     # Assert agent called with question string and model name
     mock_agent.execute_flow.assert_called_once_with(
-        question=MOCK_QUESTION, model_name="Geni AI-3.5"
+        question=MOCK_QUESTION, model_id="geni-ai-3.5"
     )
 
     # Assert new conversation created
@@ -146,7 +164,7 @@ async def test_raises_when_conversation_not_found(
     # Execute & Assert
     with pytest.raises(models.ConversationNotFoundError):
         await chat_service.execute_chat(
-            MOCK_QUESTION, "Geni AI-3.5", mock_conversation_id
+            MOCK_QUESTION, "geni-ai-3.5", mock_conversation_id
         )
 
     # Assert repository.get was called
@@ -180,12 +198,13 @@ async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repositor
 
     # Execute
     result = await chat_service.execute_chat(
-        MOCK_QUESTION, "Geni AI-3.5", mock_conversation.id
+        MOCK_QUESTION, "geni-ai-3.5", mock_conversation.id
     )
 
     # Assert agent called with question string and model name
     mock_agent.execute_flow.assert_called_once_with(
-        question=MOCK_QUESTION, model_name="Geni AI-3.5"
+        question=MOCK_QUESTION,
+        model_id="geni-ai-3.5",
     )
 
     # Assert all agent messages added in order
