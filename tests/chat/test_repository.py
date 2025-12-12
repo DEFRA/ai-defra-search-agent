@@ -23,7 +23,9 @@ def mongo_repository(mock_db):
 async def test_save_stores_usage_data(mongo_repository, mock_db):
     conversation_id = uuid.uuid4()
     usage = models.TokenUsage(input_tokens=10, output_tokens=20, total_tokens=30)
-    message = models.AssistantMessage(content="Hello", model_id="gpt-4", usage=usage)
+    message = models.AssistantMessage(
+        content="Hello", model_id="gpt-4", model_name="GPT-4", usage=usage
+    )
     conversation = models.Conversation(id=conversation_id, messages=[message])
 
     await mongo_repository.save(conversation)
@@ -50,7 +52,10 @@ async def test_save_stores_usage_data(mongo_repository, mock_db):
 @pytest.mark.asyncio
 async def test_save_stores_none_when_usage_missing(mongo_repository, mock_db):
     conversation = models.Conversation(
-        id=uuid.uuid4(), messages=[models.UserMessage(content="Hi", model_id="gpt-4")]
+        id=uuid.uuid4(),
+        messages=[
+            models.UserMessage(content="Hi", model_id="gpt-4", model_name="GPT-4")
+        ],
     )
 
     await mongo_repository.save(conversation)
@@ -72,6 +77,7 @@ async def test_get_retrieves_usage_data(mongo_repository, mock_db):
                 "role": "assistant",
                 "content": "Response",
                 "model": "claude-3",
+                "model_name": "Claude 3",
                 "usage": usage_dict,
                 "timestamp": datetime.datetime.now(datetime.UTC),
             }
@@ -91,6 +97,7 @@ async def test_get_retrieves_usage_data(mongo_repository, mock_db):
     assert msg.usage.output_tokens == 10
     assert msg.usage.total_tokens == 15
     assert msg.model_id == "claude-3"
+    assert msg.model_name == "Claude 3"
 
 
 @pytest.mark.asyncio
@@ -103,6 +110,7 @@ async def test_get_raises_when_unknown_role(mongo_repository, mock_db):
                 "role": "unknown",
                 "content": "Response",
                 "model": "gpt-4",
+                "model_name": "GPT-4",
                 "timestamp": datetime.datetime.now(datetime.UTC),
             }
         ],
@@ -116,7 +124,9 @@ async def test_get_raises_when_unknown_role(mongo_repository, mock_db):
 async def test_save_stores_timestamp(mongo_repository, mock_db):
     conversation_id = uuid.uuid4()
     timestamp = datetime.datetime(2025, 8, 30, 12, 0, 0, tzinfo=datetime.UTC)
-    message = models.UserMessage(content="Hello", model_id="gpt-4", timestamp=timestamp)
+    message = models.UserMessage(
+        content="Hello", model_id="gpt-4", model_name="GPT-4", timestamp=timestamp
+    )
     conversation = models.Conversation(id=conversation_id, messages=[message])
 
     await mongo_repository.save(conversation)
@@ -141,6 +151,7 @@ async def test_get_retrieves_timestamp(mongo_repository, mock_db):
                 "role": "user",
                 "content": "Hi",
                 "model": "gpt-4",
+                "model_name": "gpt 4",
                 "timestamp": timestamp,
             }
         ],

@@ -11,6 +11,8 @@ MOCK_RESPONSE_2 = "Second response"
 MOCK_RESPONSE_3 = "Third response"
 MOCK_RESPONSE_4 = "Fourth response"
 MOCK_PRIOR_MESSAGE = "Previous question"
+MOCK_MODEL_NAME = "GPT 4"
+MOCK_MODEL_ID = "gpt-4"
 MOCK_USAGE = models.TokenUsage(input_tokens=10, output_tokens=10, total_tokens=20)
 
 
@@ -31,9 +33,9 @@ def mock_model_resolution_service(mocker):
     resolver = mocker.Mock()
     resolver.resolve_model = mocker.Mock(
         return_value=BedrockModelConfig(
-            name="Claude 3.5 Sonnet",
-            bedrock_model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
-            model_id="claude-3-5-sonnet",
+            name=MOCK_MODEL_NAME,
+            bedrock_model_id="gpt-4-bedrock-id",
+            model_id=MOCK_MODEL_ID,
             description="A conversational AI model optimized for dialogue.",
             guardrails=None,
         )
@@ -55,7 +57,11 @@ def chat_service(mock_agent, mock_repository, mock_model_resolution_service):
 @pytest.fixture
 def mock_existing_conversation():
     """Conversation with prior messages"""
-    prior_messages = [models.UserMessage(content=MOCK_PRIOR_MESSAGE, model_id="gpt-4")]
+    prior_messages = [
+        models.UserMessage(
+            content=MOCK_PRIOR_MESSAGE, model_id="gpt-4", model_name="GPT-4"
+        )
+    ]
     return models.Conversation(id=str(uuid.uuid4()), messages=prior_messages.copy())
 
 
@@ -66,10 +72,16 @@ async def test_executes_with_existing_conversation(
     # Setup
     mock_agent_responses = [
         models.AssistantMessage(
-            content=MOCK_RESPONSE_1, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_1,
+            usage=MOCK_USAGE,
+            model_id="gpt-4",
+            model_name="GPT-4",
         ),
         models.AssistantMessage(
-            content=MOCK_RESPONSE_2, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_2,
+            usage=MOCK_USAGE,
+            model_id="gpt-4",
+            model_name="GPT-4",
         ),
     ]
     mock_agent.execute_flow.return_value = mock_agent_responses
@@ -116,20 +128,23 @@ async def test_creates_new_conversation_when_none_provided(
     # Setup
     mock_agent_responses = [
         models.AssistantMessage(
-            content=MOCK_RESPONSE_1, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_1,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
         ),
     ]
     mock_agent.execute_flow.return_value = mock_agent_responses
 
     # Execute - no conversation_id provided
-    result = await chat_service.execute_chat(MOCK_QUESTION, "geni-ai-3.5")
+    result = await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID)
 
     # Assert repository.get NOT called
     mock_repository.get.assert_not_called()
 
     # Assert agent called with question string and model name
     mock_agent.execute_flow.assert_called_once_with(
-        question=MOCK_QUESTION, model_id="geni-ai-3.5"
+        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID
     )
 
     # Assert new conversation created
@@ -164,7 +179,7 @@ async def test_raises_when_conversation_not_found(
     # Execute & Assert
     with pytest.raises(models.ConversationNotFoundError):
         await chat_service.execute_chat(
-            MOCK_QUESTION, "geni-ai-3.5", mock_conversation_id
+            MOCK_QUESTION, MOCK_MODEL_ID, mock_conversation_id
         )
 
     # Assert repository.get was called
@@ -180,16 +195,28 @@ async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repositor
     # Setup
     mock_agent_responses = [
         models.AssistantMessage(
-            content=MOCK_RESPONSE_1, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_1,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
         ),
         models.AssistantMessage(
-            content=MOCK_RESPONSE_2, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_2,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
         ),
         models.AssistantMessage(
-            content=MOCK_RESPONSE_3, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_3,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
         ),
         models.AssistantMessage(
-            content=MOCK_RESPONSE_4, usage=MOCK_USAGE, model_id="gpt-4"
+            content=MOCK_RESPONSE_4,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
         ),
     ]
     mock_conversation = models.Conversation(id=str(uuid.uuid4()))
@@ -198,13 +225,13 @@ async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repositor
 
     # Execute
     result = await chat_service.execute_chat(
-        MOCK_QUESTION, "geni-ai-3.5", mock_conversation.id
+        MOCK_QUESTION, MOCK_MODEL_ID, mock_conversation.id
     )
 
     # Assert agent called with question string and model name
     mock_agent.execute_flow.assert_called_once_with(
         question=MOCK_QUESTION,
-        model_id="geni-ai-3.5",
+        model_id=MOCK_MODEL_ID,
     )
 
     # Assert all agent messages added in order

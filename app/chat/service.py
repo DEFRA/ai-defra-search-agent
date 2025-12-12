@@ -33,7 +33,8 @@ class ChatService:
 
         user_message = models.UserMessage(
             content=question,
-            model_id=model_name,  # TODO: this should be model id but we don't have it yet
+            model_id=model_id,
+            model_name=model_info.name,
         )
         conversation.add_message(user_message)
 

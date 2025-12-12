@@ -35,6 +35,7 @@ class MongoConversationRepository(AbstractConversationRepository):
                             "role": msg.role,
                             "content": msg.content,
                             "model": msg.model_id,
+                            "model_name": msg.model_name,
                             "timestamp": msg.timestamp,
                             "usage": dataclasses.asdict(msg.usage)
                             if isinstance(msg, models.AssistantMessage)
@@ -60,12 +61,14 @@ class MongoConversationRepository(AbstractConversationRepository):
             role = msg["role"]
             content = msg["content"]
             model_id = msg["model"]
+            model_name = msg["model_name"]
             timestamp = msg["timestamp"]
 
             common_args = {
                 "role": role,
                 "content": content,
                 "model_id": model_id,
+                "model_name": model_name,
                 "timestamp": timestamp,
             }
 

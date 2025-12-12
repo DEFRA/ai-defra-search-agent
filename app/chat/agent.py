@@ -30,7 +30,13 @@ class BedrockChatAgent(AbstractChatAgent):
         model_config = self._build_model_config(model_id)
 
         messages = [
-            models.UserMessage(content=question, model_id=model_config.id).to_dict()
+            models.UserMessage(
+                content=question,
+                model_id=model_config.id,
+                model_name=self.app_config.bedrock.available_generation_models[
+                    model_id
+                ].name,
+            ).to_dict()
         ]
 
         response = self.inference_service.invoke_anthropic(
@@ -51,6 +57,9 @@ class BedrockChatAgent(AbstractChatAgent):
             models.AssistantMessage(
                 content=content_block["text"],
                 model_id=model_id,
+                model_name=self.app_config.bedrock.available_generation_models[
+                    model_id
+                ].name,
                 usage=usage,
             )
             for content_block in response.content
