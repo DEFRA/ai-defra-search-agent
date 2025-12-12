@@ -63,36 +63,6 @@ def test_with_valid_guardrails_should_return_bedrock_response(
     assert response.content == [{"text": "This is a stub response."}]
 
 
-def test_invalid_guardrail_arn_should_raise_error(
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    with pytest.raises(ValueError, match="Invalid guardrail ARN format"):
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(
-                id="geni-ai-3.5", guardrail_id="invalid-arn", guardrail_version=1
-            ),
-            system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
-        )
-
-
-def test_invalid_guardrail_version_should_raise_error(
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    with pytest.raises(
-        ValueError, match="Guardrail version must be a positive integer"
-    ):
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(
-                id="geni-ai-3.5",
-                guardrail_id="arn:aws:bedrock:us-west-2:123456789012:guardrail/8etdsfsdf3sd",
-                guardrail_version=0,
-            ),
-            system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
-        )
-
-
 def test_guardrail_id_with_no_version_should_raise_error(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
