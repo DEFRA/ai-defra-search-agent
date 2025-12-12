@@ -116,6 +116,9 @@ class AppConfig(pydantic_settings.BaseSettings):
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
 
+    def __hash__(self):
+        return id(self)
+
 
 config: AppConfig | None = None
 
