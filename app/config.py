@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockGuardrailConfig(pydantic.BaseModel):
-    model_config = pydantic.ConfigDict(frozenset=True)
     guardrail_id: str = pydantic.Field(
         ...,
         pattern=r"^arn:aws:bedrock:[a-z]{2}-[a-z]+-\d{1}:\d{12}:guardrail/[a-z0-9]+$",
@@ -18,7 +17,6 @@ class BedrockGuardrailConfig(pydantic.BaseModel):
 
 
 class BedrockModelConfig(pydantic.BaseModel):
-    model_config = pydantic.ConfigDict(frozenset=True)
     name: str
     description: str
     id: str
@@ -29,7 +27,7 @@ class BedrockModelConfig(pydantic.BaseModel):
 
 
 class BedrockConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore", frozenset=True)
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     use_credentials: bool = pydantic.Field(
         default=False, alias="AWS_BEDROCK_USE_CREDENTIALS"
     )
@@ -100,7 +98,7 @@ class MongoConfig(pydantic_settings.BaseSettings):
 
 
 class AppConfig(pydantic_settings.BaseSettings):
-    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore", frozenset=True)
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
     host: str | None = None
     port: int = pydantic.Field(...)
