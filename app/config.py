@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class BedrockGuardrailConfig(pydantic.BaseModel):
     guardrail_id: str
-    guardrail_version: str
+    guardrail_version: str = pydantic.Field(..., pattern=r"(|([1-9][0-9]{0,7})|(DRAFT))")
 
 
 class BedrockModelConfig(pydantic.BaseModel):
