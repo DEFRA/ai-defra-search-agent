@@ -33,8 +33,8 @@ class ConfigModelResolutionService(AbstractModelResolutionService):
         ]
 
     def resolve_model(self, model_id: str) -> models.ModelInfo:
-        """Resolve a model by its ID."""
-        available_models = app_config.bedrock.available_generation_models
+        """Resolve a model by its internal ID."""
+        available_models = self.app_config.bedrock.available_generation_models
 
         if model_id not in available_models:
             msg = f"Model '{model_id}' not found"
