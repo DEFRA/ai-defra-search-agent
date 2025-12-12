@@ -19,7 +19,7 @@ app_config = config.get_config()
 @contextlib.asynccontextmanager
 async def lifespan(_: fastapi.FastAPI):
     # Startup
-    client = await mongo.get_mongo_client()
+    client = await mongo.get_mongo_client(app_config)
     logger.info("MongoDB client connected")
     yield
     # Shutdown

@@ -1,7 +1,6 @@
 import dataclasses
 import datetime
 import uuid
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -9,9 +8,9 @@ from app.chat import models, repository
 
 
 @pytest.fixture
-def mock_db():
-    db = MagicMock()
-    db.conversations = AsyncMock()
+def mock_db(mocker):
+    db = mocker.MagicMock()
+    db.conversations = mocker.AsyncMock()
     return db
 
 

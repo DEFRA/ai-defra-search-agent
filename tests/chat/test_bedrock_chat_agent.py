@@ -1,5 +1,3 @@
-from unittest.mock import MagicMock
-
 import pytest
 
 from app import config
@@ -16,15 +14,15 @@ SYSTEM_PROMPT = "You are a DEFRA agent. All communication should be appropriatel
 
 
 @pytest.fixture
-def mock_inference_service():
+def mock_inference_service(mocker):
     """Mock BedrockInferenceService"""
-    return MagicMock()
+    return mocker.MagicMock()
 
 
 @pytest.fixture
-def mock_config(monkeypatch):
+def mock_config(mocker):
     """Mock app config"""
-    mock_config_obj = MagicMock()
+    mock_config_obj = mocker.MagicMock()
     mock_config_obj.bedrock.available_generation_models = {
         "anthropic.claude-3-sonnet": config.BedrockModelConfig(
             name="anthropic.claude-3-sonnet",
@@ -34,20 +32,21 @@ def mock_config(monkeypatch):
         )
     }
     mock_config_obj.bedrock.default_generation_model = MOCK_MODEL_ID
-    monkeypatch.setattr("app.chat.agent.app_config", mock_config_obj)
     return mock_config_obj
 
 
 @pytest.fixture
-def bedrock_agent(mock_inference_service):
+def bedrock_agent(mock_inference_service, mock_config):
     """BedrockChatAgent with mocked dependencies"""
-    return agent.BedrockChatAgent(inference_service=mock_inference_service)
+    return agent.BedrockChatAgent(
+        inference_service=mock_inference_service, app_config=mock_config
+    )
 
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_config")
 async def test_executes_flow_with_correct_parameters(
-    bedrock_agent, mock_inference_service
+    bedrock_agent, mock_inference_service, mocker
 ):
     # Setup
     mock_response_content = [
@@ -59,7 +58,7 @@ async def test_executes_flow_with_correct_parameters(
         content=mock_response_content,
         usage={"input_tokens": 10, "output_tokens": 20},
     )
-    mock_inference_service.invoke_anthropic = MagicMock(
+    mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
     )
 
@@ -97,7 +96,9 @@ async def test_executes_flow_with_correct_parameters(
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_config")
-async def test_handles_single_response_message(bedrock_agent, mock_inference_service):
+async def test_handles_single_response_message(
+    bedrock_agent, mock_inference_service, mocker
+):
     # Setup
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
@@ -107,7 +108,7 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
         content=mock_response_content,
         usage={"input_tokens": 10, "output_tokens": 20},
     )
-    mock_inference_service.invoke_anthropic = MagicMock(
+    mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
     )
 
@@ -124,7 +125,9 @@ async def test_handles_single_response_message(bedrock_agent, mock_inference_ser
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_config")
-async def test_executes_flow_returns_usage_data(bedrock_agent, mock_inference_service):
+async def test_executes_flow_returns_usage_data(
+    bedrock_agent, mock_inference_service, mocker
+):
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
     ]
@@ -137,7 +140,7 @@ async def test_executes_flow_returns_usage_data(bedrock_agent, mock_inference_se
         content=mock_response_content,
         usage=mock_usage,
     )
-    mock_inference_service.invoke_anthropic = MagicMock(
+    mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
     )
 

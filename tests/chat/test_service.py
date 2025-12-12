@@ -1,5 +1,4 @@
 import uuid
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -15,15 +14,15 @@ MOCK_USAGE = models.TokenUsage(input_tokens=10, output_tokens=10, total_tokens=2
 
 
 @pytest.fixture
-def mock_agent():
+def mock_agent(mocker):
     """Async mock of AbstractChatAgent"""
-    return AsyncMock(spec=agent.AbstractChatAgent)
+    return mocker.AsyncMock(spec=agent.AbstractChatAgent)
 
 
 @pytest.fixture
-def mock_repository():
+def mock_repository(mocker):
     """Async mock of AbstractConversationRepository"""
-    return AsyncMock(spec=repository.AbstractConversationRepository)
+    return mocker.AsyncMock(spec=repository.AbstractConversationRepository)
 
 
 @pytest.fixture

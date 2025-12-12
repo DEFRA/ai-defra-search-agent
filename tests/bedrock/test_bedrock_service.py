@@ -6,10 +6,15 @@ from tests.fixtures import bedrock as bedrock_fixtures
 
 
 @pytest.fixture
-def bedrock_inference_service():
+def bedrock_inference_service(mocker: MockerFixture):
+    mock_config = mocker.Mock()
+    mock_config.bedrock.max_response_tokens = 100
+    mock_config.bedrock.default_model_temprature = 0.5
+
     return service.BedrockInferenceService(
         api_client=bedrock_fixtures.StubBedrockClient(),
         runtime_client=bedrock_fixtures.StubBedrockRuntimeClient(),
+        app_config=mock_config,
     )
 
 
