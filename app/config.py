@@ -19,7 +19,8 @@ class BedrockGuardrailConfig(pydantic.BaseModel):
 class BedrockModelConfig(pydantic.BaseModel):
     name: str
     description: str
-    id: str
+    bedrock_model_id: str
+    model_id: str
     guardrails: BedrockGuardrailConfig | None = None
 
     def __hash__(self):
@@ -56,14 +57,16 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     @pydantic.field_validator("available_generation_models", mode="before")
     @classmethod
     def parse_bedrock_model(cls, v):
+        logger.info("stuff: %s", v)
+
         if isinstance(v, str):
             parsed = json.loads(v)
 
             models = {}
 
             for model_info in parsed:
-                if model_info["name"] in models:
-                    msg = f"Duplicate model name found in configuration: {model_info['name']}"
+                if model_info["modelId"] in models:
+                    msg = f"Duplicate model id found in configuration: {model_info['modelId']}"
                     raise ValueError(msg)
 
                 guardrails = None
@@ -74,9 +77,10 @@ class BedrockConfig(pydantic_settings.BaseSettings):
                         guardrail_version=model_info["guardrails"]["guardrail_version"],
                     )
 
-                models[model_info["name"]] = BedrockModelConfig(
+                models[model_info["modelId"]] = BedrockModelConfig(
                     name=model_info["name"],
-                    id=model_info["id"],
+                    bedrock_model_id=model_info["bedrockModelId"],
+                    model_id=model_info["modelId"],
                     description=model_info["description"],
                     guardrails=guardrails,
                 )

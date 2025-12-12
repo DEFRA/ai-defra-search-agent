@@ -5,4 +5,4 @@ import dataclasses
 class ModelInfo:
     name: str
     description: str
-    id: str
+    model_id: str

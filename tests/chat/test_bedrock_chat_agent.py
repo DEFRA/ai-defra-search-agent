@@ -26,7 +26,8 @@ def mock_config(mocker):
     mock_config_obj.bedrock.available_generation_models = {
         "anthropic.claude-3-sonnet": config.BedrockModelConfig(
             name="anthropic.claude-3-sonnet",
-            id="anthropic.claude-3-sonnet",
+            model_id="anthropic.claude-3-sonnet",
+            bedrock_model_id="anthropic.claude-3-sonnet",
             description="A conversational AI model optimized for dialogue.",
             guardrails=None,
         )
@@ -64,7 +65,7 @@ async def test_executes_flow_with_correct_parameters(
 
     # Execute
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_name=MOCK_MODEL_ID
+        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID
     )
 
     # Assert invoke_anthropic called with correct parameters
@@ -113,7 +114,7 @@ async def test_handles_single_response_message(
     )
 
     # Execute
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
 
     # Assert single message returned
     assert len(result) == 1
@@ -144,7 +145,7 @@ async def test_executes_flow_returns_usage_data(
         return_value=mock_model_response
     )
 
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
 
     assert len(result) == 1
     actual_message = result[0]
@@ -160,7 +161,7 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
     unsupported_model_id = "unsupported-model-123"
 
     with pytest.raises(models.UnsupportedModelError) as exc_info:
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=unsupported_model_id)
+        await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=unsupported_model_id)
 
     assert (
         str(exc_info.value)
