@@ -218,6 +218,41 @@ This configuration will:
    - Add all necessary variables (see environment configuration section)
 4. Click **OK** to save
 
+### AI-Assisted Development
+
+This repository includes guidelines for AI coding assistants to ensure generated code follows project standards.
+
+**Guidelines File:** [`docs/ai/ai-guidelines-python.md`](docs/ai/ai-guidelines-python.md)
+
+These guidelines describe:
+- Required tooling (`uv`, `taskipy`, `ruff`, `pytest`)
+- Test and style conventions
+- How commands must be executed (`uv run task <name>`)
+- Commenting and code quality expectations
+
+#### Using with Cursor
+
+To ensure Cursor follows project standards:
+1. Create a `.cursorrules` file in the project root if one doesn't exist.
+2. Copy the content of [`docs/ai/ai-guidelines-python.md`](docs/ai/ai-guidelines-python.md) into `.cursorrules`.
+3. Alternatively, reference the file explicitly in chat: `@docs/ai/ai-guidelines-python.md`.
+
+#### Using with Claude
+
+When using Claude for development:
+1. Create a `CLAUDE.md` file in the root of the project
+2. Add the following to the file:
+
+```markdown
+This project follows specific coding standards and architectural patterns. Please review the following guidelines before making any changes:
+
+## Project Context
+@docs/ai/project-context.md
+
+## Python Coding Guidelines
+@docs/ai/ai-guidelines-python.md
+```
+
 ## Tests
 
 ### Running Tests
