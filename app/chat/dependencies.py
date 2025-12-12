@@ -1,5 +1,4 @@
 import logging
-from functools import lru_cache
 
 import boto3
 import fastapi
@@ -13,7 +12,6 @@ from app.common import mongo
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
 def get_bedrock_runtime_client(
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> boto3.client:
@@ -28,7 +26,6 @@ def get_bedrock_runtime_client(
     return boto3.client("bedrock-runtime", region_name=app_config.aws_region)
 
 
-@lru_cache(maxsize=1)
 def get_bedrock_client(
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> boto3.client:
