@@ -5,8 +5,6 @@ from app.chat import agent, dependencies, repository, service
 
 
 def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
-    dependencies.get_bedrock_runtime_client.cache_clear()
-
     # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
@@ -21,8 +19,6 @@ def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
 
 
 def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
-    dependencies.get_bedrock_runtime_client.cache_clear()
-
     # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = True
@@ -44,8 +40,6 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
 
 
 def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
-    dependencies.get_bedrock_client.cache_clear()
-
     # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
@@ -60,8 +54,6 @@ def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
 
 
 def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
-    dependencies.get_bedrock_client.cache_clear()
-
     # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = True
