@@ -218,6 +218,20 @@ This configuration will:
    - Add all necessary variables (see environment configuration section)
 4. Click **OK** to save
 
+### AI-Assisted Development
+
+This repository supports the use of AI coding tools (Cursor, Claude, Copilot, etc.), but all generated code **must** follow the rules defined in:
+
+**`docs/ai/ai-guidelines-python.md`**
+
+These guidelines describe:
+- Required tooling (`uv`, `taskipy`, `ruff`, `pytest`)
+- Test and style conventions
+- How commands must be executed (`uv run task <name>`)
+- Commenting and code quality expectations
+
+When prompting an AI tool, include a reference to these guidelines to ensure consistent, correct output.
+
 ## Tests
 
 ### Running Tests
