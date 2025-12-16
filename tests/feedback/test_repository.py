@@ -50,7 +50,9 @@ async def test_save_stores_feedback_with_all_fields(mongo_repository, mock_db):
 
 
 @pytest.mark.asyncio
-async def test_save_stores_feedback_with_optional_fields_none(mongo_repository, mock_db):
+async def test_save_stores_feedback_with_optional_fields_none(
+    mongo_repository, mock_db
+):
     feedback_id = uuid.uuid4()
     timestamp = datetime.datetime.now(datetime.UTC)
 

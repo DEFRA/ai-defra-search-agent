@@ -46,6 +46,7 @@ def test_feedback_generates_timestamp_in_utc():
     assert before <= feedback.timestamp <= after
     assert feedback.timestamp.tzinfo == datetime.UTC
 
+
 def test_feedback_is_frozen():
     feedback = models.Feedback(was_helpful=True)
 

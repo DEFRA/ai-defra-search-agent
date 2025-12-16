@@ -15,6 +15,7 @@ class AbstractFeedbackRepository(abc.ABC):
     async def get(self, feedback_id: uuid.UUID) -> models.Feedback | None:
         """Get the feedback from the repository."""
 
+
 class MongoFeedbackRepository(AbstractFeedbackRepository):
     def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
         self.db = db
