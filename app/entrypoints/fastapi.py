@@ -8,6 +8,7 @@ import uvicorn
 from app import config
 from app.chat import router as chat_router
 from app.common import mongo, tracing
+from app.feedback import router as feedback_router
 from app.health import router as health_router
 from app.models import router as models_router
 
@@ -48,6 +49,7 @@ app.add_middleware(tracing.TraceIdMiddleware)
 app.include_router(health_router.router)
 app.include_router(models_router.router)
 app.include_router(chat_router.router)
+app.include_router(feedback_router.router)
 
 
 def main() -> None:  # pragma: no cover
