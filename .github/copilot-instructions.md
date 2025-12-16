@@ -1,0 +1,1 @@
+refer to the docs files in the docs/ai directory for more details on AI guidelines and project context.
