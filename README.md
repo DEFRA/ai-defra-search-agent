@@ -332,6 +332,7 @@ The scan will:
 | `GET: /docs`                | Automatic API Swagger documentation   |
 | `GET: /health`              | Health check endpoint                 |
 | `POST: /chat`               | Chat interaction with AI assistant    |
+| `POST: /feedback`           | Submit user feedback on AI responses  |
 
 ## Custom CloudWatch Metrics
 
