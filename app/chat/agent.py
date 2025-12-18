@@ -5,6 +5,7 @@ from app import config
 from app.bedrock import models as bedrock_models
 from app.bedrock import service
 from app.chat import models
+from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ class BedrockChatAgent(AbstractChatAgent):
 
         if model not in available_models:
             msg = f"Requested model '{model}' is not supported."
-            raise models.UnsupportedModelError(msg)
+            raise UnsupportedModelError(msg)
 
         model_info = available_models[model]
         guardrails = model_info.guardrails

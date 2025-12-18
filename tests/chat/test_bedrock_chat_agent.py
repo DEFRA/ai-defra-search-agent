@@ -2,7 +2,8 @@ import pytest
 
 from app import config
 from app.bedrock import models as bedrock_models
-from app.chat import agent, models
+from app.chat import agent
+from app.models import UnsupportedModelError
 
 # Mock test data
 MOCK_QUESTION = "What is the question?"
@@ -160,7 +161,7 @@ async def test_executes_flow_returns_usage_data(
 async def test_unsupported_model_raises_exception(bedrock_agent):
     unsupported_model_id = "unsupported-model-123"
 
-    with pytest.raises(models.UnsupportedModelError) as exc_info:
+    with pytest.raises(UnsupportedModelError) as exc_info:
         await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=unsupported_model_id)
 
     assert (

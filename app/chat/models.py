@@ -3,6 +3,15 @@ import datetime
 import uuid
 from typing import Literal
 
+__all__ = [
+    "AssistantMessage",
+    "Conversation",
+    "ConversationNotFoundError",
+    "Message",
+    "TokenUsage",
+    "UserMessage",
+]
+
 
 @dataclasses.dataclass(frozen=True)
 class TokenUsage:
@@ -46,8 +55,4 @@ class Conversation:
 
 
 class ConversationNotFoundError(Exception):
-    pass
-
-
-class UnsupportedModelError(Exception):
     pass

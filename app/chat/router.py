@@ -3,6 +3,7 @@ import logging
 import fastapi
 
 from app.chat import api_schemas, dependencies, models, service
+from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ async def chat(
         )
     except models.ConversationNotFoundError as e:
         raise fastapi.HTTPException(status_code=404, detail=str(e)) from None
-    except models.UnsupportedModelError as e:
+    except UnsupportedModelError as e:
         raise fastapi.HTTPException(status_code=400, detail=str(e)) from None
 
     return api_schemas.ChatResponse(
