@@ -57,8 +57,6 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     @pydantic.field_validator("available_generation_models", mode="before")
     @classmethod
     def parse_bedrock_model(cls, v):
-        logger.info("stuff: %s", v)
-
         if isinstance(v, str):
             parsed = json.loads(v)
 
