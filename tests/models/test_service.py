@@ -1,7 +1,7 @@
 import pytest
 
 from app import config
-from app.models import service
+from app.models import UnsupportedModelError, service
 
 
 def test_resolve_model_raises_value_error_if_not_found(mocker):
@@ -13,5 +13,5 @@ def test_resolve_model_raises_value_error_if_not_found(mocker):
         app_config=mock_app_config
     )
 
-    with pytest.raises(ValueError, match="Model 'unknown-model' not found"):
+    with pytest.raises(UnsupportedModelError, match="Model 'unknown-model' not found"):
         resolution_service.resolve_model("unknown-model")

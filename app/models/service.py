@@ -1,7 +1,7 @@
 import abc
 
 from app import config
-from app.models import models
+from app.models import UnsupportedModelError, models
 
 
 class AbstractModelResolutionService(abc.ABC):
@@ -38,7 +38,7 @@ class ConfigModelResolutionService(AbstractModelResolutionService):
 
         if model_id not in available_models:
             msg = f"Model '{model_id}' not found"
-            raise ValueError(msg)
+            raise UnsupportedModelError(msg)
 
         model = available_models[model_id]
         return models.ModelInfo(

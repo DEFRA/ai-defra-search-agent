@@ -9,6 +9,7 @@ from app import config
 from app.chat import router as chat_router
 from app.common import mongo, tracing
 from app.health import router as health_router
+from app.models import UnsupportedModelError
 from app.models import router as models_router
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,16 @@ async def validation_exception_handler(
     return fastapi.responses.JSONResponse(
         status_code=400,
         content={"detail": exc.errors()},
+    )
+
+
+@app.exception_handler(UnsupportedModelError)
+async def unsupported_model_exception_handler(
+    _: fastapi.Request, exc: UnsupportedModelError
+):
+    return fastapi.responses.JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
     )
 
 
