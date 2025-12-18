@@ -6,7 +6,7 @@ from typing import Any
 class ModelConfig:
     id: str
     guardrail_id: str | None = None
-    guardrail_version: int | None = None
+    guardrail_version: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
