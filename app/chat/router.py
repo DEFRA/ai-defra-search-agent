@@ -22,7 +22,7 @@ async def chat(
         )
     except models.ConversationNotFoundError as e:
         raise fastapi.HTTPException(status_code=404, detail=str(e)) from None
-    except (models.UnsupportedModelError, ValueError) as e:
+    except models.UnsupportedModelError as e:
         raise fastapi.HTTPException(status_code=400, detail=str(e)) from None
 
     return api_schemas.ChatResponse(
