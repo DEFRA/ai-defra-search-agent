@@ -23,21 +23,15 @@ async def submit_feedback(
             comment=request.comment,
         )
 
-        logger.info(
-            {
-                "feedback_id": feedback.id,
-                "conversation_id": feedback.conversation_id,
-                "was_helpful": feedback.was_helpful,
-            },
-            "Feedback submitted successfully",
-        )
-
         return api_schemas.FeedbackResponse(
             feedback_id=feedback.id,
             timestamp=feedback.timestamp,
         )
     except Exception as e:
-        logger.error({"error": str(e)}, "Error submitting feedback")
+        logger.error(
+            "Error submitting feedback",
+            extra={"error": str(e)}
+        )
         raise fastapi.HTTPException(
             status_code=500, detail="An error occurred while submitting feedback."
         ) from e

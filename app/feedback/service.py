@@ -1,6 +1,9 @@
 import uuid
+import logging
 
 from app.feedback import models, repository
+
+logger = logging.getLogger(__name__)
 
 
 class FeedbackService:
@@ -20,5 +23,12 @@ class FeedbackService:
         )
 
         await self.feedback_repository.save(feedback)
+        logger.info(
+            "Feedback submitted successfully",
+            extra={
+                "feedback_id": str(feedback.id),
+                "conversation_id": str(feedback.conversation_id)
+            }
+        )
 
         return feedback
