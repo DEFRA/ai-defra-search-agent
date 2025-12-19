@@ -1,5 +1,5 @@
-import uuid
 import logging
+import uuid
 
 from app.feedback import models, repository
 
@@ -27,8 +27,8 @@ class FeedbackService:
             "Feedback submitted successfully",
             extra={
                 "feedback_id": str(feedback.id),
-                "conversation_id": str(feedback.conversation_id)
-            }
+                "conversation_id": str(feedback.conversation_id),
+            },
         )
 
         return feedback

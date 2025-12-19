@@ -28,10 +28,7 @@ async def submit_feedback(
             timestamp=feedback.timestamp,
         )
     except Exception as e:
-        logger.error(
-            "Error submitting feedback",
-            extra={"error": str(e)}
-        )
+        logger.error("Error submitting feedback", extra={"error": str(e)})
         raise fastapi.HTTPException(
             status_code=500, detail="An error occurred while submitting feedback."
         ) from e
