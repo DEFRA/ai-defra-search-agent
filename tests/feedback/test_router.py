@@ -7,6 +7,7 @@ import pytest
 
 from app.common import mongo
 from app.entrypoints import fastapi as fastapi_app
+from app.feedback import dependencies
 
 
 @pytest.fixture
@@ -33,7 +34,6 @@ def client():
 
     yield test_client
 
-    # Clean up
     fastapi_app.app.dependency_overrides.clear()
 
 
@@ -53,7 +53,6 @@ def test_post_feedback_with_all_fields_returns_201(client, mocker):
     assert "timestamp" in response.json()
     assert response.json()["feedbackId"] is not None
 
-    # Verify logging was called
     mock_logger.info.assert_called_once()
     call_args = mock_logger.info.call_args
     assert call_args[0][0] == "Feedback submitted successfully"
@@ -105,3 +104,27 @@ def test_post_feedback_comment_too_long_returns_400(client):
     response = client.post("/feedback", json=body)
 
     assert response.status_code == 400
+
+
+def test_post_feedback_service_error_returns_500(client, mocker):
+    body = {"wasHelpful": True, "comment": "Test feedback"}
+
+    mock_service = mocker.Mock()
+    mock_service.submit_feedback = mocker.AsyncMock(
+        side_effect=Exception("Database error")
+    )
+    fastapi_app.app.dependency_overrides[dependencies.get_feedback_service] = (
+        lambda: mock_service
+    )
+
+    mock_logger = mocker.patch("app.feedback.router.logger")
+
+    response = client.post("/feedback", json=body)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "An error occurred while submitting feedback."
+    mock_logger.error.assert_called_once_with(
+        "Error submitting feedback", extra={"error": "Database error"}
+    )
+
+    del fastapi_app.app.dependency_overrides[dependencies.get_feedback_service]
