@@ -37,13 +37,14 @@ def client():
     fastapi_app.app.dependency_overrides.clear()
 
 
-def test_post_feedback_with_all_fields_returns_201(client):
+def test_post_feedback_with_all_fields_returns_201(client, mocker):
     conversation_id = str(uuid.uuid4())
     body = {
         "conversationId": conversation_id,
         "wasHelpful": True,
         "comment": "This was very helpful!",
     }
+    mock_logger = mocker.patch("app.feedback.service.logger")
 
     response = client.post("/feedback", json=body)
 
@@ -51,6 +52,14 @@ def test_post_feedback_with_all_fields_returns_201(client):
     assert "feedbackId" in response.json()
     assert "timestamp" in response.json()
     assert response.json()["feedbackId"] is not None
+
+    # Verify logging was called
+    mock_logger.info.assert_called_once()
+    call_args = mock_logger.info.call_args
+    assert call_args[0][0] == "Feedback submitted successfully"
+    assert "extra" in call_args[1]
+    assert "feedback_id" in call_args[1]["extra"]
+    assert "conversation_id" in call_args[1]["extra"]
 
 
 def test_post_feedback_minimal_returns_201(client):

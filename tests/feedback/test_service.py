@@ -18,11 +18,14 @@ def feedback_service(mock_repository):
 
 
 @pytest.mark.asyncio
-async def test_submit_feedback_with_all_fields(feedback_service, mock_repository):
+async def test_submit_feedback_with_all_fields(
+    feedback_service, mock_repository, mocker
+):
     # Setup
     conversation_id = uuid.uuid4()
     was_helpful = True
     comment = "This was very helpful!"
+    mock_logger = mocker.patch("app.feedback.service.logger")
 
     # Execute
     result = await feedback_service.submit_feedback(
@@ -46,14 +49,24 @@ async def test_submit_feedback_with_all_fields(feedback_service, mock_repository
     assert saved_feedback.was_helpful is True
     assert saved_feedback.comment == comment
 
+    # Verify logging was called with correct message and extra fields
+    mock_logger.info.assert_called_once_with(
+        "Feedback submitted successfully",
+        extra={
+            "feedback_id": str(result.id),
+            "conversation_id": str(result.conversation_id),
+        },
+    )
+
 
 @pytest.mark.asyncio
 async def test_submit_feedback_without_conversation_id(
-    feedback_service, mock_repository
+    feedback_service, mock_repository, mocker
 ):
     # Setup
     was_helpful = False
     comment = "Not helpful"
+    mock_logger = mocker.patch("app.feedback.service.logger")
 
     # Execute
     result = await feedback_service.submit_feedback(
@@ -74,6 +87,15 @@ async def test_submit_feedback_without_conversation_id(
     saved_feedback = mock_repository.save.call_args[0][0]
     assert saved_feedback.conversation_id is None
     assert saved_feedback.was_helpful is False
+
+    # Verify logging was called with None conversation_id
+    mock_logger.info.assert_called_once_with(
+        "Feedback submitted successfully",
+        extra={
+            "feedback_id": str(result.id),
+            "conversation_id": str(None),
+        },
+    )
 
 
 @pytest.mark.asyncio
