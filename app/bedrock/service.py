@@ -26,7 +26,6 @@ class BedrockInferenceService:
             model_config.guardrail_version,
         )
 
-        # Build converse API arguments
         converse_args: dict[str, Any] = {
             "modelId": model_id,
             "messages": messages,
