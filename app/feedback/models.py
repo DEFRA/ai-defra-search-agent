@@ -7,7 +7,7 @@ import uuid
 class Feedback:
     id: uuid.UUID = dataclasses.field(default_factory=uuid.uuid4)
     conversation_id: uuid.UUID | None = None
-    was_helpful: bool
+    was_helpful: str
     comment: str | None = None
     timestamp: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
