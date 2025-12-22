@@ -3,6 +3,15 @@ import datetime
 import uuid
 from typing import Literal
 
+__all__ = [
+    "AssistantMessage",
+    "Conversation",
+    "ConversationNotFoundError",
+    "Message",
+    "TokenUsage",
+    "UserMessage",
+]
+
 
 @dataclasses.dataclass(frozen=True)
 class TokenUsage:
@@ -16,6 +25,7 @@ class Message:
     role: str
     content: str
     model_id: str
+    model_name: str
     timestamp: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
@@ -45,8 +55,4 @@ class Conversation:
 
 
 class ConversationNotFoundError(Exception):
-    pass
-
-
-class UnsupportedModelError(Exception):
     pass

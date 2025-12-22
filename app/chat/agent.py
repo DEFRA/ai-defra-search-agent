@@ -5,15 +5,14 @@ from app import config
 from app.bedrock import models as bedrock_models
 from app.bedrock import service
 from app.chat import models
+from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
-    async def execute_flow(
-        self, question: str, model_name: str
-    ) -> list[models.Message]:
+    async def execute_flow(self, question: str, model_id: str) -> list[models.Message]:
         pass
 
 
@@ -26,15 +25,19 @@ class BedrockChatAgent(AbstractChatAgent):
         self.inference_service = inference_service
         self.app_config = app_config
 
-    async def execute_flow(
-        self, question: str, model_name: str
-    ) -> list[models.Message]:
+    async def execute_flow(self, question: str, model_id: str) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
-        model_config = self._build_model_config(model_name)
+        model_config = self._build_model_config(model_id)
 
         messages = [
-            models.UserMessage(content=question, model_id=model_config.id).to_dict()
+            models.UserMessage(
+                content=question,
+                model_id=model_config.id,
+                model_name=self.app_config.bedrock.available_generation_models[
+                    model_id
+                ].name,
+            ).to_dict()
         ]
 
         response = self.inference_service.invoke_anthropic(
@@ -54,7 +57,10 @@ class BedrockChatAgent(AbstractChatAgent):
         return [
             models.AssistantMessage(
                 content=content_block["text"],
-                model_id=response.model_id,
+                model_id=model_id,
+                model_name=self.app_config.bedrock.available_generation_models[
+                    model_id
+                ].name,
                 usage=usage,
             )
             for content_block in response.content
@@ -65,13 +71,13 @@ class BedrockChatAgent(AbstractChatAgent):
 
         if model not in available_models:
             msg = f"Requested model '{model}' is not supported."
-            raise models.UnsupportedModelError(msg)
+            raise UnsupportedModelError(msg)
 
         model_info = available_models[model]
         guardrails = model_info.guardrails
 
         return bedrock_models.ModelConfig(
-            id=model_info.id,
+            id=model_info.bedrock_model_id,
             guardrail_id=guardrails.guardrail_id if guardrails else None,
             guardrail_version=guardrails.guardrail_version if guardrails else None,
         )

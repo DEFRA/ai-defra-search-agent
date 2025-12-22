@@ -19,10 +19,12 @@ def test_get_models_returns_model_list(client):
 
     assert data == [
         {
+            "modelId": "geni-ai-3.5",
             "modelName": "Geni AI 3.5",
             "modelDescription": "A powerful conversational AI model suitable for a wide range of tasks.",
         },
         {
+            "modelId": "geni-ai-4",
             "modelName": "Geni AI 4",
             "modelDescription": "An advanced conversational AI model with enhanced understanding and generation capabilities.",
         },

@@ -8,6 +8,8 @@ from app import config, dependencies
 from app.bedrock import service as bedrock_service
 from app.chat import agent, repository, service
 from app.common import mongo
+from app.models import dependencies as model_dependencies
+from app.models import service as model_service
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +74,12 @@ def get_chat_service(
     conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
         get_conversation_repository
     ),
+    model_resolution_service: model_service.AbstractModelResolutionService = fastapi.Depends(
+        model_dependencies.get_model_resolution_service
+    ),
 ) -> service.ChatService:
     return service.ChatService(
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
+        model_resolution_service=model_resolution_service,
     )

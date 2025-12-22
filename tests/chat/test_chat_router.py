@@ -46,7 +46,7 @@ def test_post_chat_nonexistent_conversation_returns_404(client):
     body = {
         "question": "Hello",
         "conversationId": "2c29818a-4367-4114-a789-4494a527b8af",
-        "modelName": "Geni AI 3.5",
+        "modelId": "geni-ai-3.5",
     }
 
     response = client.post("/chat", json=body)
@@ -55,7 +55,7 @@ def test_post_chat_nonexistent_conversation_returns_404(client):
 
 
 def test_post_chat_empty_question_returns_400(client):
-    body = {"question": "", "modelName": "Geni AI 3.5"}
+    body = {"question": "", "modelId": "geni-ai-3.5"}
 
     response = client.post("/chat", json=body)
 
@@ -78,8 +78,17 @@ def test_post_chat_nonsupported_model_returns_400(client):
     assert response.status_code == 400
 
 
+def test_post_chat_unsupported_model_id_returns_400(client):
+    body = {"question": "Hello", "modelId": "unsupported-model-id"}
+
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Model 'unsupported-model-id' not found"
+
+
 def test_post_sync_chat_valid_question_returns_200(client):
-    body = {"question": "Hello, how are you?", "modelName": "Geni AI 3.5"}
+    body = {"question": "Hello, how are you?", "modelId": "geni-ai-3.5"}
 
     response = client.post("/chat", json=body)
 
@@ -89,17 +98,19 @@ def test_post_sync_chat_valid_question_returns_200(client):
     assert response.json()["messages"][0] == {
         "role": "user",
         "content": "Hello, how are you?",
-        "modelId": "Geni AI 3.5",
+        "modelId": "geni-ai-3.5",
+        "modelName": "Geni AI 3.5",
     }
     assert response.json()["messages"][1] == {
         "role": "assistant",
         "content": "This is a stub response.",
         "modelId": "geni-ai-3.5",
+        "modelName": "Geni AI 3.5",
     }
 
 
 def test_post_chat_with_existing_conversation_returns_200(client):
-    start_body = {"question": "Hello!", "modelName": "Geni AI 3.5"}
+    start_body = {"question": "Hello!", "modelId": "geni-ai-3.5"}
 
     response = client.post("/chat", json=start_body)
     assert response.status_code == 200
@@ -109,7 +120,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     continue_body = {
         "question": "How's the weather?",
         "conversationId": conversation_id,
-        "modelName": "Geni AI 3.5",
+        "modelId": "geni-ai-3.5",
     }
 
     response = client.post("/chat", json=continue_body)
@@ -120,20 +131,24 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][0] == {
         "role": "user",
         "content": "Hello!",
-        "modelId": "Geni AI 3.5",
+        "modelId": "geni-ai-3.5",
+        "modelName": "Geni AI 3.5",
     }
     assert response.json()["messages"][1] == {
         "role": "assistant",
         "content": "This is a stub response.",
         "modelId": "geni-ai-3.5",
+        "modelName": "Geni AI 3.5",
     }
     assert response.json()["messages"][2] == {
         "role": "user",
         "content": "How's the weather?",
-        "modelId": "Geni AI 3.5",
+        "modelId": "geni-ai-3.5",
+        "modelName": "Geni AI 3.5",
     }
     assert response.json()["messages"][3] == {
         "role": "assistant",
         "content": "This is a stub response.",
         "modelId": "geni-ai-3.5",
+        "modelName": "Geni AI 3.5",
     }

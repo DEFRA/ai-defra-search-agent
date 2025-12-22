@@ -1,13 +1,17 @@
 import abc
 
 from app import config
-from app.models import models
+from app.models import UnsupportedModelError, models
 
 
 class AbstractModelResolutionService(abc.ABC):
     @abc.abstractmethod
     def get_available_models(self) -> list[models.ModelInfo]:
         """Retrieve a list of available models."""
+
+    @abc.abstractmethod
+    def resolve_model(self, model_id: str) -> models.ModelInfo:
+        """Resolve a model by its ID."""
 
 
 class ConfigModelResolutionService(AbstractModelResolutionService):
@@ -23,7 +27,22 @@ class ConfigModelResolutionService(AbstractModelResolutionService):
             models.ModelInfo(
                 name=model.name,
                 description=model.description,
-                id=model.id,
+                model_id=model.model_id,
             )
             for model in available_models
         ]
+
+    def resolve_model(self, model_id: str) -> models.ModelInfo:
+        """Resolve a model by its internal ID."""
+        available_models = self.app_config.bedrock.available_generation_models
+
+        if model_id not in available_models:
+            msg = f"Model '{model_id}' not found"
+            raise UnsupportedModelError(msg)
+
+        model = available_models[model_id]
+        return models.ModelInfo(
+            name=model.name,
+            description=model.description,
+            model_id=model.model_id,
+        )

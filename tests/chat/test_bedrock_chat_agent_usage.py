@@ -23,7 +23,8 @@ def mock_config(mocker):
     mock_config_obj.bedrock.available_generation_models = {
         "anthropic.claude-3-sonnet": config.BedrockModelConfig(
             name="anthropic.claude-3-sonnet",
-            id="anthropic.claude-3-sonnet",
+            model_id="anthropic.claude-3-sonnet",
+            bedrock_model_id="anthropic.claude-3-sonnet",
             description="A conversational AI model optimized for dialogue.",
             guardrails=None,
         )
@@ -81,5 +82,5 @@ async def test_raises_key_error_on_partial_usage_data(
     )
 
     with pytest.raises(KeyError) as excinfo:
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
+        await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
     assert "'output_tokens'" in str(excinfo.value)
