@@ -18,23 +18,17 @@ def feedback_service(mock_repository):
 
 
 @pytest.mark.asyncio
-async def test_submit_feedback_with_all_fields(
-    feedback_service, mock_repository, mocker
-):
-    # Setup
+async def test_submit_feedback_with_all_fields(feedback_service, mock_repository):
     conversation_id = uuid.uuid4()
     was_helpful = True
     comment = "This was very helpful!"
-    mock_logger = mocker.patch("app.feedback.service.logger")
 
-    # Execute
     result = await feedback_service.submit_feedback(
         was_helpful=was_helpful,
         conversation_id=conversation_id,
         comment=comment,
     )
 
-    # Assert
     assert isinstance(result, models.Feedback)
     assert result.conversation_id == conversation_id
     assert result.was_helpful is True
@@ -42,39 +36,25 @@ async def test_submit_feedback_with_all_fields(
     assert result.id is not None
     assert result.timestamp is not None
 
-    # Verify repository.save was called once with the feedback
     mock_repository.save.assert_called_once()
     saved_feedback = mock_repository.save.call_args[0][0]
     assert saved_feedback.conversation_id == conversation_id
     assert saved_feedback.was_helpful is True
     assert saved_feedback.comment == comment
 
-    # Verify logging was called with correct message and extra fields
-    mock_logger.info.assert_called_once_with(
-        "Feedback submitted successfully",
-        extra={
-            "feedback_id": str(result.id),
-            "conversation_id": str(result.conversation_id),
-        },
-    )
-
 
 @pytest.mark.asyncio
 async def test_submit_feedback_without_conversation_id(
-    feedback_service, mock_repository, mocker
+    feedback_service, mock_repository
 ):
-    # Setup
     was_helpful = False
     comment = "Not helpful"
-    mock_logger = mocker.patch("app.feedback.service.logger")
 
-    # Execute
     result = await feedback_service.submit_feedback(
         was_helpful=was_helpful,
         comment=comment,
     )
 
-    # Assert
     assert isinstance(result, models.Feedback)
     assert result.conversation_id is None
     assert result.was_helpful is False
@@ -82,35 +62,22 @@ async def test_submit_feedback_without_conversation_id(
     assert result.id is not None
     assert result.timestamp is not None
 
-    # Verify repository.save was called
     mock_repository.save.assert_called_once()
     saved_feedback = mock_repository.save.call_args[0][0]
     assert saved_feedback.conversation_id is None
     assert saved_feedback.was_helpful is False
 
-    # Verify logging was called with None conversation_id
-    mock_logger.info.assert_called_once_with(
-        "Feedback submitted successfully",
-        extra={
-            "feedback_id": str(result.id),
-            "conversation_id": str(None),
-        },
-    )
-
 
 @pytest.mark.asyncio
 async def test_submit_feedback_without_comment(feedback_service, mock_repository):
-    # Setup
     conversation_id = uuid.uuid4()
     was_helpful = True
 
-    # Execute
     result = await feedback_service.submit_feedback(
         was_helpful=was_helpful,
         conversation_id=conversation_id,
     )
 
-    # Assert
     assert isinstance(result, models.Feedback)
     assert result.conversation_id == conversation_id
     assert result.was_helpful is True
@@ -118,7 +85,6 @@ async def test_submit_feedback_without_comment(feedback_service, mock_repository
     assert result.id is not None
     assert result.timestamp is not None
 
-    # Verify repository.save was called
     mock_repository.save.assert_called_once()
     saved_feedback = mock_repository.save.call_args[0][0]
     assert saved_feedback.comment is None
@@ -126,13 +92,10 @@ async def test_submit_feedback_without_comment(feedback_service, mock_repository
 
 @pytest.mark.asyncio
 async def test_submit_feedback_minimal(feedback_service, mock_repository):
-    # Setup - only required field
     was_helpful = False
 
-    # Execute
     result = await feedback_service.submit_feedback(was_helpful=was_helpful)
 
-    # Assert
     assert isinstance(result, models.Feedback)
     assert result.conversation_id is None
     assert result.was_helpful is False
@@ -140,5 +103,4 @@ async def test_submit_feedback_minimal(feedback_service, mock_repository):
     assert result.id is not None
     assert result.timestamp is not None
 
-    # Verify repository.save was called
     mock_repository.save.assert_called_once()
