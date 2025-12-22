@@ -24,7 +24,9 @@ def test_no_guardrails_should_return_bedrock_response(
     response = bedrock_inference_service.invoke_anthropic(
         model_config=models.ModelConfig(id="geni-ai-3.5"),
         system_prompt="This is not a real prompt",
-        messages=[{"role": "user", "content": "What is the weather today?"}],
+        messages=[
+            {"role": "user", "content": [{"text": "What is the weather today?"}]}
+        ],
     )
 
     assert response.model_id == "geni-ai-3.5"
@@ -39,7 +41,9 @@ def test_invoke_with_inference_profile_should_return_model_id(
             id="arn:aws:bedrock:us-west-2:123456789012:inference-profile/geni-ai-3.5"
         ),
         system_prompt="This is not a real prompt",
-        messages=[{"role": "user", "content": "What is the weather today?"}],
+        messages=[
+            {"role": "user", "content": [{"text": "What is the weather today?"}]}
+        ],
     )
 
     assert response.model_id == "geni-ai-3.5"
@@ -56,7 +60,9 @@ def test_with_valid_guardrails_should_return_bedrock_response(
             guardrail_version=1,
         ),
         system_prompt="This is not a real prompt",
-        messages=[{"role": "user", "content": "What is the weather today?"}],
+        messages=[
+            {"role": "user", "content": [{"text": "What is the weather today?"}]}
+        ],
     )
 
     assert response.model_id == "geni-ai-3.5"
@@ -76,7 +82,9 @@ def test_guardrail_id_with_no_version_should_raise_error(
                 guardrail_version=None,
             ),
             system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
+            messages=[
+                {"role": "user", "content": [{"text": "What is the weather today?"}]}
+            ],
         )
 
 
@@ -91,7 +99,9 @@ def test_guardrail_version_with_no_id_should_raise_error(
                 id="geni-ai-3.5", guardrail_id=None, guardrail_version=1
             ),
             system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
+            messages=[
+                {"role": "user", "content": [{"text": "What is the weather today?"}]}
+            ],
         )
 
 
@@ -109,7 +119,9 @@ def test_missing_backing_model_should_raise_error(
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(id="invalid-model-id"),
             system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
+            messages=[
+                {"role": "user", "content": [{"text": "What is the weather today?"}]}
+            ],
         )
 
 

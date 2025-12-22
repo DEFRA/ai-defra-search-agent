@@ -1,7 +1,7 @@
 import dataclasses
 import datetime
 import uuid
-from typing import Literal
+from typing import Any, Literal
 
 __all__ = [
     "AssistantMessage",
@@ -30,8 +30,8 @@ class Message:
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
 
-    def to_dict(self) -> dict[str, str]:
-        return {"role": self.role, "content": self.content}
+    def to_dict(self) -> dict[str, Any]:
+        return {"role": self.role, "content": [{"text": self.content}]}
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)

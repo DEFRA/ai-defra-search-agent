@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any
 
@@ -20,14 +19,6 @@ class BedrockInferenceService:
         system_prompt: str,
         messages: list[dict[str, Any]],
     ) -> models.ModelResponse:
-        native_request = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": self.app_config.bedrock.max_response_tokens,
-            "temperature": self.app_config.bedrock.default_model_temprature,
-            "system": system_prompt,
-            "messages": messages,
-        }
-
         model_id = model_config.id
 
         (guardrail_id, guardrail_version) = (
@@ -35,9 +26,15 @@ class BedrockInferenceService:
             model_config.guardrail_version,
         )
 
-        invoke_args: dict[str, str | int] = {
+        # Build converse API arguments
+        converse_args: dict[str, Any] = {
             "modelId": model_id,
-            "body": json.dumps(native_request),
+            "messages": messages,
+            "system": [{"text": system_prompt}],
+            "inferenceConfig": {
+                "maxTokens": self.app_config.bedrock.max_response_tokens,
+                "temperature": self.app_config.bedrock.default_model_temprature,
+            },
         }
 
         if (guardrail_id is None) ^ (guardrail_version is None):
@@ -45,22 +42,28 @@ class BedrockInferenceService:
             raise ValueError(msg)
 
         if guardrail_id and guardrail_version is not None:
-            invoke_args["guardrailIdentifier"] = guardrail_id
-            invoke_args["guardrailVersion"] = guardrail_version
+            converse_args["guardrailConfig"] = {
+                "guardrailIdentifier": guardrail_id,
+                "guardrailVersion": str(guardrail_version),
+            }
 
-        response = self.runtime_client.invoke_model(**invoke_args)
-
-        response_json = json.loads(response["body"].read().decode("utf-8"))
+        response = self.runtime_client.converse(**converse_args)
 
         backing_model = self._get_backing_model(model_id)
         if not backing_model:
             msg = f"Backing model not found for model ID: {model_id}"
             raise ValueError(msg)
 
+        output_message = response["output"]["message"]
+        usage_info = response["usage"]
+
         return models.ModelResponse(
             model_id=backing_model,
-            content=response_json["content"],
-            usage=response_json.get("usage"),
+            content=output_message["content"],
+            usage={
+                "input_tokens": usage_info["inputTokens"],
+                "output_tokens": usage_info["outputTokens"],
+            },
         )
 
     def get_inference_profile_details(

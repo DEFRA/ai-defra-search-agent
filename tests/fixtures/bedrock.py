@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from app.bedrock import models, service
@@ -29,33 +28,25 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
         )
 
 
-class FakeStreamingBody:
-    def __init__(self, content: bytes):
-        self._content = content
-
-    def read(self) -> bytes:
-        return self._content
-
-
 class StubBedrockRuntimeClient:
-    def invoke_model(self, **kwargs) -> dict:
-        response = {
-            "id": "stub-response-id",
-            "model": kwargs.get("modelId", "unknown-model"),
-            "type": "message",
-            "role": "assistant",
-            "content": [{"text": "This is a stub response."}],
+    def converse(self, **kwargs) -> dict:
+        return {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "This is a stub response."}],
+                }
+            },
+            "stopReason": "end_turn",
             "usage": {
-                "input_tokens": 10,
-                "output_tokens": 15,
+                "inputTokens": 10,
+                "outputTokens": 15,
+                "totalTokens": 25,
+            },
+            "metrics": {
+                "latencyMs": 100,
             },
         }
-
-        encoded_response = FakeStreamingBody(
-            content=json.dumps(response).encode("utf-8")
-        )
-
-        return {"body": encoded_response, "contentType": "application/json"}
 
 
 class StubBedrockClient:
