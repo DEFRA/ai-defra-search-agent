@@ -33,7 +33,6 @@ def client():
 
     yield test_client
 
-    # Clean up
     fastapi_app.app.dependency_overrides.clear()
 
 
