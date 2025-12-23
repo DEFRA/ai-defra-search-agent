@@ -83,7 +83,7 @@ async def test_executes_flow_with_correct_parameters(
     mock_messages = call_args[1]["messages"]
     assert len(mock_messages) == 1
     assert mock_messages[0]["role"] == "user"
-    assert mock_messages[0]["content"] == MOCK_QUESTION
+    assert mock_messages[0]["content"] == [{"text": MOCK_QUESTION}]
 
     # Assert response converted to messages correctly
     assert len(result) == 2  # 2 response messages

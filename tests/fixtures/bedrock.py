@@ -37,7 +37,7 @@ class FakeStreamingBody:
         return self._content
 
 
-class StubBedrockRuntimeClient:
+class StubBedrockRuntimeBedrockV1Client:
     def invoke_model(self, **kwargs) -> dict:
         response = {
             "id": "stub-response-id",
@@ -56,6 +56,27 @@ class StubBedrockRuntimeClient:
         )
 
         return {"body": encoded_response, "contentType": "application/json"}
+
+
+class StubBedrockRuntimeBedrockV2Client:
+    def converse(self, **kwargs) -> dict:
+        return {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "This is a stub response."}],
+                }
+            },
+            "stopReason": "end_turn",
+            "usage": {
+                "inputTokens": 10,
+                "outputTokens": 15,
+                "totalTokens": 25,
+            },
+            "metrics": {
+                "latencyMs": 100,
+            },
+        }
 
 
 class StubBedrockClient:
