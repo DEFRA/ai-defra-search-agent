@@ -43,7 +43,7 @@ class BedrockInferenceService:
         if guardrail_id and guardrail_version is not None:
             converse_args["guardrailConfig"] = {
                 "guardrailIdentifier": guardrail_id,
-                "guardrailVersion": str(guardrail_version),
+                "guardrailVersion": guardrail_version,
             }
 
         response = self.runtime_client.converse(**converse_args)

@@ -13,7 +13,7 @@ def bedrock_inference_service(mocker: MockerFixture):
 
     return service.BedrockInferenceService(
         api_client=bedrock_fixtures.StubBedrockClient(),
-        runtime_client=bedrock_fixtures.StubBedrockRuntimeClient(),
+        runtime_client=bedrock_fixtures.StubBedrockRuntimeBedrockV2Client(),
         app_config=mock_config,
     )
 
