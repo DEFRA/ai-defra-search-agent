@@ -8,11 +8,9 @@ from app import config
 
 logger = logging.getLogger(__name__)
 
-app_config = config.get_config()
-
-ctx_trace_id = contextvars.ContextVar("trace_id")
-ctx_request = contextvars.ContextVar("request")
-ctx_response = contextvars.ContextVar("response")
+ctx_trace_id: contextvars.ContextVar[str] = contextvars.ContextVar("trace_id")
+ctx_request: contextvars.ContextVar[dict] = contextvars.ContextVar("request")
+ctx_response: contextvars.ContextVar[dict] = contextvars.ContextVar("response")
 
 
 # Inbound HTTP requests on the platform will have a `x-cdp-request-id` header.
@@ -21,6 +19,7 @@ ctx_response = contextvars.ContextVar("response")
 # for the duration of the request in the ContextVar `ctx_trace_id`.
 class TraceIdMiddleware(starlette.middleware.base.BaseHTTPMiddleware):
     async def dispatch(self, request: fastapi.Request, call_next):
+        app_config = config.get_config()
         req_trace_id = request.headers.get(app_config.tracing_header, None)
         if req_trace_id:
             ctx_trace_id.set(req_trace_id)

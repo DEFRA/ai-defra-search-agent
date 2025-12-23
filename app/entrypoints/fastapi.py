@@ -15,12 +15,11 @@ from app.models import router as models_router
 
 logger = logging.getLogger(__name__)
 
-app_config = config.get_config()
-
 
 @contextlib.asynccontextmanager
 async def lifespan(_: fastapi.FastAPI):
     # Startup
+    app_config = config.get_config()
     client = await mongo.get_mongo_client(app_config)
     logger.info("MongoDB client connected")
     yield
@@ -64,6 +63,7 @@ app.include_router(feedback_router.router)
 
 
 def main() -> None:  # pragma: no cover
+    app_config = config.get_config()
     uvicorn.run(
         "app.entrypoints.fastapi:app",
         host=app_config.host,

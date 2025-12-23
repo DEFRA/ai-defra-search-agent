@@ -5,6 +5,7 @@ import fastapi.testclient
 import pymongo
 import pytest
 
+from app import config
 from app.common import mongo
 from app.entrypoints import fastapi as fastapi_app
 
@@ -13,7 +14,7 @@ from app.entrypoints import fastapi as fastapi_app
 def client():
     def get_fresh_mongo_client():
         match = re.search(
-            r"mongodb://(?:[^@]+@)?([^:/]+)", fastapi_app.app_config.mongo.uri
+            r"mongodb://(?:[^@]+@)?([^:/]+)", config.get_config().mongo.uri
         )
         host = match.group(1) if match else "localhost"
         return pymongo.AsyncMongoClient(

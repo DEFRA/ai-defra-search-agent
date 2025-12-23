@@ -102,8 +102,8 @@ class MongoConfig(pydantic_settings.BaseSettings):
 class AppConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
-    host: str | None = None
-    port: int = pydantic.Field(...)
+    host: str = "127.0.0.1"
+    port: int = 8086
     log_config: str = pydantic.Field(...)
     aws_region: str = pydantic.Field(...)
     localstack_url: str | None = None
@@ -137,9 +137,10 @@ def get_config() -> AppConfig:
                 for error in e.errors()
             ]
 
-            logger.error("Config validation failed with errors: %s", error_details)
+            error_details_str = json.dumps(error_details)
+            msg = f"Config validation failed with errors: {error_details_str}"
 
-            msg = "Invalid application configuration"
+            logger.error(msg)
             raise RuntimeError(msg) from None
 
     return config

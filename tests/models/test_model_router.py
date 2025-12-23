@@ -21,12 +21,12 @@ def test_get_models_returns_model_list(client):
         {
             "modelId": "geni-ai-3.5",
             "modelName": "Geni AI 3.5",
-            "modelDescription": "A powerful conversational AI model suitable for a wide range of tasks.",
+            "modelDescription": "Test model 3.5.",
         },
         {
             "modelId": "geni-ai-4",
             "modelName": "Geni AI 4",
-            "modelDescription": "An advanced conversational AI model with enhanced understanding and generation capabilities.",
+            "modelDescription": "Test model 4",
         },
     ]
 
