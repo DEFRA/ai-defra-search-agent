@@ -100,10 +100,10 @@ async def test_executes_with_existing_conversation(
     call_kwargs = mock_agent.execute_flow.call_args.kwargs
     assert call_kwargs["question"] == MOCK_QUESTION
     assert call_kwargs["model_id"] == "Geni AI-3.5"
-    assert "conversation_history" in call_kwargs
+    assert "conversation" in call_kwargs
     # History should include the prior message only (not the new user message)
-    assert len(call_kwargs["conversation_history"]) == 1
-    assert call_kwargs["conversation_history"][0].content == MOCK_PRIOR_MESSAGE
+    assert len(call_kwargs["conversation"]) == 1
+    assert call_kwargs["conversation"][0].content == MOCK_PRIOR_MESSAGE
 
     # Assert user message added
     assert len(result.messages) == 4  # 1 prior + 1 user + 2 agent
@@ -152,9 +152,9 @@ async def test_creates_new_conversation_when_none_provided(
     call_kwargs = mock_agent.execute_flow.call_args.kwargs
     assert call_kwargs["question"] == MOCK_QUESTION
     assert call_kwargs["model_id"] == MOCK_MODEL_ID
-    assert "conversation_history" in call_kwargs
+    assert "conversation" in call_kwargs
     # For new conversation, history should be empty list (no prior messages)
-    assert call_kwargs["conversation_history"] == []
+    assert call_kwargs["conversation"] == []
 
     # Assert new conversation created
     assert result.id is not None
@@ -242,9 +242,9 @@ async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repositor
     call_kwargs = mock_agent.execute_flow.call_args.kwargs
     assert call_kwargs["question"] == MOCK_QUESTION
     assert call_kwargs["model_id"] == MOCK_MODEL_ID
-    assert "conversation_history" in call_kwargs
+    assert "conversation" in call_kwargs
     # For empty conversation, history should be empty list
-    assert call_kwargs["conversation_history"] == []
+    assert call_kwargs["conversation"] == []
 
     # Assert all agent messages added in order
     assert len(result.messages) == 5  # 1 user + 4 agent
@@ -322,10 +322,10 @@ async def test_execute_chat_with_multi_turn_conversation_includes_full_history(
     call_kwargs = mock_agent.execute_flow.call_args.kwargs
     assert call_kwargs["question"] == "When was it created?"
     assert call_kwargs["model_id"] == MOCK_MODEL_ID
-    assert "conversation_history" in call_kwargs
+    assert "conversation" in call_kwargs
 
     # History should have all 4 previous messages (not including the new user message we just added)
-    history = call_kwargs["conversation_history"]
+    history = call_kwargs["conversation"]
     assert len(history) == 4
     assert history[0].content == "What is Python?"
     assert history[0].role == "user"

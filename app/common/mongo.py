@@ -78,8 +78,8 @@ async def _ensure_indexes(db: pymongo.asynchronous.database.AsyncDatabase):
     """Ensure indexes are created on the necessary collections."""
     logger.info("Ensuring MongoDB indexes are present")
 
-    conversation_history = db.conversation_history
+    conversations = db.conversations
 
-    await conversation_history.create_index("conversationId", unique=True)
+    await conversations.create_index("conversation_id", unique=True)
 
     logger.info("MongoDB indexes ensured")

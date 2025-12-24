@@ -17,7 +17,7 @@ class AbstractChatAgent(abc.ABC):
         self,
         question: str,
         model_id: str,
-        conversation_history: Optional[list[models.Message]] = None,
+        conversation: Optional[list[models.Message]] = None,
     ) -> list[models.Message]:
         pass
 
@@ -35,15 +35,15 @@ class BedrockChatAgent(AbstractChatAgent):
         self,
         question: str,
         model_id: str,
-        conversation_history: Optional[list[models.Message]] = None,
+        conversation: Optional[list[models.Message]] = None,
     ) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
         model_config = self._build_model_config(model_id)
 
         messages = []
-        if conversation_history:
-            messages = [msg.to_dict() for msg in conversation_history]
+        if conversation:
+            messages = [msg.to_dict() for msg in conversation]
 
         user_message = models.UserMessage(
             content=question,
