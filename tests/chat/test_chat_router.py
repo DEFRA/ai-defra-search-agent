@@ -78,18 +78,18 @@ def test_post_sync_chat_valid_question_returns_200(client):
     assert response.status_code == 200
 
     assert response.json()["conversationId"] is not None
-    assert response.json()["messages"][0] == {
-        "role": "user",
-        "content": "Hello, how are you?",
-        "modelId": "geni-ai-3.5",
-        "modelName": "Geni AI 3.5",
-    }
-    assert response.json()["messages"][1] == {
-        "role": "assistant",
-        "content": "This is a stub response.",
-        "modelId": "geni-ai-3.5",
-        "modelName": "Geni AI 3.5",
-    }
+
+    assert response.json()["messages"][0]["role"] == "user"
+    assert response.json()["messages"][0]["content"] == "Hello, how are you?"
+    assert response.json()["messages"][0]["modelId"] == "geni-ai-3.5"
+    assert response.json()["messages"][0]["modelName"] == "Geni AI 3.5"
+    assert "timestamp" in response.json()["messages"][0]
+
+    assert response.json()["messages"][1]["role"] == "assistant"
+    assert response.json()["messages"][1]["content"] == "This is a stub response."
+    assert response.json()["messages"][1]["modelId"] == "geni-ai-3.5"
+    assert response.json()["messages"][1]["modelName"] == "Geni AI 3.5"
+    assert "timestamp" in response.json()["messages"][1]
 
 
 def test_post_chat_with_existing_conversation_returns_200(client):
@@ -111,27 +111,27 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.status_code == 200
 
     assert response.json()["conversationId"] is not None
-    assert response.json()["messages"][0] == {
-        "role": "user",
-        "content": "Hello!",
-        "modelId": "geni-ai-3.5",
-        "modelName": "Geni AI 3.5",
-    }
-    assert response.json()["messages"][1] == {
-        "role": "assistant",
-        "content": "This is a stub response.",
-        "modelId": "geni-ai-3.5",
-        "modelName": "Geni AI 3.5",
-    }
-    assert response.json()["messages"][2] == {
-        "role": "user",
-        "content": "How's the weather?",
-        "modelId": "geni-ai-3.5",
-        "modelName": "Geni AI 3.5",
-    }
-    assert response.json()["messages"][3] == {
-        "role": "assistant",
-        "content": "This is a stub response.",
-        "modelId": "geni-ai-3.5",
-        "modelName": "Geni AI 3.5",
-    }
+
+    assert response.json()["messages"][0]["role"] == "user"
+    assert response.json()["messages"][0]["content"] == "Hello!"
+    assert response.json()["messages"][0]["modelId"] == "geni-ai-3.5"
+    assert response.json()["messages"][0]["modelName"] == "Geni AI 3.5"
+    assert "timestamp" in response.json()["messages"][0]
+
+    assert response.json()["messages"][1]["role"] == "assistant"
+    assert response.json()["messages"][1]["content"] == "This is a stub response."
+    assert response.json()["messages"][1]["modelId"] == "geni-ai-3.5"
+    assert response.json()["messages"][1]["modelName"] == "Geni AI 3.5"
+    assert "timestamp" in response.json()["messages"][1]
+
+    assert response.json()["messages"][2]["role"] == "user"
+    assert response.json()["messages"][2]["content"] == "How's the weather?"
+    assert response.json()["messages"][2]["modelId"] == "geni-ai-3.5"
+    assert response.json()["messages"][2]["modelName"] == "Geni AI 3.5"
+    assert "timestamp" in response.json()["messages"][2]
+
+    assert response.json()["messages"][3]["role"] == "assistant"
+    assert response.json()["messages"][3]["content"] == "This is a stub response."
+    assert response.json()["messages"][3]["modelId"] == "geni-ai-3.5"
+    assert response.json()["messages"][3]["modelName"] == "Geni AI 3.5"
+    assert "timestamp" in response.json()["messages"][3]

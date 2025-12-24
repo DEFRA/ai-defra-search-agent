@@ -1,6 +1,5 @@
 import dataclasses
 import uuid
-from typing import Optional
 
 from app.chat import agent, models, repository
 from app.models import service as model_service
@@ -18,7 +17,7 @@ class ChatService:
         self.model_resolution_service = model_resolution_service
 
     async def execute_chat(
-        self, question: str, model_id: str, conversation_id: Optional[uuid.UUID] = None
+        self, question: str, model_id: str, conversation_id: uuid.UUID | None = None
     ) -> models.Conversation:
         # Resolve model information to get the model name
         model_info = self.model_resolution_service.resolve_model(model_id)
