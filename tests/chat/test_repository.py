@@ -166,7 +166,7 @@ async def test_get_retrieves_timestamp(mongo_repository, mock_db):
 
 
 @pytest.mark.asyncio
-async def test_save_and_get_preserves_conversation_history(mongo_repository, mock_db):
+async def test_save_and_get_preserves_conversation(mongo_repository, mock_db):
     """Test that saving and retrieving preserves all messages in conversation history"""
     conversation_id = uuid.uuid4()
     timestamp1 = datetime.datetime(2025, 12, 23, 10, 0, 0, tzinfo=datetime.UTC)

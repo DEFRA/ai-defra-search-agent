@@ -44,7 +44,7 @@ class ChatService:
         agent_responses = await self.chat_agent.execute_flow(
             question=question,
             model_id=model_id,
-            conversation_history=conversation.messages[:-1],
+            conversation=conversation.messages[:-1],
         )
 
         for response_message in agent_responses:

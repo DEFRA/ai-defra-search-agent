@@ -172,7 +172,7 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_config")
-async def test_execute_flow_with_conversation_history(
+async def test_execute_flow_with_conversation(
     bedrock_agent, mock_inference_service, mocker
 ):
     """Test that conversation history is included in subsequent requests"""
@@ -208,7 +208,7 @@ async def test_execute_flow_with_conversation_history(
     result = await bedrock_agent.execute_flow(
         question="Who created it?",
         model_id=MOCK_MODEL_ID,
-        conversation_history=history,
+        conversation=conversation,
     )
 
     # Assert invoke_anthropic was called with the full conversation history
@@ -233,7 +233,7 @@ async def test_execute_flow_with_conversation_history(
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_config")
-async def test_execute_flow_without_conversation_history(
+async def test_execute_flow_without_conversation(
     bedrock_agent, mock_inference_service, mocker
 ):
     """Test that execute_flow works correctly when no conversation history is provided"""
@@ -251,7 +251,7 @@ async def test_execute_flow_without_conversation_history(
 
     # Execute without conversation history (None)
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation_history=None
+        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation=None
     )
 
     # Assert invoke_anthropic was called with only the new message
@@ -272,7 +272,7 @@ async def test_execute_flow_without_conversation_history(
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_config")
-async def test_execute_flow_with_empty_conversation_history(
+async def test_execute_flow_with_empty_conversation(
     bedrock_agent, mock_inference_service, mocker
 ):
     mock_response_content = [
@@ -289,7 +289,7 @@ async def test_execute_flow_with_empty_conversation_history(
 
     # Execute with empty conversation history
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation_history=[]
+        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation=[]
     )
 
     # Assert invoke_anthropic was called with only the new message
