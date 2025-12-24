@@ -2,18 +2,19 @@ import pytest
 from pytest_mock import MockerFixture
 
 from app.bedrock import models, service
-from tests.fixtures import bedrock as bedrock_fixtures
 
 
 @pytest.fixture
-def bedrock_inference_service(mocker: MockerFixture):
+def bedrock_inference_service(
+    mocker: MockerFixture, bedrock_client, bedrock_runtime_v2_client
+):
     mock_config = mocker.Mock()
     mock_config.bedrock.max_response_tokens = 100
     mock_config.bedrock.default_model_temprature = 0.5
 
     return service.BedrockInferenceService(
-        api_client=bedrock_fixtures.StubBedrockClient(),
-        runtime_client=bedrock_fixtures.StubBedrockRuntimeBedrockV2Client(),
+        api_client=bedrock_client,
+        runtime_client=bedrock_runtime_v2_client,
         app_config=mock_config,
     )
 

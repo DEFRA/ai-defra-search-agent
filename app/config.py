@@ -23,9 +23,6 @@ class BedrockModelConfig(pydantic.BaseModel):
     model_id: str
     guardrails: BedrockGuardrailConfig | None = None
 
-    def __hash__(self):
-        return hash(self.name)
-
 
 class BedrockConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
@@ -102,8 +99,8 @@ class MongoConfig(pydantic_settings.BaseSettings):
 class AppConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
-    host: str | None = None
-    port: int = pydantic.Field(...)
+    host: str = "127.0.0.1"
+    port: int = 8086
     log_config: str = pydantic.Field(...)
     aws_region: str = pydantic.Field(...)
     localstack_url: str | None = None
@@ -113,9 +110,6 @@ class AppConfig(pydantic_settings.BaseSettings):
 
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
-
-    def __hash__(self):
-        return id(self)
 
 
 config: AppConfig | None = None
@@ -137,9 +131,12 @@ def get_config() -> AppConfig:
                 for error in e.errors()
             ]
 
-            logger.error("Config validation failed with errors: %s", error_details)
+            error_strings = [
+                f"Field '{error['field']}' {error['message']}"
+                for error in error_details
+            ]
 
-            msg = "Invalid application configuration"
+            msg = f"Config validation failed with errors: {', '.join(error_strings)}"
+            logger.error(msg)
             raise RuntimeError(msg) from None
-
     return config
