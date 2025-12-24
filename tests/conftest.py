@@ -4,7 +4,7 @@ import pytest
 
 from app import config
 
-pytest_plugins = ["tests.fixtures.bedrock"]
+pytest_plugins = ["tests.fixtures.bedrock", "tests.fixtures.mongo"]
 
 
 # Reset the global app config variable before each test
@@ -38,9 +38,9 @@ def bedrock_generation_models():
 
 
 @pytest.fixture(autouse=True)
-def set_test_env(monkeypatch, bedrock_generation_models):
+def set_test_env(monkeypatch, bedrock_generation_models, mongo_uri):
     """Set environment variables for the test session."""
-    monkeypatch.setenv("MONGO_URI", "mongodb://mongodb:27018/test_db")
+    monkeypatch.setenv("MONGO_URI", mongo_uri)
     monkeypatch.setenv(
         "AWS_BEDROCK_AVAILABLE_GENERATION_MODELS", json.dumps(bedrock_generation_models)
     )

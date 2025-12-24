@@ -1,5 +1,3 @@
-import re
-
 import fastapi.testclient
 import pymongo
 import pytest
@@ -13,12 +11,8 @@ from app.entrypoints.api import app
 @pytest.fixture
 def client(bedrock_inference_service):
     def get_fresh_mongo_client():
-        match = re.search(
-            r"mongodb://(?:[^@]+@)?([^:/]+)", config.get_config().mongo.uri
-        )
-        host = match.group(1) if match else "localhost"
         return pymongo.AsyncMongoClient(
-            host, uuidRepresentation="standard", timeoutMS=5000
+            config.get_config().mongo.uri, uuidRepresentation="standard", timeoutMS=5000
         )
 
     def get_fresh_mongo_db():
