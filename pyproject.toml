@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-ai-defra-search-agent = "app.entrypoints.fastapi:main"
+ai-defra-search-agent = "app.entrypoints.api:main"
 
 [build-system]
 requires = ["hatchling"]

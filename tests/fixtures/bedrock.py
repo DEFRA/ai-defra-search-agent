@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+import pytest
+
 from app.bedrock import models, service
 
 
@@ -59,7 +61,7 @@ class StubBedrockRuntimeBedrockV1Client:
 
 
 class StubBedrockRuntimeBedrockV2Client:
-    def converse(self, **kwargs) -> dict:
+    def converse(self, **_) -> dict:
         return {
             "output": {
                 "message": {
@@ -96,3 +98,23 @@ class StubBedrockClient:
             "status": "ACTIVE",
             "type": "APPLICATION",
         }
+
+
+@pytest.fixture
+def bedrock_client():
+    return StubBedrockClient()
+
+
+@pytest.fixture
+def bedrock_inference_service():
+    return StubBedrockInferenceService()
+
+
+@pytest.fixture
+def bedrock_runtime_v1_client():
+    return StubBedrockRuntimeBedrockV1Client()
+
+
+@pytest.fixture
+def bedrock_runtime_v2_client():
+    return StubBedrockRuntimeBedrockV2Client()

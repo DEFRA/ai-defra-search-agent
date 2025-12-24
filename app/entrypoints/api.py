@@ -65,7 +65,7 @@ app.include_router(feedback_router.router)
 def main() -> None:  # pragma: no cover
     app_config = config.get_config()
     uvicorn.run(
-        "app.entrypoints.fastapi:app",
+        "app.entrypoints.api:app",
         host=app_config.host,
         port=app_config.port,
         log_config=app_config.log_config,
