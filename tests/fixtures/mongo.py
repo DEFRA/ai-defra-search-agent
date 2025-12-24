@@ -1,5 +1,5 @@
-import pymongo
 import pytest
+from testcontainers.mongodb import MongoDbContainer
 
 
 class MongoFixture:
@@ -13,13 +13,12 @@ class MongoFixture:
             await self.client.close()
 
 
-@pytest.fixture
-async def mongo():
-    client = pymongo.AsyncMongoClient("mongodb", uuidRepresentation="standard")
-    db = client.get_database("ai_defra_search_agent")
-    fixture = MongoFixture(db, client)
+@pytest.fixture(scope="session")
+def mongo_container():
+    with MongoDbContainer("mongo:6.0.13") as mongo:
+        yield mongo
 
-    yield fixture
 
-    # Clean up: close the client connection
-    await fixture.close()
+@pytest.fixture(scope="session")
+def mongo_uri(mongo_container):
+    return mongo_container.get_connection_url()
