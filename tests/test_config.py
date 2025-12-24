@@ -8,7 +8,7 @@ from app import config
 def test_get_config(bedrock_generation_models):
     config_obj = config.get_config()
     assert config_obj is not None
-    assert config_obj.mongo.uri == "mongodb://localhost:27017/test_db"
+    assert config_obj.mongo.uri == "mongodb://mongodb:27018/test_db"
 
     expected_models = {}
     for model in bedrock_generation_models:
