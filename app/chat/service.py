@@ -1,5 +1,6 @@
 import dataclasses
 import uuid
+from typing import Optional
 
 from app.chat import agent, models, repository
 from app.models import service as model_service
@@ -17,7 +18,7 @@ class ChatService:
         self.model_resolution_service = model_resolution_service
 
     async def execute_chat(
-        self, question: str, model_id: str, conversation_id: uuid.UUID | None = None
+        self, question: str, model_id: str, conversation_id: Optional[uuid.UUID] = None
     ) -> models.Conversation:
         # Resolve model information to get the model name
         model_info = self.model_resolution_service.resolve_model(model_id)
@@ -41,7 +42,9 @@ class ChatService:
         # TODO: maybe execute_flow should return both question and response so we can add
         # token count and model-id to the user message?
         agent_responses = await self.chat_agent.execute_flow(
-            question=question, model_id=model_id
+            question=question,
+            model_id=model_id,
+            conversation_history=conversation.messages[:-1],
         )
 
         for response_message in agent_responses:

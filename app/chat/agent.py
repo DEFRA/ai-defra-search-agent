@@ -6,13 +6,19 @@ from app.bedrock import models as bedrock_models
 from app.bedrock import service
 from app.chat import models
 from app.models import UnsupportedModelError
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
-    async def execute_flow(self, question: str, model_id: str) -> list[models.Message]:
+    async def execute_flow(
+        self,
+        question: str,
+        model_id: str,
+        conversation_history: Optional[list[models.Message]] = None,
+    ) -> list[models.Message]:
         pass
 
 
@@ -25,20 +31,28 @@ class BedrockChatAgent(AbstractChatAgent):
         self.inference_service = inference_service
         self.app_config = app_config
 
-    async def execute_flow(self, question: str, model_id: str) -> list[models.Message]:
+    async def execute_flow(
+        self,
+        question: str,
+        model_id: str,
+        conversation_history: Optional[list[models.Message]] = None,
+    ) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
         model_config = self._build_model_config(model_id)
 
-        messages = [
-            models.UserMessage(
-                content=question,
-                model_id=model_config.id,
-                model_name=self.app_config.bedrock.available_generation_models[
-                    model_id
-                ].name,
-            ).to_dict()
-        ]
+        messages = []
+        if conversation_history:
+            messages = [msg.to_dict() for msg in conversation_history]
+
+        user_message = models.UserMessage(
+            content=question,
+            model_id=model_config.id,
+            model_name=self.app_config.bedrock.available_generation_models[
+                model_id
+            ].name,
+        )
+        messages.append(user_message.to_dict())
 
         response = self.inference_service.invoke_anthropic(
             model_config=model_config,
@@ -54,7 +68,7 @@ class BedrockChatAgent(AbstractChatAgent):
             total_tokens=input_tokens + output_tokens,
         )
 
-        return [
+        assistant_messages = [
             models.AssistantMessage(
                 content=content_block["text"],
                 model_id=model_id,
@@ -65,6 +79,8 @@ class BedrockChatAgent(AbstractChatAgent):
             )
             for content_block in response.content
         ]
+
+        return assistant_messages
 
     def _build_model_config(self, model: str) -> bedrock_models.ModelConfig:
         available_models = self.app_config.bedrock.available_generation_models
