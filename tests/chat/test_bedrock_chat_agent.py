@@ -177,7 +177,7 @@ async def test_execute_flow_with_conversation(
 ):
     """Test that conversation history is included in subsequent requests"""
     # Setup - create some conversation history
-    history = [
+    conversation = [
         models.UserMessage(
             content="What is Python?",
             model_id=MOCK_MODEL_ID,
@@ -219,11 +219,11 @@ async def test_execute_flow_with_conversation(
     # Should have history (2 messages) + new user message (1) = 3 messages
     assert len(messages) == 3
     assert messages[0]["role"] == "user"
-    assert messages[0]["content"] == "What is Python?"
+    assert messages[0]["content"] == [{"text": "What is Python?"}]
     assert messages[1]["role"] == "assistant"
-    assert messages[1]["content"] == "Python is a programming language."
+    assert messages[1]["content"] == [{"text": "Python is a programming language."}]
     assert messages[2]["role"] == "user"
-    assert messages[2]["content"] == "Who created it?"
+    assert messages[2]["content"] == [{"text": "Who created it?"}]
 
     # Assert response contains only assistant message (not user message)
     assert len(result) == 1
@@ -262,7 +262,7 @@ async def test_execute_flow_without_conversation(
     # Should have only the new user message
     assert len(messages) == 1
     assert messages[0]["role"] == "user"
-    assert messages[0]["content"] == MOCK_QUESTION
+    assert messages[0]["content"] == [{"text": MOCK_QUESTION}]
 
     # Assert response contains only assistant message
     assert len(result) == 1
@@ -299,7 +299,7 @@ async def test_execute_flow_with_empty_conversation(
     # Should have only the new user message
     assert len(messages) == 1
     assert messages[0]["role"] == "user"
-    assert messages[0]["content"] == MOCK_QUESTION
+    assert messages[0]["content"] == [{"text": MOCK_QUESTION}]
 
     # Assert response contains only assistant message
     assert len(result) == 1

@@ -34,6 +34,7 @@ async def chat(
                 content=message.content,
                 model_name=message.model_name,
                 model_id=message.model_id,
+                timestamp=message.timestamp,
             )
             for message in conversation.messages
         ],

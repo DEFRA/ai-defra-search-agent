@@ -6,7 +6,6 @@ from app.bedrock import models as bedrock_models
 from app.bedrock import service
 from app.chat import models
 from app.models import UnsupportedModelError
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ class AbstractChatAgent(abc.ABC):
         self,
         question: str,
         model_id: str,
-        conversation: Optional[list[models.Message]] = None,
+        conversation: list[models.Message] | None = None,
     ) -> list[models.Message]:
         pass
 
@@ -35,7 +34,7 @@ class BedrockChatAgent(AbstractChatAgent):
         self,
         question: str,
         model_id: str,
-        conversation: Optional[list[models.Message]] = None,
+        conversation: list[models.Message] | None = None,
     ) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
