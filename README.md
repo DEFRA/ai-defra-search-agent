@@ -260,22 +260,15 @@ This project follows specific coding standards and architectural patterns. Pleas
 Run the tests with:
 
 ```bash
-uv run task docker-test
+uv run task test
 ```
 
 This command will:
-1. Stop any running containers
-2. Build the service
-3. Run the test suite using pytest
-4. Generate coverage reports in the `./coverage` directory
+
+1. Run the test suite using pytest
+2. Generate coverage reports in the `./coverage` directory
 
 Testing follows the [FastAPI documented approach](https://fastapi.tiangolo.com/tutorial/testing/), using pytest and Starlette.
-
-To run tests locally without Docker:
-
-```bash
-uv run task test
-```
 
 ## Security Scanning
 
