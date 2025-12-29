@@ -78,7 +78,6 @@ def test_post_sync_chat_valid_question_returns_200(client):
     assert response.status_code == 200
 
     assert response.json()["conversationId"] is not None
-
     assert response.json()["messages"][0]["role"] == "user"
     assert response.json()["messages"][0]["content"] == "Hello, how are you?"
     assert response.json()["messages"][0]["modelId"] == "geni-ai-3.5"

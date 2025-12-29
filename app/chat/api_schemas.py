@@ -48,7 +48,7 @@ class MessageResponse(pydantic.BaseModel):
         serialization_alias="modelId",
     )
     timestamp: datetime.datetime = pydantic.Field(
-        description="The timestamp when the message was created"
+        description="The timestamp of when the message was created"
     )
 
 

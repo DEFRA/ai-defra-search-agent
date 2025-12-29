@@ -175,8 +175,6 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
 async def test_execute_flow_with_conversation(
     bedrock_agent, mock_inference_service, mocker
 ):
-    """Test that conversation history is included in subsequent requests"""
-    # Setup - create some conversation history
     conversation = [
         models.UserMessage(
             content="What is Python?",

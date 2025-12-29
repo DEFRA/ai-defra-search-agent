@@ -67,7 +67,7 @@ class BedrockChatAgent(AbstractChatAgent):
             total_tokens=input_tokens + output_tokens,
         )
 
-        assistant_messages = [
+        return [
             models.AssistantMessage(
                 content=content_block["text"],
                 model_id=model_id,
@@ -78,8 +78,6 @@ class BedrockChatAgent(AbstractChatAgent):
             )
             for content_block in response.content
         ]
-
-        return assistant_messages
 
     def _build_model_config(self, model: str) -> bedrock_models.ModelConfig:
         available_models = self.app_config.bedrock.available_generation_models
