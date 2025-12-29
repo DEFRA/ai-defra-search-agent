@@ -64,3 +64,10 @@ output = "coverage/coverage.xml"
 lint = "uv run ruff format ./app ./tests --check && uv run ruff check ./app ./tests"
 test = "uv run task lint && uv run coverage run -m pytest -vv && uv run coverage html && uv run coverage xml"
 docker-test = "docker compose down && docker compose -f compose.yaml -f compose.test.yaml run  --build --rm 'ai-defra-search-agent'"
+
+[tool.pytest]
+minversion = "7.0"
+testpaths = [
+    "tests",
+]
+asyncio_mode = "auto"
