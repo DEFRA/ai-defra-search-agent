@@ -5,10 +5,10 @@ import pytest
 from app import config
 
 
-def test_get_config(bedrock_generation_models):
+def test_get_config(bedrock_generation_models, mongo_uri):
     config_obj = config.get_config()
     assert config_obj is not None
-    assert config_obj.mongo.uri == "mongodb://mongodb:27018/test_db"
+    assert config_obj.mongo.uri == mongo_uri
 
     expected_models = {}
     for model in bedrock_generation_models:
