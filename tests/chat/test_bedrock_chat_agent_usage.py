@@ -3,6 +3,7 @@ import pytest
 from app import config
 from app.bedrock import models as bedrock_models
 from app.chat import agent
+from app.chat import models as chat_models
 
 # Mock test data
 MOCK_QUESTION = "What is the question?"
@@ -60,7 +61,9 @@ async def test_raises_type_error_on_missing_usage_data(
     )
 
     with pytest.raises(TypeError):
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model_name=MOCK_MODEL_ID)
+        await bedrock_agent.execute_flow(
+            chat_models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+        )
 
 
 @pytest.mark.asyncio
@@ -82,5 +85,7 @@ async def test_raises_key_error_on_partial_usage_data(
     )
 
     with pytest.raises(KeyError) as excinfo:
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+        await bedrock_agent.execute_flow(
+            chat_models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+        )
     assert "'output_tokens'" in str(excinfo.value)

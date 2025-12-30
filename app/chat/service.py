@@ -40,9 +40,12 @@ class ChatService:
 
         # TODO: maybe execute_flow should return both question and response so we can add
         # token count and model-id to the user message?
-        agent_responses = await self.chat_agent.execute_flow(
-            question=question, model_id=model_id
+        agent_request = models.AgentRequest(
+            question=question,
+            model_id=model_id,
+            conversation=conversation.messages[:-1],
         )
+        agent_responses = await self.chat_agent.execute_flow(agent_request)
 
         for response_message in agent_responses:
             message_with_model_name = dataclasses.replace(

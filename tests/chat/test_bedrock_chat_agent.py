@@ -2,7 +2,7 @@ import pytest
 
 from app import config
 from app.bedrock import models as bedrock_models
-from app.chat import agent
+from app.chat import agent, models
 from app.models import UnsupportedModelError
 
 # Mock test data
@@ -66,7 +66,7 @@ async def test_executes_flow_with_correct_parameters(
 
     # Execute
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID
+        models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
     )
 
     # Assert invoke_anthropic called with correct parameters
@@ -115,7 +115,9 @@ async def test_handles_single_response_message(
     )
 
     # Execute
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    )
 
     # Assert single message returned
     assert len(result) == 1
@@ -146,7 +148,9 @@ async def test_executes_flow_returns_usage_data(
         return_value=mock_model_response
     )
 
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    )
 
     assert len(result) == 1
     actual_message = result[0]
@@ -162,9 +166,153 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
     unsupported_model_id = "unsupported-model-123"
 
     with pytest.raises(UnsupportedModelError) as exc_info:
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=unsupported_model_id)
+        await bedrock_agent.execute_flow(
+            models.AgentRequest(question=MOCK_QUESTION, model_id=unsupported_model_id)
+        )
 
     assert (
         str(exc_info.value)
         == f"Requested model '{unsupported_model_id}' is not supported."
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_config")
+async def test_execute_flow_with_conversation(
+    bedrock_agent, mock_inference_service, mocker
+):
+    conversation = [
+        models.UserMessage(
+            content="What is Python?",
+            model_id=MOCK_MODEL_ID,
+            model_name="Claude 3 Sonnet",
+        ),
+        models.AssistantMessage(
+            content="Python is a programming language.",
+            model_id=MOCK_MODEL_ID,
+            model_name="Claude 3 Sonnet",
+            usage=models.TokenUsage(input_tokens=5, output_tokens=10, total_tokens=15),
+        ),
+    ]
+
+    # Mock response for the new question
+    mock_response_content = [
+        {"type": "text", "text": "It was created by Guido van Rossum."},
+    ]
+    mock_model_response = bedrock_models.ModelResponse(
+        model_id=MOCK_MODEL_ID,
+        content=mock_response_content,
+        usage={"input_tokens": 20, "output_tokens": 15},
+    )
+    mock_inference_service.invoke_anthropic = mocker.MagicMock(
+        return_value=mock_model_response
+    )
+
+    # Execute with conversation history
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(
+            question="Who created it?",
+            model_id=MOCK_MODEL_ID,
+            conversation=conversation,
+        )
+    )
+
+    # Assert invoke_anthropic was called with the full conversation history
+    mock_inference_service.invoke_anthropic.assert_called_once()
+    call_args = mock_inference_service.invoke_anthropic.call_args
+    messages = call_args[1]["messages"]
+
+    # Should have history (2 messages) + new user message (1) = 3 messages
+    assert len(messages) == 3
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == [{"text": "What is Python?"}]
+    assert messages[1]["role"] == "assistant"
+    assert messages[1]["content"] == [{"text": "Python is a programming language."}]
+    assert messages[2]["role"] == "user"
+    assert messages[2]["content"] == [{"text": "Who created it?"}]
+
+    # Assert response contains only assistant message (not user message)
+    assert len(result) == 1
+    assert result[0].role == "assistant"
+    assert result[0].content == "It was created by Guido van Rossum."
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_config")
+async def test_execute_flow_without_conversation(
+    bedrock_agent, mock_inference_service, mocker
+):
+    """Test that execute_flow works correctly when no conversation history is provided"""
+    mock_response_content = [
+        {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
+    ]
+    mock_model_response = bedrock_models.ModelResponse(
+        model_id=MOCK_MODEL_ID,
+        content=mock_response_content,
+        usage={"input_tokens": 10, "output_tokens": 20},
+    )
+    mock_inference_service.invoke_anthropic = mocker.MagicMock(
+        return_value=mock_model_response
+    )
+
+    # Execute without conversation history (None)
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(
+            question=MOCK_QUESTION,
+            model_id=MOCK_MODEL_ID,
+            conversation=None,
+        )
+    )
+
+    # Assert invoke_anthropic was called with only the new message
+    mock_inference_service.invoke_anthropic.assert_called_once()
+    call_args = mock_inference_service.invoke_anthropic.call_args
+    messages = call_args[1]["messages"]
+
+    # Should have only the new user message
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == [{"text": MOCK_QUESTION}]
+
+    # Assert response contains only assistant message
+    assert len(result) == 1
+    assert result[0].role == "assistant"
+    assert result[0].content == MOCK_RESPONSE_TEXT_1
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_config")
+async def test_execute_flow_with_empty_conversation(
+    bedrock_agent, mock_inference_service, mocker
+):
+    mock_response_content = [
+        {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
+    ]
+    mock_model_response = bedrock_models.ModelResponse(
+        model_id=MOCK_MODEL_ID,
+        content=mock_response_content,
+        usage={"input_tokens": 10, "output_tokens": 20},
+    )
+    mock_inference_service.invoke_anthropic = mocker.MagicMock(
+        return_value=mock_model_response
+    )
+
+    # Execute with empty conversation history
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(
+            question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation=[]
+        )
+    )
+
+    # Assert invoke_anthropic was called with only the new message
+    call_args = mock_inference_service.invoke_anthropic.call_args
+    messages = call_args[1]["messages"]
+
+    # Should have only the new user message
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == [{"text": MOCK_QUESTION}]
+
+    # Assert response contains only assistant message
+    assert len(result) == 1
+    assert result[0].role == "assistant"

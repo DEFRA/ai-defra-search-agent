@@ -4,6 +4,7 @@ import uuid
 from typing import Any, Literal
 
 __all__ = [
+    "AgentRequest",
     "AssistantMessage",
     "Conversation",
     "ConversationNotFoundError",
@@ -18,6 +19,13 @@ class TokenUsage:
     input_tokens: int
     output_tokens: int
     total_tokens: int
+
+
+@dataclasses.dataclass(frozen=True)
+class AgentRequest:
+    question: str
+    model_id: str
+    conversation: list["Message"] | None = None
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
