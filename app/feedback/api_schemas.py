@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from typing import Literal
 
 import pydantic
 import pydantic.alias_generators
@@ -19,13 +20,16 @@ class FeedbackRequest(BaseRequestSchema):
         description="The ID of the conversation this feedback relates to",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
-    was_helpful: bool = pydantic.Field(
-        description="Whether the user found the AI response helpful", examples=[True]
+    was_helpful: Literal[
+        "very-useful", "useful", "neither", "not-useful", "not-at-all-useful"
+    ] = pydantic.Field(
+        description="User's rating of how useful the AI Assistant was",
+        examples=["very-useful"],
     )
     comment: str | None = pydantic.Field(
         default=None,
         description="Optional user comments provided by the user about the AI assistant's response",
-        max_length=1000,
+        max_length=1200,
         examples=["The response was very informative and addressed my question well."],
     )
 

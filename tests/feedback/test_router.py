@@ -39,7 +39,7 @@ def test_post_feedback_with_all_fields_returns_201(client):
     conversation_id = str(uuid.uuid4())
     body = {
         "conversationId": conversation_id,
-        "wasHelpful": True,
+        "wasHelpful": "very-useful",
         "comment": "This was very helpful!",
     }
 
@@ -52,7 +52,7 @@ def test_post_feedback_with_all_fields_returns_201(client):
 
 
 def test_post_feedback_minimal_returns_201(client):
-    body = {"wasHelpful": False}
+    body = {"wasHelpful": "not-useful"}
 
     response = client.post("/feedback", json=body)
 
@@ -62,7 +62,7 @@ def test_post_feedback_minimal_returns_201(client):
 
 
 def test_post_feedback_without_conversation_id_returns_201(client):
-    body = {"wasHelpful": True, "comment": "Great response!"}
+    body = {"wasHelpful": "useful", "comment": "Great response!"}
 
     response = client.post("/feedback", json=body)
 
@@ -80,7 +80,7 @@ def test_post_feedback_missing_required_field_returns_400(client):
 
 
 def test_post_feedback_invalid_uuid_returns_400(client):
-    body = {"conversationId": "not-a-uuid", "wasHelpful": True}
+    body = {"conversationId": "not-a-uuid", "wasHelpful": "neither"}
 
     response = client.post("/feedback", json=body)
 
@@ -88,9 +88,39 @@ def test_post_feedback_invalid_uuid_returns_400(client):
 
 
 def test_post_feedback_comment_too_long_returns_400(client):
-    long_comment = "x" * 1001
-    body = {"wasHelpful": True, "comment": long_comment}
+    long_comment = "x" * 1201
+    body = {"wasHelpful": "not-at-all-useful", "comment": long_comment}
 
     response = client.post("/feedback", json=body)
 
     assert response.status_code == 400
+
+
+def test_post_feedback_with_neither_returns_201(client):
+    """Test the 'neither' satisfaction value"""
+    body = {"wasHelpful": "neither", "comment": "It was okay"}
+
+    response = client.post("/feedback", json=body)
+
+    assert response.status_code == 201
+    assert "feedbackId" in response.json()
+
+
+def test_post_feedback_with_not_at_all_useful_returns_201(client):
+    """Test the 'not-at-all-useful' satisfaction value"""
+    body = {"wasHelpful": "not-at-all-useful"}
+
+    response = client.post("/feedback", json=body)
+
+    assert response.status_code == 201
+    assert "feedbackId" in response.json()
+
+
+def test_post_feedback_with_empty_comment_returns_201(client):
+    """Test that empty comment is allowed"""
+    body = {"wasHelpful": "useful", "comment": ""}
+
+    response = client.post("/feedback", json=body)
+
+    assert response.status_code == 201
+    assert "feedbackId" in response.json()
