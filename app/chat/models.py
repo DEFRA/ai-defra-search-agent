@@ -1,7 +1,7 @@
 import dataclasses
 import datetime
 import uuid
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 __all__ = [
     "AgentRequest",
@@ -25,7 +25,7 @@ class TokenUsage:
 class AgentRequest:
     question: str
     model_id: str
-    conversation: Optional[list["Message"]] = None
+    conversation: list["Message"] | None = None
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
