@@ -1,9 +1,10 @@
 import dataclasses
 import datetime
 import uuid
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 __all__ = [
+    "AgentRequest",
     "AssistantMessage",
     "Conversation",
     "ConversationNotFoundError",
@@ -18,6 +19,13 @@ class TokenUsage:
     input_tokens: int
     output_tokens: int
     total_tokens: int
+
+
+@dataclasses.dataclass(frozen=True)
+class AgentRequest:
+    question: str
+    model_id: str
+    conversation: Optional[list["Message"]] = None
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)

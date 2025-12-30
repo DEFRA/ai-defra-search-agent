@@ -14,9 +14,7 @@ class AbstractChatAgent(abc.ABC):
     @abc.abstractmethod
     async def execute_flow(
         self,
-        question: str,
-        model_id: str,
-        conversation: list[models.Message] | None = None,
+        request: models.AgentRequest,
     ) -> list[models.Message]:
         pass
 
@@ -32,23 +30,21 @@ class BedrockChatAgent(AbstractChatAgent):
 
     async def execute_flow(
         self,
-        question: str,
-        model_id: str,
-        conversation: list[models.Message] | None = None,
+        request: models.AgentRequest,
     ) -> list[models.Message]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
-        model_config = self._build_model_config(model_id)
+        model_config = self._build_model_config(request.model_id)
 
         messages = []
-        if conversation:
-            messages = [msg.to_dict() for msg in conversation]
+        if request.conversation:
+            messages = [msg.to_dict() for msg in request.conversation]
 
         user_message = models.UserMessage(
-            content=question,
+            content=request.question,
             model_id=model_config.id,
             model_name=self.app_config.bedrock.available_generation_models[
-                model_id
+                request.model_id
             ].name,
         )
         messages.append(user_message.to_dict())
@@ -70,9 +66,9 @@ class BedrockChatAgent(AbstractChatAgent):
         return [
             models.AssistantMessage(
                 content=content_block["text"],
-                model_id=model_id,
+                model_id=request.model_id,
                 model_name=self.app_config.bedrock.available_generation_models[
-                    model_id
+                    request.model_id
                 ].name,
                 usage=usage,
             )

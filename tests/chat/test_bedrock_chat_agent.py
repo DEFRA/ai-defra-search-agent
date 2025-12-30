@@ -66,7 +66,7 @@ async def test_executes_flow_with_correct_parameters(
 
     # Execute
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID
+        models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
     )
 
     # Assert invoke_anthropic called with correct parameters
@@ -115,7 +115,9 @@ async def test_handles_single_response_message(
     )
 
     # Execute
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    )
 
     # Assert single message returned
     assert len(result) == 1
@@ -146,7 +148,9 @@ async def test_executes_flow_returns_usage_data(
         return_value=mock_model_response
     )
 
-    result = await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    result = await bedrock_agent.execute_flow(
+        models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
+    )
 
     assert len(result) == 1
     actual_message = result[0]
@@ -162,7 +166,9 @@ async def test_unsupported_model_raises_exception(bedrock_agent):
     unsupported_model_id = "unsupported-model-123"
 
     with pytest.raises(UnsupportedModelError) as exc_info:
-        await bedrock_agent.execute_flow(MOCK_QUESTION, model_id=unsupported_model_id)
+        await bedrock_agent.execute_flow(
+            models.AgentRequest(question=MOCK_QUESTION, model_id=unsupported_model_id)
+        )
 
     assert (
         str(exc_info.value)
@@ -204,9 +210,11 @@ async def test_execute_flow_with_conversation(
 
     # Execute with conversation history
     result = await bedrock_agent.execute_flow(
-        question="Who created it?",
-        model_id=MOCK_MODEL_ID,
-        conversation=conversation,
+        models.AgentRequest(
+            question="Who created it?",
+            model_id=MOCK_MODEL_ID,
+            conversation=conversation,
+        )
     )
 
     # Assert invoke_anthropic was called with the full conversation history
@@ -249,7 +257,11 @@ async def test_execute_flow_without_conversation(
 
     # Execute without conversation history (None)
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation=None
+        models.AgentRequest(
+            question=MOCK_QUESTION,
+            model_id=MOCK_MODEL_ID,
+            conversation=None,
+        )
     )
 
     # Assert invoke_anthropic was called with only the new message
@@ -287,7 +299,9 @@ async def test_execute_flow_with_empty_conversation(
 
     # Execute with empty conversation history
     result = await bedrock_agent.execute_flow(
-        question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation=[]
+        models.AgentRequest(
+            question=MOCK_QUESTION, model_id=MOCK_MODEL_ID, conversation=[]
+        )
     )
 
     # Assert invoke_anthropic was called with only the new message
