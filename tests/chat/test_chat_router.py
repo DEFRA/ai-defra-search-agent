@@ -134,3 +134,30 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][3]["modelId"] == "geni-ai-3.5"
     assert response.json()["messages"][3]["modelName"] == "Geni AI 3.5"
     assert "timestamp" in response.json()["messages"][3]
+
+
+def test_post_chat_bedrock_400_error_returns_400(mocker, client):
+    # Mock the bedrock service to raise an HTTPException (like it would when AWS returns 400)
+    from app.bedrock import service as bedrock_service
+
+    mock_bedrock_service = mocker.Mock(spec=bedrock_service.BedrockInferenceService)
+    mock_bedrock_service.invoke_anthropic.side_effect = fastapi.HTTPException(
+        status_code=400, detail="Invalid request to AI model: Invalid model parameters"
+    )
+
+    # Override the dependency to use our mock
+    app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
+        lambda: mock_bedrock_service
+    )
+
+    try:
+        body = {"question": "Hello, how are you?", "modelId": "geni-ai-3.5"}
+
+        response = client.post("/chat", json=body)
+
+        assert response.status_code == 400
+        assert "Invalid request to AI model" in response.json()["detail"]
+        assert "Invalid model parameters" in response.json()["detail"]
+    finally:
+        # Clean up the override
+        app.dependency_overrides.clear()
