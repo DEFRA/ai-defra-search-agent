@@ -15,7 +15,7 @@ class AbstractChatAgent(abc.ABC):
     async def execute_flow(
         self,
         request: models.AgentRequest,
-    ) -> list[models.Message]:
+    ) -> list[models.AssistantMessage]:
         pass
 
 
@@ -31,7 +31,7 @@ class BedrockChatAgent(AbstractChatAgent):
     async def execute_flow(
         self,
         request: models.AgentRequest,
-    ) -> list[models.Message]:
+    ) -> list[models.AssistantMessage]:
         system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
 
         model_config = self._build_model_config(request.model_id)

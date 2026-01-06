@@ -48,6 +48,15 @@ class ChatService:
         agent_responses = await self.chat_agent.execute_flow(agent_request)
 
         for response_message in agent_responses:
+            if response_message.sources:
+                knowledge_reference_str = self._build_knowledge_reference_str(
+                    response_message.sources
+                )
+                response_message = dataclasses.replace(
+                    response_message,
+                    content=f"{response_message.content}\n\n{knowledge_reference_str}",
+                )
+
             message_with_model_name = dataclasses.replace(
                 response_message,
                 model_name=model_info.name,
@@ -58,3 +67,14 @@ class ChatService:
         await self.conversation_repository.save(conversation)
 
         return conversation
+
+    # TODO: This should not be concerned with markdown formatting, this is a display concern
+    def _build_knowledge_reference_str(self, sources: list[models.Source]) -> str:
+        formatted_sources = []
+        for i, source in enumerate(sources, 1):
+            snippet = source.snippet.replace("\n", "\n   > ")
+            formatted_sources.append(
+                f"{i}. **[{source.name}]({source.location})**\n   > {snippet}"
+            )
+
+        return "\n\n### Sources\n\n" + "\n\n".join(formatted_sources)
