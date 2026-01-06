@@ -1,9 +1,94 @@
 import logging
 
-from app.common.knowledge import KnowledgeRetriever
+import httpx
+
+from app.common.knowledge import KnowledgeRetriever, _convert_keys, _to_snake_case
+
+
+class TestHelpers:
+    def test_to_snake_case(self):
+        assert _to_snake_case("camelCase") == "camel_case"
+        assert _to_snake_case("PascalCase") == "pascal_case"
+        assert _to_snake_case("simple") == "simple"
+        assert _to_snake_case("PDFLoader") == "p_d_f_loader"
+
+    def test_convert_keys(self):
+        data = {"camelCase": 1, "nested": {"PascalCase": 2}, "list": [{"camelCase": 3}]}
+        expected = {
+            "camel_case": 1,
+            "nested": {"pascal_case": 2},
+            "list": [{"camel_case": 3}],
+        }
+        assert _convert_keys(data) == expected
+
+    def test_convert_keys_non_dict_list(self):
+        assert _convert_keys("string") == "string"
+        assert _convert_keys(123) == 123
 
 
 class TestKnowledgeRetriever:
+    def test_search_success(self, mocker):
+        base_url = "http://test"
+        retriever = KnowledgeRetriever(base_url=base_url)
+
+        mock_response = mocker.Mock()
+        mock_response.json.return_value = [
+            {"similarityScore": 0.9, "content": "foo"},
+            {"similarityScore": 0.1, "content": "bar"},
+        ]
+        mock_response.raise_for_status.return_value = None
+
+        mock_client = mocker.patch("httpx.Client")
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.__enter__.return_value = mock_client_instance
+        mock_client_instance.post.return_value = mock_response
+
+        results = retriever.search("group1", "query")
+
+        mock_client_instance.post.assert_called_once_with(
+            f"{base_url}/snapshots/query",
+            json={
+                "groupId": "group1",
+                "query": "query",
+                "maxResults": 5,
+            },
+        )
+
+        assert len(results) == 1
+        assert results[0]["similarity_score"] == 0.9
+        assert results[0]["content"] == "foo"
+
+    def test_search_api_error(self, caplog, mocker):
+        retriever = KnowledgeRetriever(base_url="http://test")
+
+        mock_response = mocker.Mock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Error", request=mocker.Mock(), response=mocker.Mock()
+        )
+
+        mock_client = mocker.patch("httpx.Client")
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.__enter__.return_value = mock_client_instance
+        mock_client_instance.post.return_value = mock_response
+
+        results = retriever.search("group1", "query")
+
+        assert results == []
+        assert "RAG Lookup failed" in caplog.text
+
+    def test_search_connection_error(self, caplog, mocker):
+        retriever = KnowledgeRetriever(base_url="http://test")
+
+        mock_client = mocker.patch("httpx.Client")
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.__enter__.return_value = mock_client_instance
+        mock_client_instance.post.side_effect = httpx.ConnectError("Connection failed")
+
+        results = retriever.search("group1", "query")
+
+        assert results == []
+        assert "RAG Lookup failed" in caplog.text
+
     def test_filter_relevant_docs_filters_below_threshold(self):
         retriever = KnowledgeRetriever(base_url="http://test", similarity_threshold=0.6)
         docs = [
