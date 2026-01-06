@@ -53,3 +53,6 @@ def set_test_env(monkeypatch, bedrock_generation_models):
     monkeypatch.setenv("AWS_BEDROCK_USE_CREDENTIALS", "False")
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")  # noqa: S105
+    monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-base.com")
+    monkeypatch.setenv("KNOWLEDGE_GROUP_ID", "kg-1234567890")
+    monkeypatch.setenv("KNOWLEDGE_SIMILARITY_THRESHOLD", "0.5")
