@@ -7,11 +7,20 @@ import pymongo.asynchronous.database
 from app import config, dependencies
 from app.bedrock import service as bedrock_service
 from app.chat import agent, repository, service
-from app.common import mongo
+from app.common import knowledge, mongo
 from app.models import dependencies as model_dependencies
 from app.models import service as model_service
 
 logger = logging.getLogger(__name__)
+
+
+def get_knowledge_retriever(
+    app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
+) -> knowledge.KnowledgeRetriever | None:
+    return knowledge.KnowledgeRetriever(
+        base_url=app_config.knowledge.base_url,
+        similarity_threshold=app_config.knowledge.similarity_threshold,
+    )
 
 
 def get_bedrock_runtime_client(
@@ -46,9 +55,15 @@ def get_bedrock_inference_service(
     api_client: boto3.client = fastapi.Depends(get_bedrock_client),
     runtime_client: boto3.client = fastapi.Depends(get_bedrock_runtime_client),
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
+    knowledge_retriever: knowledge.KnowledgeRetriever | None = fastapi.Depends(
+        get_knowledge_retriever
+    ),
 ) -> bedrock_service.BedrockInferenceService:
     return bedrock_service.BedrockInferenceService(
-        api_client=api_client, runtime_client=runtime_client, app_config=app_config
+        api_client=api_client,
+        runtime_client=runtime_client,
+        app_config=app_config,
+        knowledge_retriever=knowledge_retriever,
     )
 
 

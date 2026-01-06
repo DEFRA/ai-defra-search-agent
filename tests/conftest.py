@@ -38,9 +38,11 @@ def bedrock_generation_models():
 
 
 @pytest.fixture(autouse=True)
-def set_test_env(monkeypatch, bedrock_generation_models, mongo_uri):
+def set_test_env(monkeypatch, bedrock_generation_models):
     """Set environment variables for the test session."""
-    monkeypatch.setenv("MONGO_URI", mongo_uri)
+
+    # Use a dummy URI by default so we don't spin up Docker for every test
+    monkeypatch.setenv("MONGO_URI", "mongodb://dummy:27017/test_db")
     monkeypatch.setenv(
         "AWS_BEDROCK_AVAILABLE_GENERATION_MODELS", json.dumps(bedrock_generation_models)
     )

@@ -11,11 +11,14 @@ def bedrock_inference_service(
     mock_config = mocker.Mock()
     mock_config.bedrock.max_response_tokens = 100
     mock_config.bedrock.default_model_temprature = 0.5
+    mock_knowledge_retriever = mocker.Mock()
+    mock_knowledge_retriever._filter_relevant_docs = lambda x: x
 
     return service.BedrockInferenceService(
         api_client=bedrock_client,
         runtime_client=bedrock_runtime_v2_client,
         app_config=mock_config,
+        knowledge_retriever=mock_knowledge_retriever,
     )
 
 
@@ -38,9 +41,7 @@ def test_invoke_with_inference_profile_should_return_model_id(
     bedrock_inference_service: service.BedrockInferenceService,
 ):
     response = bedrock_inference_service.invoke_anthropic(
-        model_config=models.ModelConfig(
-            id="arn:aws:bedrock:us-west-2:123456789012:inference-profile/geni-ai-3.5"
-        ),
+        model_config=models.ModelConfig(id="geni-ai-3.5"),
         system_prompt="This is not a real prompt",
         messages=[
             {"role": "user", "content": [{"text": "What is the weather today?"}]}
@@ -58,7 +59,7 @@ def test_with_valid_guardrails_should_return_bedrock_response(
         model_config=models.ModelConfig(
             id="geni-ai-3.5",
             guardrail_id="arn:aws:bedrock:us-west-2:123456789012:guardrail/8etdsfsdf3sd",
-            guardrail_version=1,
+            guardrail_version="1",
         ),
         system_prompt="This is not a real prompt",
         messages=[
@@ -97,7 +98,7 @@ def test_guardrail_version_with_no_id_should_raise_error(
     ):
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(
-                id="geni-ai-3.5", guardrail_id=None, guardrail_version=1
+                id="geni-ai-3.5", guardrail_id=None, guardrail_version="1"
             ),
             system_prompt="This is not a real prompt",
             messages=[
