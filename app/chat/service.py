@@ -74,7 +74,7 @@ class ChatService:
         for i, source in enumerate(sources, 1):
             snippet = source.snippet.replace("\n", "\n   > ")
             formatted_sources.append(
-                f"{i}. **[{source.name}]({source.location})**\n   > {snippet}"
+                f"{i}. **[{source.name}]({source.location})** ({int(source.score * 100)}%)\n   > {snippet}"
             )
 
         return "\n\n### Sources\n\n" + "\n\n".join(formatted_sources)
