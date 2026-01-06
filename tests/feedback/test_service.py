@@ -3,6 +3,7 @@ import uuid
 import pytest
 
 from app.feedback import models, repository, service
+from app.feedback.models import WasHelpfulRating
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ async def test_submit_feedback_with_all_fields(feedback_service, mock_repository
 
     assert isinstance(result, models.Feedback)
     assert result.conversation_id == conversation_id
-    assert result.was_helpful == "useful"
+    assert result.was_helpful == WasHelpfulRating.USEFUL
     assert result.comment == comment
     assert result.id is not None
     assert result.timestamp is not None
@@ -39,7 +40,7 @@ async def test_submit_feedback_with_all_fields(feedback_service, mock_repository
     mock_repository.save.assert_called_once()
     saved_feedback = mock_repository.save.call_args[0][0]
     assert saved_feedback.conversation_id == conversation_id
-    assert saved_feedback.was_helpful == "useful"
+    assert saved_feedback.was_helpful == WasHelpfulRating.USEFUL
     assert saved_feedback.comment == comment
 
 
@@ -57,7 +58,7 @@ async def test_submit_feedback_without_conversation_id(
 
     assert isinstance(result, models.Feedback)
     assert result.conversation_id is None
-    assert result.was_helpful == "not-useful"
+    assert result.was_helpful == WasHelpfulRating.NOT_USEFUL
     assert result.comment == comment
     assert result.id is not None
     assert result.timestamp is not None
@@ -65,7 +66,7 @@ async def test_submit_feedback_without_conversation_id(
     mock_repository.save.assert_called_once()
     saved_feedback = mock_repository.save.call_args[0][0]
     assert saved_feedback.conversation_id is None
-    assert saved_feedback.was_helpful == "not-useful"
+    assert saved_feedback.was_helpful == WasHelpfulRating.NOT_USEFUL
 
 
 @pytest.mark.asyncio
@@ -80,7 +81,7 @@ async def test_submit_feedback_without_comment(feedback_service, mock_repository
 
     assert isinstance(result, models.Feedback)
     assert result.conversation_id == conversation_id
-    assert result.was_helpful == "very-useful"
+    assert result.was_helpful == WasHelpfulRating.VERY_USEFUL
     assert result.comment is None
     assert result.id is not None
     assert result.timestamp is not None
@@ -98,7 +99,7 @@ async def test_submit_feedback_minimal(feedback_service, mock_repository):
 
     assert isinstance(result, models.Feedback)
     assert result.conversation_id is None
-    assert result.was_helpful == "neither"
+    assert result.was_helpful == WasHelpfulRating.NEITHER
     assert result.comment is None
     assert result.id is not None
     assert result.timestamp is not None

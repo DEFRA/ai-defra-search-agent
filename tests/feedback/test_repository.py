@@ -4,6 +4,7 @@ import uuid
 import pytest
 
 from app.feedback import models, repository
+from app.feedback.models import WasHelpfulRating
 
 
 @pytest.fixture
@@ -27,7 +28,7 @@ async def test_save_stores_feedback_with_all_fields(mongo_repository, mock_db):
     feedback = models.Feedback(
         id=feedback_id,
         conversation_id=conversation_id,
-        was_helpful=True,
+        was_helpful=WasHelpfulRating.VERY_USEFUL,
         comment="Very helpful!",
         timestamp=timestamp,
     )
@@ -44,7 +45,7 @@ async def test_save_stores_feedback_with_all_fields(mongo_repository, mock_db):
 
     assert saved_data["feedback_id"] == feedback_id
     assert saved_data["conversation_id"] == conversation_id
-    assert saved_data["was_helpful"] is True
+    assert saved_data["was_helpful"] == WasHelpfulRating.VERY_USEFUL
     assert saved_data["comment"] == "Very helpful!"
     assert saved_data["timestamp"] == timestamp
 
@@ -58,7 +59,7 @@ async def test_save_stores_feedback_with_optional_fields_none(
 
     feedback = models.Feedback(
         id=feedback_id,
-        was_helpful=False,
+        was_helpful=WasHelpfulRating.NOT_USEFUL,
         timestamp=timestamp,
     )
 
@@ -69,12 +70,12 @@ async def test_save_stores_feedback_with_optional_fields_none(
 
     assert saved_data["conversation_id"] is None
     assert saved_data["comment"] is None
-    assert saved_data["was_helpful"] is False
+    assert saved_data["was_helpful"] == WasHelpfulRating.NOT_USEFUL
 
 
 @pytest.mark.asyncio
 async def test_save_uses_upsert(mongo_repository, mock_db):
-    feedback = models.Feedback(was_helpful=True)
+    feedback = models.Feedback(was_helpful=WasHelpfulRating.VERY_USEFUL)
 
     await mongo_repository.save(feedback)
 
@@ -91,7 +92,7 @@ async def test_get_retrieves_feedback_with_all_fields(mongo_repository, mock_db)
     mock_doc = {
         "feedback_id": feedback_id,
         "conversation_id": conversation_id,
-        "was_helpful": True,
+        "was_helpful": "very-useful",
         "comment": "Great response!",
         "timestamp": timestamp,
     }
@@ -102,7 +103,7 @@ async def test_get_retrieves_feedback_with_all_fields(mongo_repository, mock_db)
     assert result is not None
     assert result.id == feedback_id
     assert result.conversation_id == conversation_id
-    assert result.was_helpful is True
+    assert result.was_helpful == WasHelpfulRating.VERY_USEFUL
     assert result.comment == "Great response!"
     assert result.timestamp == timestamp
 
@@ -116,7 +117,7 @@ async def test_get_retrieves_feedback_with_optional_fields_missing(
 
     mock_doc = {
         "feedback_id": feedback_id,
-        "was_helpful": False,
+        "was_helpful": "not-useful",
         "timestamp": timestamp,
     }
     mock_db.feedback.find_one.return_value = mock_doc
@@ -127,7 +128,7 @@ async def test_get_retrieves_feedback_with_optional_fields_missing(
     assert result.id == feedback_id
     assert result.conversation_id is None
     assert result.comment is None
-    assert result.was_helpful is False
+    assert result.was_helpful == WasHelpfulRating.NOT_USEFUL
 
 
 @pytest.mark.asyncio
@@ -148,7 +149,7 @@ async def test_get_handles_empty_comment(mongo_repository, mock_db):
 
     mock_doc = {
         "feedback_id": feedback_id,
-        "was_helpful": True,
+        "was_helpful": "useful",
         "comment": "",
         "timestamp": timestamp,
     }
@@ -169,7 +170,7 @@ async def test_save_and_get_roundtrip(mongo_repository, mock_db):
     original_feedback = models.Feedback(
         id=feedback_id,
         conversation_id=conversation_id,
-        was_helpful=True,
+        was_helpful=WasHelpfulRating.VERY_USEFUL,
         comment="Excellent!",
         timestamp=timestamp,
     )
