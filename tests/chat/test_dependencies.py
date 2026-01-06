@@ -94,12 +94,18 @@ def test_get_bedrock_inference_service(mocker: MockerFixture):
 def test_get_chat_agent(mocker: MockerFixture):
     mock_inference_service = mocker.Mock(spec=bedrock_service.BedrockInferenceService)
     mock_config = mocker.Mock()
+    mock_prompt_repository = mocker.Mock()
+    mock_prompt_repository.get_prompt_by_name.return_value = "Test system prompt"
 
-    agent_instance = dependencies.get_chat_agent(mock_inference_service, mock_config)
+    agent_instance = dependencies.get_chat_agent(
+        mock_inference_service, mock_config, mock_prompt_repository
+    )
 
     assert isinstance(agent_instance, agent.BedrockChatAgent)
     assert agent_instance.inference_service == mock_inference_service
     assert agent_instance.app_config == mock_config
+    assert agent_instance.system_prompt == "Test system prompt"
+    mock_prompt_repository.get_prompt_by_name.assert_called_once_with("system_prompt")
 
 
 def test_get_conversation_repository(mocker: MockerFixture):
