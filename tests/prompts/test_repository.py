@@ -94,7 +94,7 @@ class TestFileSystemPromptRepository:
         assert len(repo._cache) == 0
 
     def test_get_cached_prompt_names_returns_cached_names(self, tmp_path):
-        """Test that get_cached_prompt_names returns list of cached prompt names"""
+        """Test that internal cache contains loaded prompt names"""
         # Create test files
         (tmp_path / "prompt1.txt").write_text("Prompt 1", encoding="utf-8")
         (tmp_path / "prompt2.txt").write_text("Prompt 2", encoding="utf-8")
@@ -102,14 +102,14 @@ class TestFileSystemPromptRepository:
         repo = FileSystemPromptRepository(prompts_dir=tmp_path)
 
         # Initially, no cached prompts
-        assert repo.get_cached_prompt_names() == []
+        assert list(repo._cache.keys()) == []
 
         # Load prompts
         repo.get_prompt_by_name("prompt1")
         repo.get_prompt_by_name("prompt2")
 
         # Check cached names
-        cached_names = repo.get_cached_prompt_names()
+        cached_names = list(repo._cache.keys())
         assert len(cached_names) == 2
         assert "prompt1" in cached_names
         assert "prompt2" in cached_names
