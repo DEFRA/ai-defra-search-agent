@@ -9,7 +9,13 @@ logger = logging.getLogger(__name__)
 router = fastapi.APIRouter(tags=["models"])
 
 
-@router.get("/models", response_model=list[api_schemas.ModelInfoResponse])
+@router.get(
+    "/models",
+    response_model=list[api_schemas.ModelInfoResponse],
+    summary="List available models",
+    description="Retrieves a list of all AI models available for chat interactions.",
+    responses={204: {"description": "No available models found"}},
+)
 async def list_models(
     model_resolution_service: service.AbstractModelResolutionService = fastapi.Depends(
         dependencies.get_model_resolution_service

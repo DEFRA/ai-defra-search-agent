@@ -5,7 +5,13 @@ from app.feedback import api_schemas, dependencies, service
 router = fastapi.APIRouter(tags=["feedback"])
 
 
-@router.post("/feedback", response_model=api_schemas.FeedbackResponse, status_code=201)
+@router.post(
+    "/feedback",
+    response_model=api_schemas.FeedbackResponse,
+    status_code=201,
+    summary="Submit feedback",
+    description="Allows users to submit feedback (helpful/not helpful) and optional comments for a specific conversation.",
+)
 async def submit_feedback(
     request: api_schemas.FeedbackRequest,
     feedback_service: service.FeedbackService = fastapi.Depends(
