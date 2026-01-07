@@ -25,7 +25,7 @@ async def test_get_mongo_client_initialization(mocker):
     # Setup the async ping command
     # get_database() returns a DB object, which has an async command() method
     mock_db = mocker.MagicMock()
-    mock_db.conversation_history.create_index = mocker.AsyncMock()
+    mock_db.conversations.create_index = mocker.AsyncMock()
     mock_instance.get_database.return_value = mock_db
     mock_db.command = mocker.AsyncMock(return_value={"ok": 1})
     mock_instance.admin.command = mocker.AsyncMock(return_value={"ok": 1})
@@ -52,7 +52,7 @@ async def test_get_mongo_client_with_custom_tls(mocker):
     mock_client_cls = mocker.patch("app.common.mongo.pymongo.AsyncMongoClient")
     mock_instance = mock_client_cls.return_value
     mock_db = mocker.MagicMock()
-    mock_db.conversation_history.create_index = mocker.AsyncMock()
+    mock_db.conversations.create_index = mocker.AsyncMock()
     mock_instance.get_database.return_value = mock_db
     mock_db.command = mocker.AsyncMock(return_value={"ok": 1})
     mock_instance.admin.command = mocker.AsyncMock(return_value={"ok": 1})
@@ -91,7 +91,7 @@ async def test_get_db(mocker):
     mock_config.mongo.database = "test_db"
 
     # Setup mock for create_index to be awaitable
-    mock_db.conversation_history.create_index = mocker.AsyncMock()
+    mock_db.conversations.create_index = mocker.AsyncMock()
 
     mock_client.get_database.return_value = mock_db
 

@@ -2,18 +2,19 @@ import pytest
 from pytest_mock import MockerFixture
 
 from app.bedrock import models, service
-from tests.fixtures import bedrock as bedrock_fixtures
 
 
 @pytest.fixture
-def bedrock_inference_service(mocker: MockerFixture):
+def bedrock_inference_service(
+    mocker: MockerFixture, bedrock_client, bedrock_runtime_v2_client
+):
     mock_config = mocker.Mock()
     mock_config.bedrock.max_response_tokens = 100
     mock_config.bedrock.default_model_temprature = 0.5
 
     return service.BedrockInferenceService(
-        api_client=bedrock_fixtures.StubBedrockClient(),
-        runtime_client=bedrock_fixtures.StubBedrockRuntimeClient(),
+        api_client=bedrock_client,
+        runtime_client=bedrock_runtime_v2_client,
         app_config=mock_config,
     )
 
@@ -24,7 +25,9 @@ def test_no_guardrails_should_return_bedrock_response(
     response = bedrock_inference_service.invoke_anthropic(
         model_config=models.ModelConfig(id="geni-ai-3.5"),
         system_prompt="This is not a real prompt",
-        messages=[{"role": "user", "content": "What is the weather today?"}],
+        messages=[
+            {"role": "user", "content": [{"text": "What is the weather today?"}]}
+        ],
     )
 
     assert response.model_id == "geni-ai-3.5"
@@ -39,7 +42,9 @@ def test_invoke_with_inference_profile_should_return_model_id(
             id="arn:aws:bedrock:us-west-2:123456789012:inference-profile/geni-ai-3.5"
         ),
         system_prompt="This is not a real prompt",
-        messages=[{"role": "user", "content": "What is the weather today?"}],
+        messages=[
+            {"role": "user", "content": [{"text": "What is the weather today?"}]}
+        ],
     )
 
     assert response.model_id == "geni-ai-3.5"
@@ -56,7 +61,9 @@ def test_with_valid_guardrails_should_return_bedrock_response(
             guardrail_version=1,
         ),
         system_prompt="This is not a real prompt",
-        messages=[{"role": "user", "content": "What is the weather today?"}],
+        messages=[
+            {"role": "user", "content": [{"text": "What is the weather today?"}]}
+        ],
     )
 
     assert response.model_id == "geni-ai-3.5"
@@ -76,7 +83,9 @@ def test_guardrail_id_with_no_version_should_raise_error(
                 guardrail_version=None,
             ),
             system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
+            messages=[
+                {"role": "user", "content": [{"text": "What is the weather today?"}]}
+            ],
         )
 
 
@@ -91,7 +100,9 @@ def test_guardrail_version_with_no_id_should_raise_error(
                 id="geni-ai-3.5", guardrail_id=None, guardrail_version=1
             ),
             system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
+            messages=[
+                {"role": "user", "content": [{"text": "What is the weather today?"}]}
+            ],
         )
 
 
@@ -109,7 +120,9 @@ def test_missing_backing_model_should_raise_error(
         bedrock_inference_service.invoke_anthropic(
             model_config=models.ModelConfig(id="invalid-model-id"),
             system_prompt="This is not a real prompt",
-            messages=[{"role": "user", "content": "What is the weather today?"}],
+            messages=[
+                {"role": "user", "content": [{"text": "What is the weather today?"}]}
+            ],
         )
 
 

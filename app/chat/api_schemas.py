@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 import pydantic
@@ -45,6 +46,9 @@ class MessageResponse(pydantic.BaseModel):
         description="The internal model id of the model used to generate the message, if applicable",
         exclude_if=lambda v: v is None,
         serialization_alias="modelId",
+    )
+    timestamp: datetime.datetime = pydantic.Field(
+        description="The timestamp of when the message was created"
     )
 
 

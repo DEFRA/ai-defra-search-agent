@@ -163,3 +163,93 @@ async def test_get_retrieves_timestamp(mongo_repository, mock_db):
     assert result is not None
     msg = result.messages[0]
     assert msg.timestamp == timestamp
+
+
+@pytest.mark.asyncio
+async def test_save_and_get_preserves_conversation(mongo_repository, mock_db):
+    """Test that saving and retrieving preserves all messages in conversation history"""
+    conversation_id = uuid.uuid4()
+    timestamp1 = datetime.datetime(2025, 12, 23, 10, 0, 0, tzinfo=datetime.UTC)
+    timestamp2 = datetime.datetime(2025, 12, 23, 10, 1, 0, tzinfo=datetime.UTC)
+    timestamp3 = datetime.datetime(2025, 12, 23, 10, 2, 0, tzinfo=datetime.UTC)
+    timestamp4 = datetime.datetime(2025, 12, 23, 10, 3, 0, tzinfo=datetime.UTC)
+
+    # Create a conversation with multiple message exchanges
+    conversation = models.Conversation(
+        id=conversation_id,
+        messages=[
+            models.UserMessage(
+                content="What is Python?",
+                model_id="claude-3",
+                model_name="Claude 3",
+                timestamp=timestamp1,
+            ),
+            models.AssistantMessage(
+                content="Python is a programming language.",
+                model_id="claude-3",
+                model_name="Claude 3",
+                usage=models.TokenUsage(
+                    input_tokens=5, output_tokens=10, total_tokens=15
+                ),
+                timestamp=timestamp2,
+            ),
+            models.UserMessage(
+                content="Who created it?",
+                model_id="claude-3",
+                model_name="Claude 3",
+                timestamp=timestamp3,
+            ),
+            models.AssistantMessage(
+                content="It was created by Guido van Rossum.",
+                model_id="claude-3",
+                model_name="Claude 3",
+                usage=models.TokenUsage(
+                    input_tokens=8, output_tokens=12, total_tokens=20
+                ),
+                timestamp=timestamp4,
+            ),
+        ],
+    )
+
+    # Save the conversation
+    await mongo_repository.save(conversation)
+
+    # Verify save was called correctly
+    mock_db.conversations.update_one.assert_called_once()
+    call_args = mock_db.conversations.update_one.call_args
+    saved_messages = call_args[0][1]["$set"]["messages"]
+
+    # Verify all messages were saved
+    assert len(saved_messages) == 4
+    assert saved_messages[0]["role"] == "user"
+    assert saved_messages[0]["content"] == "What is Python?"
+    assert saved_messages[1]["role"] == "assistant"
+    assert saved_messages[1]["content"] == "Python is a programming language."
+    assert saved_messages[1]["usage"]["input_tokens"] == 5
+    assert saved_messages[2]["role"] == "user"
+    assert saved_messages[2]["content"] == "Who created it?"
+    assert saved_messages[3]["role"] == "assistant"
+    assert saved_messages[3]["content"] == "It was created by Guido van Rossum."
+    assert saved_messages[3]["usage"]["input_tokens"] == 8
+
+    # Now test retrieval
+    mock_db.conversations.find_one.return_value = {
+        "conversation_id": conversation_id,
+        "messages": saved_messages,
+    }
+
+    result = await mongo_repository.get(conversation_id)
+
+    # Verify all messages were retrieved correctly
+    assert result is not None
+    assert len(result.messages) == 4
+    assert isinstance(result.messages[0], models.UserMessage)
+    assert result.messages[0].content == "What is Python?"
+    assert isinstance(result.messages[1], models.AssistantMessage)
+    assert result.messages[1].content == "Python is a programming language."
+    assert result.messages[1].usage.input_tokens == 5
+    assert isinstance(result.messages[2], models.UserMessage)
+    assert result.messages[2].content == "Who created it?"
+    assert isinstance(result.messages[3], models.AssistantMessage)
+    assert result.messages[3].content == "It was created by Guido van Rossum."
+    assert result.messages[3].usage.input_tokens == 8

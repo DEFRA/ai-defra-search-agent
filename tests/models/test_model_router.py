@@ -1,13 +1,13 @@
 import fastapi.testclient
 import pytest
 
-from app.entrypoints import fastapi as fastapi_app
+from app.entrypoints.api import app
 from app.models import dependencies as model_dependencies
 
 
 @pytest.fixture
 def client():
-    return fastapi.testclient.TestClient(fastapi_app.app)
+    return fastapi.testclient.TestClient(app)
 
 
 def test_get_models_returns_model_list(client):
@@ -21,12 +21,12 @@ def test_get_models_returns_model_list(client):
         {
             "modelId": "geni-ai-3.5",
             "modelName": "Geni AI 3.5",
-            "modelDescription": "A powerful conversational AI model suitable for a wide range of tasks.",
+            "modelDescription": "Test model 3.5",
         },
         {
             "modelId": "geni-ai-4",
             "modelName": "Geni AI 4",
-            "modelDescription": "An advanced conversational AI model with enhanced understanding and generation capabilities.",
+            "modelDescription": "Test model 4",
         },
     ]
 
@@ -37,14 +37,12 @@ def test_get_models_returns_204_when_no_models_configured(client):
         def get_available_models(self):
             return []
 
-    # Override the dependency for this test
-    fastapi_app.app.dependency_overrides[
-        model_dependencies.get_model_resolution_service
-    ] = lambda: EmptyModelResolutionService()
+    app.dependency_overrides[model_dependencies.get_model_resolution_service] = (
+        lambda: EmptyModelResolutionService()
+    )
 
     try:
         response = client.get("/models")
         assert response.status_code == 204
     finally:
-        # Clean up the override after the test
-        fastapi_app.app.dependency_overrides.clear()
+        app.dependency_overrides.clear()

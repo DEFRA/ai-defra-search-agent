@@ -1,9 +1,10 @@
 import dataclasses
 import datetime
 import uuid
-from typing import Literal
+from typing import Any, Literal
 
 __all__ = [
+    "AgentRequest",
     "AssistantMessage",
     "Conversation",
     "ConversationNotFoundError",
@@ -20,6 +21,13 @@ class TokenUsage:
     total_tokens: int
 
 
+@dataclasses.dataclass(frozen=True)
+class AgentRequest:
+    question: str
+    model_id: str
+    conversation: list["Message"] | None = None
+
+
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class Message:
     role: str
@@ -30,8 +38,8 @@ class Message:
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
 
-    def to_dict(self) -> dict[str, str]:
-        return {"role": self.role, "content": self.content}
+    def to_dict(self) -> dict[str, Any]:
+        return {"role": self.role, "content": [{"text": self.content}]}
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)

@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+import pytest
+
 from app.bedrock import models, service
 
 
@@ -37,7 +39,7 @@ class FakeStreamingBody:
         return self._content
 
 
-class StubBedrockRuntimeClient:
+class StubBedrockRuntimeBedrockV1Client:
     def invoke_model(self, **kwargs) -> dict:
         response = {
             "id": "stub-response-id",
@@ -58,6 +60,27 @@ class StubBedrockRuntimeClient:
         return {"body": encoded_response, "contentType": "application/json"}
 
 
+class StubBedrockRuntimeBedrockV2Client:
+    def converse(self, **_) -> dict:
+        return {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "This is a stub response."}],
+                }
+            },
+            "stopReason": "end_turn",
+            "usage": {
+                "inputTokens": 10,
+                "outputTokens": 15,
+                "totalTokens": 25,
+            },
+            "metrics": {
+                "latencyMs": 100,
+            },
+        }
+
+
 class StubBedrockClient:
     def get_inference_profile(self, **kwargs) -> dict:
         inference_profile_id = kwargs.get("inferenceProfileIdentifier")
@@ -75,3 +98,23 @@ class StubBedrockClient:
             "status": "ACTIVE",
             "type": "APPLICATION",
         }
+
+
+@pytest.fixture
+def bedrock_client():
+    return StubBedrockClient()
+
+
+@pytest.fixture
+def bedrock_inference_service():
+    return StubBedrockInferenceService()
+
+
+@pytest.fixture
+def bedrock_runtime_v1_client():
+    return StubBedrockRuntimeBedrockV1Client()
+
+
+@pytest.fixture
+def bedrock_runtime_v2_client():
+    return StubBedrockRuntimeBedrockV2Client()

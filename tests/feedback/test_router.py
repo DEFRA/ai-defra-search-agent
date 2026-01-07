@@ -1,39 +1,38 @@
-import re
 import uuid
 
 import fastapi.testclient
 import pymongo
 import pytest
 
+from app import config
+from app.chat import dependencies
 from app.common import mongo
-from app.entrypoints import fastapi as fastapi_app
+from app.entrypoints.api import app
 
 
 @pytest.fixture
-def client():
+def client(bedrock_inference_service):
     def get_fresh_mongo_client():
-        match = re.search(
-            r"mongodb://(?:[^@]+@)?([^:/]+)", fastapi_app.app_config.mongo.uri
-        )
-        host = match.group(1) if match else "localhost"
         return pymongo.AsyncMongoClient(
-            host, uuidRepresentation="standard", timeoutMS=5000
+            config.get_config().mongo.uri, uuidRepresentation="standard", timeoutMS=5000
         )
 
     def get_fresh_mongo_db():
         client = get_fresh_mongo_client()
         return client.get_database("ai_defra_search_agent")
 
-    fastapi_app.app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
-    fastapi_app.app.dependency_overrides[mongo.get_mongo_client] = (
-        get_fresh_mongo_client
+    app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
+    app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+
+    app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
+        lambda: bedrock_inference_service
     )
 
-    test_client = fastapi.testclient.TestClient(fastapi_app.app)
+    test_client = fastapi.testclient.TestClient(app)
 
     yield test_client
 
-    fastapi_app.app.dependency_overrides.clear()
+    app.dependency_overrides.clear()
 
 
 def test_post_feedback_with_all_fields_returns_201(client):

@@ -27,8 +27,7 @@ jobs:
           uv sync --locked
           mkdir -p coverage
           chmod -R a+rw ./coverage
-          uv run task docker-test
-          sed -i "s|<source>/home/nonroot</source>|<source>${GITHUB_WORKSPACE}</source>|g" coverage/coverage.xml
+          uv run task test
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v6.0.0
