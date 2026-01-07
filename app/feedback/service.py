@@ -12,13 +12,13 @@ class FeedbackService:
 
     async def submit_feedback(
         self,
-        was_helpful: bool,
+        was_helpful: str,
         conversation_id: uuid.UUID | None = None,
         comment: str | None = None,
     ) -> models.Feedback:
         feedback = models.Feedback(
             conversation_id=conversation_id,
-            was_helpful=was_helpful,
+            was_helpful=models.WasHelpfulRating(was_helpful),
             comment=comment,
         )
 

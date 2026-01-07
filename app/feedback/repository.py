@@ -47,7 +47,7 @@ class MongoFeedbackRepository(AbstractFeedbackRepository):
         return models.Feedback(
             id=feedback_doc["feedback_id"],
             conversation_id=feedback_doc.get("conversation_id"),
-            was_helpful=feedback_doc["was_helpful"],
+            was_helpful=models.WasHelpfulRating(feedback_doc["was_helpful"]),
             comment=feedback_doc.get("comment"),
             timestamp=feedback_doc["timestamp"],
         )

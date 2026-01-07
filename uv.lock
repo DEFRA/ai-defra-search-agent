@@ -7,6 +7,7 @@ name = "ai-defra-search-agent"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "anthropic" },
     { name = "asgi-logger" },
     { name = "aws-embedded-metrics" },
@@ -38,6 +39,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = "==3.13.3" },
     { name = "anthropic", specifier = "==0.64.0" },
     { name = "asgi-logger", specifier = "==0.1.0" },
     { name = "aws-embedded-metrics", specifier = "==3.3.0" },
