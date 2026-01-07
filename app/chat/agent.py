@@ -6,6 +6,7 @@ from app.bedrock import models as bedrock_models
 from app.bedrock import service
 from app.chat import models
 from app.models import UnsupportedModelError
+from app.prompts.repository import AbstractPromptRepository
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,17 @@ class BedrockChatAgent(AbstractChatAgent):
         self,
         inference_service: service.BedrockInferenceService,
         app_config: config.AppConfig,
+        prompt_repository: AbstractPromptRepository,
     ):
         self.inference_service = inference_service
         self.app_config = app_config
+        self.system_prompt = prompt_repository.get_prompt_by_name("system_prompt")
 
     async def execute_flow(
         self,
         request: models.AgentRequest,
     ) -> list[models.AssistantMessage]:
-        system_prompt = "You are a DEFRA agent. All communication should be appropriately professional for a UK government service"
+        system_prompt = self.system_prompt
 
         model_config = self._build_model_config(request.model_id)
 
