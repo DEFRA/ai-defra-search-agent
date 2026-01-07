@@ -11,7 +11,9 @@ from app.entrypoints.api import app
 
 
 @pytest.fixture
-def client(bedrock_inference_service):
+def client(monkeypatch, bedrock_inference_service, mongo_uri):
+    monkeypatch.setenv("MONGO_URI", mongo_uri)
+
     def get_fresh_mongo_client():
         return pymongo.AsyncMongoClient(
             config.get_config().mongo.uri, uuidRepresentation="standard", timeoutMS=5000

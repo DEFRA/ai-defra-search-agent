@@ -351,3 +351,29 @@ async def test_execute_chat_with_multi_turn_conversation_includes_full_history(
     mock_repository.save.assert_called_once()
     saved_conversation = mock_repository.save.call_args[0][0]
     assert len(saved_conversation.messages) == 6
+
+
+def test_build_knowledge_reference_str_formats_correctly(chat_service):
+    sources = [
+        models.Source(
+            name="Doc 1", location="http://doc1.com", snippet="Snippet 1", score=0.95
+        ),
+        models.Source(
+            name="Doc 2",
+            location="http://doc2.com",
+            snippet="Line 1\nLine 2",
+            score=0.8,
+        ),
+    ]
+
+    expected_output = (
+        "\n\n### Sources\n\n"
+        "1. **[Doc 1](http://doc1.com)** (95%)\n"
+        "   > Snippet 1\n\n"
+        "2. **[Doc 2](http://doc2.com)** (80%)\n"
+        "   > Line 1\n"
+        "   > Line 2"
+    )
+
+    result = chat_service._build_knowledge_reference_str(sources)
+    assert result == expected_output

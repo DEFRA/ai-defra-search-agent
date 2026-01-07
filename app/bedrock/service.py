@@ -3,23 +3,43 @@ from typing import Any
 
 from app import config
 from app.bedrock import models
+from app.common import knowledge
 
 logger = logging.getLogger(__name__)
 
 
 class BedrockInferenceService:
-    def __init__(self, api_client, runtime_client, app_config: config.AppConfig):
+    def __init__(
+        self,
+        api_client,
+        runtime_client,
+        app_config: config.AppConfig,
+        knowledge_retriever: knowledge.KnowledgeRetriever | None,
+    ):
         self.api_client = api_client
         self.runtime_client = runtime_client
         self.app_config = app_config
+        self.knowledge_retriever = knowledge_retriever
 
     def invoke_anthropic(
         self,
         model_config: models.ModelConfig,
         system_prompt: str,
         messages: list[dict[str, Any]],
-    ) -> models.ModelResponse:
+        knowledge_group_id: str | None = None,
+    ) -> models.EnhancedModelResponse:
+        if not messages:
+            msg = "Cannot invoke Anthropic model with no messages"
+            raise ValueError(msg)
+
+        sources_found: list[models.RagSource] = []
         model_id = model_config.id
+
+        if self.knowledge_retriever and knowledge_group_id:
+            rag_docs = self._retrieve_knowledge(messages, knowledge_group_id)
+            if rag_docs:
+                system_prompt += self._build_context_string(rag_docs)
+                sources_found = self._map_docs_to_sources(rag_docs)
 
         (guardrail_id, guardrail_version) = (
             model_config.guardrail_id,
@@ -56,13 +76,14 @@ class BedrockInferenceService:
         output_message = response["output"]["message"]
         usage_info = response["usage"]
 
-        return models.ModelResponse(
-            model_id=backing_model,
+        return models.EnhancedModelResponse(
+            model_id=model_id,
             content=output_message["content"],
             usage={
                 "input_tokens": usage_info["inputTokens"],
                 "output_tokens": usage_info["outputTokens"],
             },
+            sources=sources_found,
         )
 
     def get_inference_profile_details(
@@ -85,6 +106,38 @@ class BedrockInferenceService:
             name=inference_profile["inferenceProfileName"],
             models=inference_profile["models"],
         )
+
+    def _retrieve_knowledge(
+        self, messages: list[dict[str, Any]], knowledge_group_id: str
+    ) -> list[dict[str, Any]]:
+        if not self.knowledge_retriever:
+            return []
+
+        # TODO: Make more robust - function to filter only last _user_message?
+        query = messages[-1]["content"][0]["text"]
+        return self.knowledge_retriever.search(group_id=knowledge_group_id, query=query)
+
+    def _build_context_string(self, docs: list[dict[str, Any]]) -> str:
+        context_str = "\n\n".join(
+            [
+                f'<source name="{d["name"]}" id="{i}">\n{d["content"]}\n</source>'
+                for i, d in enumerate(docs)
+            ]
+        )
+        return f"\n\n<context>\n{context_str}\n</context>..."
+
+    def _map_docs_to_sources(
+        self, docs: list[dict[str, Any]]
+    ) -> list[models.RagSource]:
+        return [
+            models.RagSource(
+                name=d["name"],
+                location=d["location"],
+                snippet=d["content"][:200] + "...",
+                score=d["similarity_score"],
+            )
+            for d in docs
+        ]
 
     def _get_backing_model(self, model_id: str) -> str | None:
         if not model_id.startswith("arn:aws:bedrock"):

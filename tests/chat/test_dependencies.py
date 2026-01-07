@@ -2,10 +2,22 @@ from pytest_mock import MockerFixture
 
 from app.bedrock import service as bedrock_service
 from app.chat import agent, dependencies, repository, service
+from app.common import knowledge
+
+
+def test_get_knowledge_retriever(mocker: MockerFixture):
+    mock_config = mocker.Mock()
+    mock_config.knowledge.base_url = "http://knowledge-base.com"
+    mock_config.knowledge.similarity_threshold = 0.5
+
+    retriever = dependencies.get_knowledge_retriever(app_config=mock_config)
+
+    assert isinstance(retriever, knowledge.KnowledgeRetriever)
+    assert retriever.base_url == "http://knowledge-base.com"
+    assert retriever.similarity_threshold == 0.5
 
 
 def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
-    # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
     mock_config.aws_region = "us-east-1"
@@ -19,7 +31,6 @@ def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
 
 
 def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
-    # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = True
     mock_config.bedrock.access_key_id = "test-key"
@@ -40,7 +51,6 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
 
 
 def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
-    # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
     mock_config.aws_region = "us-east-1"
@@ -54,7 +64,6 @@ def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
 
 
 def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
-    # Mock config
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = True
     mock_config.bedrock.access_key_id = "test-key"

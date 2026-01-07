@@ -16,18 +16,20 @@ class StubBedrockInferenceService(service.BedrockInferenceService):
         model_config: models.ModelConfig,
         system_prompt: str,  # noqa: ARG002
         messages: list[dict[str, Any]],  # noqa: ARG002
-    ) -> models.ModelResponse:
-        return models.ModelResponse(
+        knowledge_group_id: str | None = None,  # noqa: ARG002
+    ) -> models.EnhancedModelResponse:
+        return models.EnhancedModelResponse(
             model_id=model_config.id,
             content=[{"text": "This is a stub response."}],
             usage={"input_tokens": 10, "output_tokens": 15},
+            sources=[],
         )
 
     def get_inference_profile_details(
         self, inference_profile_id: str
     ) -> models.InferenceProfile:
         return models.InferenceProfile(
-            id=inference_profile_id, name="geni-ai-3.5", models=["geni-ai-3.5"]
+            id=inference_profile_id, name="geni-ai-3.5", models=[{"id": "geni-ai-3.5"}]
         )
 
 

@@ -65,10 +65,11 @@ async def test_executes_flow_with_correct_parameters(
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
         {"type": "text", "text": MOCK_RESPONSE_TEXT_2},
     ]
-    mock_model_response = bedrock_models.ModelResponse(
+    mock_model_response = bedrock_models.EnhancedModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
         usage={"input_tokens": 10, "output_tokens": 20},
+        sources=[],
     )
     mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
@@ -111,25 +112,23 @@ async def test_executes_flow_with_correct_parameters(
 async def test_handles_single_response_message(
     bedrock_agent, mock_inference_service, mocker
 ):
-    # Setup
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
     ]
-    mock_model_response = bedrock_models.ModelResponse(
+    mock_model_response = bedrock_models.EnhancedModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
         usage={"input_tokens": 10, "output_tokens": 20},
+        sources=[],
     )
     mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
     )
 
-    # Execute
     result = await bedrock_agent.execute_flow(
         models.AgentRequest(question=MOCK_QUESTION, model_id=MOCK_MODEL_ID)
     )
 
-    # Assert single message returned
     assert len(result) == 1
     actual_message = result[0]
     assert actual_message.role == "assistant"
@@ -149,10 +148,11 @@ async def test_executes_flow_returns_usage_data(
         "input_tokens": 10,
         "output_tokens": 20,
     }
-    mock_model_response = bedrock_models.ModelResponse(
+    mock_model_response = bedrock_models.EnhancedModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
         usage=mock_usage,
+        sources=[],
     )
     mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
@@ -209,10 +209,11 @@ async def test_execute_flow_with_conversation(
     mock_response_content = [
         {"type": "text", "text": "It was created by Guido van Rossum."},
     ]
-    mock_model_response = bedrock_models.ModelResponse(
+    mock_model_response = bedrock_models.EnhancedModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
         usage={"input_tokens": 20, "output_tokens": 15},
+        sources=[],
     )
     mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
@@ -256,10 +257,11 @@ async def test_execute_flow_without_conversation(
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
     ]
-    mock_model_response = bedrock_models.ModelResponse(
+    mock_model_response = bedrock_models.EnhancedModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
         usage={"input_tokens": 10, "output_tokens": 20},
+        sources=[],
     )
     mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
@@ -298,10 +300,11 @@ async def test_execute_flow_with_empty_conversation(
     mock_response_content = [
         {"type": "text", "text": MOCK_RESPONSE_TEXT_1},
     ]
-    mock_model_response = bedrock_models.ModelResponse(
+    mock_model_response = bedrock_models.EnhancedModelResponse(
         model_id=MOCK_MODEL_ID,
         content=mock_response_content,
         usage={"input_tokens": 10, "output_tokens": 20},
+        sources=[],
     )
     mock_inference_service.invoke_anthropic = mocker.MagicMock(
         return_value=mock_model_response
