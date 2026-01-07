@@ -29,7 +29,12 @@ async def lifespan(_: fastapi.FastAPI):
         logger.info("MongoDB client closed")
 
 
-app = fastapi.FastAPI(lifespan=lifespan)
+app = fastapi.FastAPI(
+    title="AI Defra Search Agent",
+    description="API for the AI-powered search agent",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 
 @app.exception_handler(fastapi.exceptions.RequestValidationError)

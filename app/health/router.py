@@ -1,6 +1,6 @@
 import fastapi
 
-router = fastapi.APIRouter()
+router = fastapi.APIRouter(tags=["health"])
 
 
 # Do not remove - used for health checks
