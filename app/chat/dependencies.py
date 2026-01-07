@@ -23,11 +23,11 @@ def get_knowledge_retriever(
         similarity_threshold=app_config.knowledge.similarity_threshold,
     )
 
-  
+
 def get_prompt_repository() -> FileSystemPromptRepository:
     return FileSystemPromptRepository()
 
-  
+
 def get_bedrock_runtime_client(
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> boto3.client:
