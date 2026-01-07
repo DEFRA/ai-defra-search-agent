@@ -4,6 +4,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+PROMPTS_DIR = Path(__file__).parent.parent / "resources" / "prompts"
+
 
 class AbstractPromptRepository(abc.ABC):
     @abc.abstractmethod
@@ -12,18 +14,16 @@ class AbstractPromptRepository(abc.ABC):
 
 
 class FileSystemPromptRepository(AbstractPromptRepository):
-    def __init__(self, prompts_dir: Path):
-        self.prompts_dir = prompts_dir
+    def __init__(self):
+        self.prompts_dir = PROMPTS_DIR
         self._cache: dict[str, str] = {}
 
         if not self.prompts_dir.exists():
             msg = f"Prompts directory does not exist: {self.prompts_dir}"
-            logger.error(msg)
             raise FileNotFoundError(msg)
 
         if not self.prompts_dir.is_dir():
             msg = f"Prompts path is not a directory: {self.prompts_dir}"
-            logger.error(msg)
             raise ValueError(msg)
 
     def get_prompt_by_name(self, name: str) -> str:

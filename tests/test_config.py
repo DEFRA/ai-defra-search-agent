@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import pytest
 
@@ -62,33 +61,3 @@ def test_get_config_raises_error_on_duplicate_model_ids(monkeypatch):
     assert "Duplicate model id found in configuration: duplicate-id" in str(
         excinfo.value
     )
-
-
-def test_system_prompt_loads_from_file():
-    config_obj = config.get_config()
-
-    # Read the expected content from the file
-    prompt_path = (
-        Path(__file__).parent.parent
-        / "app"
-        / "resources"
-        / "prompts"
-        / "system_prompt.txt"
-    )
-    with open(prompt_path, encoding="utf-8") as f:
-        expected_prompt = f.read().strip()
-
-    # Verify the system_prompt property returns the file content
-    assert config_obj.system_prompt == expected_prompt
-    assert len(config_obj.system_prompt) > 0
-
-
-def test_system_prompt_is_cached():
-    config_obj = config.get_config()
-
-    # Access system_prompt twice and verify it returns the same object (cached)
-    first_access = config_obj.system_prompt
-    second_access = config_obj.system_prompt
-
-    # Should be the exact same object (cached)
-    assert first_access is second_access

@@ -1,7 +1,5 @@
 import json
 import logging
-from functools import cached_property
-from pathlib import Path
 from typing import Annotated
 
 import pydantic
@@ -109,20 +107,9 @@ class AppConfig(pydantic_settings.BaseSettings):
     http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
-    prompts_dir: Path = pydantic.Field(
-        default_factory=lambda: Path(__file__).parent / "resources" / "prompts",
-        description="Directory containing prompt template files",
-    )
 
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
-
-    @cached_property
-    def system_prompt(self) -> str:
-        """Load and cache the system prompt from the prompts directory."""
-        prompt_path = self.prompts_dir / "system_prompt.txt"
-        with open(prompt_path, encoding="utf-8") as f:
-            return f.read().strip()
 
 
 config: AppConfig | None = None

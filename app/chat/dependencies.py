@@ -15,10 +15,8 @@ from app.prompts.repository import FileSystemPromptRepository
 logger = logging.getLogger(__name__)
 
 
-def get_prompt_repository(
-    app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
-) -> FileSystemPromptRepository:
-    return FileSystemPromptRepository(prompts_dir=app_config.prompts_dir)
+def get_prompt_repository() -> FileSystemPromptRepository:
+    return FileSystemPromptRepository()
 
 
 def get_bedrock_runtime_client(
