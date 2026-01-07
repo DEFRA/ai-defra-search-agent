@@ -10,7 +10,16 @@ logger = logging.getLogger(__name__)
 router = fastapi.APIRouter(tags=["chat"])
 
 
-@router.post("/chat", response_model=api_schemas.ChatResponse)
+@router.post(
+    "/chat",
+    response_model=api_schemas.ChatResponse,
+    summary="Send a message to the chatbot",
+    description="Sends a user question to the specified model and retrieves the response along with the conversation history.",
+    responses={
+        404: {"description": "Conversation not found"},
+        400: {"description": "Unsupported model ID"},
+    },
+)
 async def chat(
     request: api_schemas.ChatRequest,
     chat_service: service.ChatService = fastapi.Depends(dependencies.get_chat_service),
