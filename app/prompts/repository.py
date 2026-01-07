@@ -32,12 +32,6 @@ class FileSystemPromptRepository(AbstractPromptRepository):
 
         prompt_file = self.prompts_dir / f"{name}.txt"
 
-        if not prompt_file.exists():
-            msg = f"Prompt file not found: {prompt_file}"
-            raise FileNotFoundError(msg)
-
-        logger.info("Loading prompt '%s' from file: %s", name, prompt_file)
-
         try:
             with open(prompt_file, encoding="utf-8") as f:
                 prompt_content = f.read().strip()
@@ -45,9 +39,9 @@ class FileSystemPromptRepository(AbstractPromptRepository):
             self._cache[name] = prompt_content
 
             return prompt_content
-        except Exception as e:
-            msg = f"Error reading prompt file {prompt_file}: {e}"
-            raise RuntimeError(msg) from e
+        except FileNotFoundError as err:
+            msg = f"Prompt '{name}' not found in directory '{self.prompts_dir}'"
+            raise RuntimeError(msg) from err
 
     def clear_cache(self) -> None:
         self._cache.clear()

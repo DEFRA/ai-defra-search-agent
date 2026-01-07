@@ -60,7 +60,9 @@ class TestFileSystemPromptRepository:
         monkeypatch.setattr(repository, "PROMPTS_DIR", tmp_path)
         repo = FileSystemPromptRepository()
 
-        with pytest.raises(FileNotFoundError, match="Prompt file not found"):
+        with pytest.raises(
+            RuntimeError, match="Prompt 'nonexistent_prompt' not found in directory"
+        ):
             repo.get_prompt_by_name("nonexistent_prompt")
 
     def test_get_prompt_by_name_strips_whitespace(self, tmp_path, monkeypatch):
