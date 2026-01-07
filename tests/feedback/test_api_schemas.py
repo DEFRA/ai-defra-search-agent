@@ -5,6 +5,7 @@ import pydantic
 import pytest
 
 from app.feedback import api_schemas
+from app.feedback.models import WasHelpfulRating
 
 
 def test_feedback_request_with_all_fields():
@@ -18,7 +19,7 @@ def test_feedback_request_with_all_fields():
     request = api_schemas.FeedbackRequest(**data)
 
     assert request.conversation_id == conversation_id
-    assert request.was_helpful == "very-useful"
+    assert request.was_helpful == WasHelpfulRating.VERY_USEFUL
     assert request.comment == "This was very helpful!"
 
 
@@ -28,7 +29,7 @@ def test_feedback_request_minimal():
     request = api_schemas.FeedbackRequest(**data)
 
     assert request.conversation_id is None
-    assert request.was_helpful == "not-useful"
+    assert request.was_helpful == WasHelpfulRating.NOT_USEFUL
     assert request.comment is None
 
 
@@ -43,7 +44,7 @@ def test_feedback_request_with_snake_case():
     request = api_schemas.FeedbackRequest(**data)
 
     assert request.conversation_id == conversation_id
-    assert request.was_helpful == "useful"
+    assert request.was_helpful == WasHelpfulRating.USEFUL
     assert request.comment == "Great response!"
 
 
@@ -80,16 +81,16 @@ def test_feedback_request_invalid_uuid():
 def test_feedback_request_all_valid_was_helpful_values():
     """Test all 5 valid was_helpful values are accepted"""
     valid_values = [
-        "very-useful",
-        "useful",
-        "neither",
-        "not-useful",
-        "not-at-all-useful",
+        ("very-useful", WasHelpfulRating.VERY_USEFUL),
+        ("useful", WasHelpfulRating.USEFUL),
+        ("neither", WasHelpfulRating.NEITHER),
+        ("not-useful", WasHelpfulRating.NOT_USEFUL),
+        ("not-at-all-useful", WasHelpfulRating.NOT_AT_ALL_USEFUL),
     ]
 
-    for value in valid_values:
-        request = api_schemas.FeedbackRequest(was_helpful=value)
-        assert request.was_helpful == value
+    for string_value, enum_value in valid_values:
+        request = api_schemas.FeedbackRequest(was_helpful=string_value)
+        assert request.was_helpful == enum_value
 
 
 def test_feedback_response_serialization():
