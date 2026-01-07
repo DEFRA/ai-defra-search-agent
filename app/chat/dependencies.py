@@ -10,8 +10,13 @@ from app.chat import agent, repository, service
 from app.common import mongo
 from app.models import dependencies as model_dependencies
 from app.models import service as model_service
+from app.prompts.repository import FileSystemPromptRepository
 
 logger = logging.getLogger(__name__)
+
+
+def get_prompt_repository() -> FileSystemPromptRepository:
+    return FileSystemPromptRepository()
 
 
 def get_bedrock_runtime_client(
@@ -57,9 +62,14 @@ def get_chat_agent(
         get_bedrock_inference_service
     ),
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
+    prompt_repository: FileSystemPromptRepository = fastapi.Depends(
+        get_prompt_repository
+    ),
 ) -> agent.AbstractChatAgent:
     return agent.BedrockChatAgent(
-        inference_service=inference_service, app_config=app_config
+        inference_service=inference_service,
+        app_config=app_config,
+        prompt_repository=prompt_repository,
     )
 
 

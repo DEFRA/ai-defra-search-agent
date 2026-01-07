@@ -38,10 +38,20 @@ def mock_config(mocker):
 
 
 @pytest.fixture
-def bedrock_agent(mock_inference_service, mock_config):
+def mock_prompt_repository(mocker):
+    """Mock PromptRepository"""
+    mock_repo = mocker.MagicMock()
+    mock_repo.get_prompt_by_name.return_value = SYSTEM_PROMPT
+    return mock_repo
+
+
+@pytest.fixture
+def bedrock_agent(mock_inference_service, mock_config, mock_prompt_repository):
     """BedrockChatAgent with mocked dependencies"""
     return agent.BedrockChatAgent(
-        inference_service=mock_inference_service, app_config=mock_config
+        inference_service=mock_inference_service,
+        app_config=mock_config,
+        prompt_repository=mock_prompt_repository,
     )
 
 
@@ -316,3 +326,21 @@ async def test_execute_flow_with_empty_conversation(
     # Assert response contains only assistant message
     assert len(result) == 1
     assert result[0].role == "assistant"
+
+
+def test_init_loads_system_prompt_from_repository(
+    mock_inference_service, mock_config, mock_prompt_repository
+):
+    """Test that BedrockChatAgent loads system prompt during initialization"""
+    # Create agent
+    bedrock_agent = agent.BedrockChatAgent(
+        inference_service=mock_inference_service,
+        app_config=mock_config,
+        prompt_repository=mock_prompt_repository,
+    )
+
+    # Assert get_prompt_by_name was called during initialization
+    mock_prompt_repository.get_prompt_by_name.assert_called_once_with("system_prompt")
+
+    # Assert system_prompt is set as instance variable
+    assert bedrock_agent.system_prompt == SYSTEM_PROMPT

@@ -35,10 +35,20 @@ def mock_config(mocker):
 
 
 @pytest.fixture
-def bedrock_agent(mock_inference_service, mock_config):
+def mock_prompt_repository(mocker):
+    """Mock PromptRepository"""
+    mock_repo = mocker.MagicMock()
+    mock_repo.get_prompt_by_name.return_value = "Mock system prompt"
+    return mock_repo
+
+
+@pytest.fixture
+def bedrock_agent(mock_inference_service, mock_config, mock_prompt_repository):
     """BedrockChatAgent with mocked dependencies"""
     return agent.BedrockChatAgent(
-        inference_service=mock_inference_service, app_config=mock_config
+        inference_service=mock_inference_service,
+        app_config=mock_config,
+        prompt_repository=mock_prompt_repository,
     )
 
 
