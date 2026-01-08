@@ -1,9 +1,6 @@
 import logging
 from typing import Any
 
-import fastapi
-from botocore.exceptions import ClientError
-
 from app import config
 from app.bedrock import models
 
@@ -22,31 +19,15 @@ class BedrockInferenceService:
         system_prompt: str,
         messages: list[dict[str, Any]],
     ) -> models.ModelResponse:
-        converse_args = self._build_converse_args(model_config, system_prompt, messages)
-        response = self._call_bedrock_api(converse_args)
-        backing_model = self._get_backing_model(model_config.id)
+        model_id = model_config.id
 
-        if not backing_model:
-            msg = f"Backing model not found for model ID: {model_config.id}"
-            raise ValueError(msg)
-
-        return self._build_model_response(response, backing_model)
-
-    def _build_converse_args(
-        self,
-        model_config: models.ModelConfig,
-        system_prompt: str,
-        messages: list[dict[str, Any]],
-    ) -> dict[str, Any]:
-        guardrail_id = model_config.guardrail_id
-        guardrail_version = model_config.guardrail_version
-
-        if (guardrail_id is None) ^ (guardrail_version is None):
-            msg = "The guardrail ID and version must be provided together"
-            raise ValueError(msg)
+        (guardrail_id, guardrail_version) = (
+            model_config.guardrail_id,
+            model_config.guardrail_version,
+        )
 
         converse_args: dict[str, Any] = {
-            "modelId": model_config.id,
+            "modelId": model_id,
             "messages": messages,
             "system": [{"text": system_prompt}],
             "inferenceConfig": {
@@ -55,52 +36,23 @@ class BedrockInferenceService:
             },
         }
 
+        if (guardrail_id is None) ^ (guardrail_version is None):
+            msg = "The guardrail ID and version must be provided together"
+            raise ValueError(msg)
+
         if guardrail_id and guardrail_version is not None:
             converse_args["guardrailConfig"] = {
                 "guardrailIdentifier": guardrail_id,
                 "guardrailVersion": guardrail_version,
             }
 
-        return converse_args
+        response = self.runtime_client.converse(**converse_args)
 
-    def _call_bedrock_api(self, converse_args: dict[str, Any]) -> dict[str, Any]:
-        try:
-            return self.runtime_client.converse(**converse_args)
-        except ClientError as e:
-            self._handle_bedrock_error(e)
-            raise
+        backing_model = self._get_backing_model(model_id)
+        if not backing_model:
+            msg = f"Backing model not found for model ID: {model_id}"
+            raise ValueError(msg)
 
-    def _handle_bedrock_error(self, error: ClientError) -> None:
-        error_code = error.response.get("Error", {}).get("Code", "")
-        status_code = error.response.get("ResponseMetadata", {}).get(
-            "HTTPStatusCode", 500
-        )
-        error_message = error.response.get("Error", {}).get(
-            "Message", "AWS Bedrock request failed"
-        )
-
-        logger.error(
-            "Bedrock API error: %s - %s (HTTP %s)",
-            error_code,
-            error_message,
-            status_code,
-        )
-
-        # Handle all 4xx client errors (400-499)
-        if 400 <= status_code < 500:
-            raise fastapi.HTTPException(
-                status_code=status_code,
-                detail=f"Invalid request to AI model: {error_message}",
-            ) from error
-
-        # Re-raise other errors as 500
-        raise fastapi.HTTPException(
-            status_code=500, detail="AI model request failed"
-        ) from error
-
-    def _build_model_response(
-        self, response: dict[str, Any], backing_model: str
-    ) -> models.ModelResponse:
         output_message = response["output"]["message"]
         usage_info = response["usage"]
 

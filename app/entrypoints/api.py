@@ -4,6 +4,7 @@ import logging
 import fastapi
 import fastapi.exceptions
 import uvicorn
+from botocore.exceptions import ClientError
 
 from app import config
 from app.chat import router as chat_router
@@ -54,6 +55,19 @@ async def unsupported_model_exception_handler(
     return fastapi.responses.JSONResponse(
         status_code=400,
         content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(ClientError)
+async def bedrock_exception_handler(_: fastapi.Request, exc: ClientError):
+    """Handle Bedrock ClientError by preserving original HTTP status and message."""
+    http_status = exc.response['ResponseMetadata']['HTTPStatusCode']
+    error_code = exc.response['Error']['Code']
+    error_message = exc.response['Error'].get('Message', 'An error occurred')
+
+    return fastapi.responses.JSONResponse(
+        status_code=http_status,
+        content={'error': error_code, 'message': error_message}
     )
 
 

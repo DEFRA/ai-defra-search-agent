@@ -1,6 +1,4 @@
 import pytest
-from botocore.exceptions import ClientError
-from fastapi import HTTPException
 from pytest_mock import MockerFixture
 
 from app.bedrock import models, service
@@ -168,155 +166,162 @@ def test_get_inference_profile_details_with_non_existent_profile_should_raise_er
         )
 
 
-def test_bedrock_400_error_should_raise_http_exception_400(
-    mocker: MockerFixture,
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    error_response = {
-        "Error": {
-            "Code": "ValidationException",
-            "Message": "Invalid model parameters",
-        },
-        "ResponseMetadata": {"HTTPStatusCode": 400},
-    }
-    mocker.patch.object(
-        bedrock_inference_service.runtime_client,
-        "converse",
-        side_effect=ClientError(error_response, "converse"),
-    )
+class TestBedrockExceptionHandling:
+    """Test that the service properly handles AWS Bedrock exceptions."""
 
-    with pytest.raises(HTTPException) as exc_info:
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(id="geni-ai-3.5"),
-            system_prompt="This is not a real prompt",
-            messages=[
-                {"role": "user", "content": [{"text": "What is the weather today?"}]}
-            ],
+    def test_throttling_exception_should_be_raised(
+        self,
+        mocker: MockerFixture,
+        bedrock_client,
+    ):
+        from botocore.exceptions import ClientError
+        from tests.fixtures.bedrock import StubBedrockRuntimeBedrockV2Client
+
+        # Create a client that will raise ThrottlingException
+        runtime_client = StubBedrockRuntimeBedrockV2Client(
+            raise_exception="ThrottlingException"
         )
 
-    assert exc_info.value.status_code == 400
-    assert "Invalid request to AI model" in exc_info.value.detail
-    assert "Invalid model parameters" in exc_info.value.detail
+        mock_config = mocker.Mock()
+        mock_config.bedrock.max_response_tokens = 100
+        mock_config.bedrock.default_model_temprature = 0.5
 
-
-def test_bedrock_403_error_should_raise_http_exception_403(
-    mocker: MockerFixture,
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    error_response = {
-        "Error": {
-            "Code": "AccessDeniedException",
-            "Message": "User does not have access to model",
-        },
-        "ResponseMetadata": {"HTTPStatusCode": 403},
-    }
-    mocker.patch.object(
-        bedrock_inference_service.runtime_client,
-        "converse",
-        side_effect=ClientError(error_response, "converse"),
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(id="geni-ai-3.5"),
-            system_prompt="This is not a real prompt",
-            messages=[
-                {"role": "user", "content": [{"text": "What is the weather today?"}]}
-            ],
+        service_instance = service.BedrockInferenceService(
+            api_client=bedrock_client,
+            runtime_client=runtime_client,
+            app_config=mock_config,
         )
 
-    assert exc_info.value.status_code == 403
-    assert "Invalid request to AI model" in exc_info.value.detail
-    assert "User does not have access to model" in exc_info.value.detail
+        with pytest.raises(ClientError) as exc_info:
+            service_instance.invoke_anthropic(
+                model_config=models.ModelConfig(id="geni-ai-3.5"),
+                system_prompt="Test prompt",
+                messages=[{"role": "user", "content": [{"text": "Test"}]}],
+            )
 
+        assert exc_info.value.response["Error"]["Code"] == "ThrottlingException"
 
-def test_bedrock_404_error_should_raise_http_exception_404(
-    mocker: MockerFixture,
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    error_response = {
-        "Error": {
-            "Code": "ResourceNotFoundException",
-            "Message": "Model not found",
-        },
-        "ResponseMetadata": {"HTTPStatusCode": 404},
-    }
-    mocker.patch.object(
-        bedrock_inference_service.runtime_client,
-        "converse",
-        side_effect=ClientError(error_response, "converse"),
-    )
+    def test_validation_exception_should_be_raised(
+        self,
+        mocker: MockerFixture,
+        bedrock_client,
+    ):
+        from botocore.exceptions import ClientError
+        from tests.fixtures.bedrock import StubBedrockRuntimeBedrockV2Client
 
-    with pytest.raises(HTTPException) as exc_info:
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(id="geni-ai-3.5"),
-            system_prompt="This is not a real prompt",
-            messages=[
-                {"role": "user", "content": [{"text": "What is the weather today?"}]}
-            ],
+        runtime_client = StubBedrockRuntimeBedrockV2Client(
+            raise_exception="ValidationException"
         )
 
-    assert exc_info.value.status_code == 404
-    assert "Invalid request to AI model" in exc_info.value.detail
-    assert "Model not found" in exc_info.value.detail
+        mock_config = mocker.Mock()
+        mock_config.bedrock.max_response_tokens = 100
+        mock_config.bedrock.default_model_temprature = 0.5
 
-
-def test_bedrock_429_error_should_raise_http_exception_429(
-    mocker: MockerFixture,
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    error_response = {
-        "Error": {
-            "Code": "ThrottlingException",
-            "Message": "Rate exceeded",
-        },
-        "ResponseMetadata": {"HTTPStatusCode": 429},
-    }
-    mocker.patch.object(
-        bedrock_inference_service.runtime_client,
-        "converse",
-        side_effect=ClientError(error_response, "converse"),
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(id="geni-ai-3.5"),
-            system_prompt="This is not a real prompt",
-            messages=[
-                {"role": "user", "content": [{"text": "What is the weather today?"}]}
-            ],
+        service_instance = service.BedrockInferenceService(
+            api_client=bedrock_client,
+            runtime_client=runtime_client,
+            app_config=mock_config,
         )
 
-    assert exc_info.value.status_code == 429
-    assert "Invalid request to AI model" in exc_info.value.detail
-    assert "Rate exceeded" in exc_info.value.detail
+        with pytest.raises(ClientError) as exc_info:
+            service_instance.invoke_anthropic(
+                model_config=models.ModelConfig(id="geni-ai-3.5"),
+                system_prompt="Test prompt",
+                messages=[{"role": "user", "content": [{"text": "Test"}]}],
+            )
 
+        assert exc_info.value.response["Error"]["Code"] == "ValidationException"
 
-def test_bedrock_500_error_should_raise_http_exception_500(
-    mocker: MockerFixture,
-    bedrock_inference_service: service.BedrockInferenceService,
-):
-    error_response = {
-        "Error": {
-            "Code": "InternalServerException",
-            "Message": "Internal service error",
-        },
-        "ResponseMetadata": {"HTTPStatusCode": 500},
-    }
-    mocker.patch.object(
-        bedrock_inference_service.runtime_client,
-        "converse",
-        side_effect=ClientError(error_response, "converse"),
-    )
+    def test_model_timeout_exception_should_be_raised(
+        self,
+        mocker: MockerFixture,
+        bedrock_client,
+    ):
+        from botocore.exceptions import ClientError
+        from tests.fixtures.bedrock import StubBedrockRuntimeBedrockV2Client
 
-    with pytest.raises(HTTPException) as exc_info:
-        bedrock_inference_service.invoke_anthropic(
-            model_config=models.ModelConfig(id="geni-ai-3.5"),
-            system_prompt="This is not a real prompt",
-            messages=[
-                {"role": "user", "content": [{"text": "What is the weather today?"}]}
-            ],
+        runtime_client = StubBedrockRuntimeBedrockV2Client(
+            raise_exception="ModelTimeoutException"
         )
 
-    assert exc_info.value.status_code == 500
-    assert exc_info.value.detail == "AI model request failed"
+        mock_config = mocker.Mock()
+        mock_config.bedrock.max_response_tokens = 100
+        mock_config.bedrock.default_model_temprature = 0.5
+
+        service_instance = service.BedrockInferenceService(
+            api_client=bedrock_client,
+            runtime_client=runtime_client,
+            app_config=mock_config,
+        )
+
+        with pytest.raises(ClientError) as exc_info:
+            service_instance.invoke_anthropic(
+                model_config=models.ModelConfig(id="geni-ai-3.5"),
+                system_prompt="Test prompt",
+                messages=[{"role": "user", "content": [{"text": "Test"}]}],
+            )
+
+        assert exc_info.value.response["Error"]["Code"] == "ModelTimeoutException"
+
+    def test_access_denied_exception_should_be_raised(
+        self,
+        mocker: MockerFixture,
+        bedrock_client,
+    ):
+        from botocore.exceptions import ClientError
+        from tests.fixtures.bedrock import StubBedrockRuntimeBedrockV2Client
+
+        runtime_client = StubBedrockRuntimeBedrockV2Client(
+            raise_exception="AccessDeniedException"
+        )
+
+        mock_config = mocker.Mock()
+        mock_config.bedrock.max_response_tokens = 100
+        mock_config.bedrock.default_model_temprature = 0.5
+
+        service_instance = service.BedrockInferenceService(
+            api_client=bedrock_client,
+            runtime_client=runtime_client,
+            app_config=mock_config,
+        )
+
+        with pytest.raises(ClientError) as exc_info:
+            service_instance.invoke_anthropic(
+                model_config=models.ModelConfig(id="geni-ai-3.5"),
+                system_prompt="Test prompt",
+                messages=[{"role": "user", "content": [{"text": "Test"}]}],
+            )
+
+        assert exc_info.value.response["Error"]["Code"] == "AccessDeniedException"
+
+    def test_resource_not_found_exception_should_be_raised(
+        self,
+        mocker: MockerFixture,
+        bedrock_client,
+    ):
+        from botocore.exceptions import ClientError
+        from tests.fixtures.bedrock import StubBedrockRuntimeBedrockV2Client
+
+        runtime_client = StubBedrockRuntimeBedrockV2Client(
+            raise_exception="ResourceNotFoundException"
+        )
+
+        mock_config = mocker.Mock()
+        mock_config.bedrock.max_response_tokens = 100
+        mock_config.bedrock.default_model_temprature = 0.5
+
+        service_instance = service.BedrockInferenceService(
+            api_client=bedrock_client,
+            runtime_client=runtime_client,
+            app_config=mock_config,
+        )
+
+        with pytest.raises(ClientError) as exc_info:
+            service_instance.invoke_anthropic(
+                model_config=models.ModelConfig(id="geni-ai-3.5"),
+                system_prompt="Test prompt",
+                messages=[{"role": "user", "content": [{"text": "Test"}]}],
+            )
+
+        assert exc_info.value.response["Error"]["Code"] == "ResourceNotFoundException"
+
