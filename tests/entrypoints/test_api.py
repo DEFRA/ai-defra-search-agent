@@ -27,4 +27,3 @@ def test_health():
 def test_root():
     response = client.get("/")
     assert response.status_code == 404
-

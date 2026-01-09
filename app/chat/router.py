@@ -35,6 +35,11 @@ async def chat(
         raise fastapi.HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from None
     except UnsupportedModelError as e:
         raise fastapi.HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from None
+    except ClientError as e:
+        raise fastapi.HTTPException(
+            status_code=e.response['ResponseMetadata']['HTTPStatusCode'],
+            detail=str(e),
+        ) from None
 
     return api_schemas.ChatResponse(
         conversation_id=conversation.id,
@@ -49,3 +54,4 @@ async def chat(
             for message in conversation.messages
         ],
     )
+

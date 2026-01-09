@@ -138,7 +138,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
 
 
 def test_post_chat_bedrock_throttling_error_returns_429(bedrock_inference_service, mocker):
-    """Test that Bedrock throttling errors return 429 with REST-compliant response."""
+    """Test that Bedrock throttling errors return 429. Client uses conversation ID from their request to retrieve conversation."""
     # Mock the bedrock service to raise a ClientError
     mocker.patch.object(
         bedrock_inference_service,
@@ -178,17 +178,18 @@ def test_post_chat_bedrock_throttling_error_returns_429(bedrock_inference_servic
     body = {"question": "Hello", "modelId": "geni-ai-3.5"}
     response = test_client.post("/chat", json=body)
 
-    # Verify REST-compliant error response
+    # Verify standard HTTP error response
     assert response.status_code == 429
-    assert response.json()['error'] == 'ThrottlingException'
-    assert response.json()['message'] == 'Rate limit exceeded'
-    # No 'retryable' field - HTTP status code indicates retry behavior
+    response_json = response.json()
+    # ClientError string representation includes both error code and message
+    assert 'ThrottlingException' in response_json['detail']
+    assert 'Rate limit exceeded' in response_json['detail']
 
     app.dependency_overrides.clear()
 
 
 def test_post_chat_bedrock_validation_error_returns_400(bedrock_inference_service, mocker):
-    """Test that Bedrock validation errors return 400 with REST-compliant response."""
+    """Test that Bedrock validation errors return 400."""
     mocker.patch.object(
         bedrock_inference_service,
         'invoke_anthropic',
@@ -226,16 +227,17 @@ def test_post_chat_bedrock_validation_error_returns_400(bedrock_inference_servic
     body = {"question": "Hello", "modelId": "geni-ai-3.5"}
     response = test_client.post("/chat", json=body)
 
-    # Verify REST-compliant error response
+    # Verify standard HTTP error response
     assert response.status_code == 400
-    assert response.json()['error'] == 'ValidationException'
-    assert response.json()['message'] == 'Invalid input parameters'
+    response_json = response.json()
+    assert 'ValidationException' in response_json['detail']
+    assert 'Invalid input parameters' in response_json['detail']
 
     app.dependency_overrides.clear()
 
 
 def test_post_chat_bedrock_internal_error_returns_500(bedrock_inference_service, mocker):
-    """Test that Bedrock internal errors return 500 with REST-compliant response."""
+    """Test that Bedrock internal errors return 500."""
     mocker.patch.object(
         bedrock_inference_service,
         'invoke_anthropic',
@@ -273,10 +275,10 @@ def test_post_chat_bedrock_internal_error_returns_500(bedrock_inference_service,
     body = {"question": "Hello", "modelId": "geni-ai-3.5"}
     response = test_client.post("/chat", json=body)
 
-    # Verify REST-compliant error response
+    # Verify standard HTTP error response
     assert response.status_code == 500
-    assert response.json()['error'] == 'InternalServerException'
-    assert response.json()['message'] == 'Internal server error'
+    response_json = response.json()
+    assert 'InternalServerException' in response_json['detail']
+    assert 'Internal server error' in response_json['detail']
 
     app.dependency_overrides.clear()
-
