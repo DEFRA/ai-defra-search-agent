@@ -50,6 +50,9 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     default_model_temprature: float = pydantic.Field(
         default=0.7, alias="AWS_BEDROCK_DEFAULT_MODEL_TEMPERATURE"
     )
+    bedrock_endpoint_url: str = pydantic.Field(
+        ..., alias="AWS_BED_ENDPOINT_URL"
+    )
 
     @pydantic.field_validator("available_generation_models", mode="before")
     @classmethod

@@ -1,6 +1,7 @@
 import fastapi.testclient
 import pymongo
 import pytest
+from botocore.exceptions import ClientError
 
 from app import config
 from app.chat import dependencies
@@ -134,3 +135,150 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][3]["modelId"] == "geni-ai-3.5"
     assert response.json()["messages"][3]["modelName"] == "Geni AI 3.5"
     assert "timestamp" in response.json()["messages"][3]
+
+
+def test_post_chat_bedrock_throttling_error_returns_429(bedrock_inference_service, mocker):
+    """Test that Bedrock throttling errors return 429. Client uses conversation ID from their request to retrieve conversation."""
+    # Mock the bedrock service to raise a ClientError
+    mocker.patch.object(
+        bedrock_inference_service,
+        'invoke_anthropic',
+        side_effect=ClientError(
+            {
+                'Error': {
+                    'Code': 'ThrottlingException',
+                    'Message': 'Rate limit exceeded'
+                },
+                'ResponseMetadata': {
+                    'HTTPStatusCode': 429
+                }
+            },
+            'converse'
+        )
+    )
+
+    # Setup test client with mocked service
+    def get_fresh_mongo_client():
+        return pymongo.AsyncMongoClient(
+            config.get_config().mongo.uri, uuidRepresentation="standard", timeoutMS=5000
+        )
+
+    def get_fresh_mongo_db():
+        client = get_fresh_mongo_client()
+        return client.get_database("ai_defra_search_agent")
+
+    app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
+    app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+    app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
+        lambda: bedrock_inference_service
+    )
+
+    test_client = fastapi.testclient.TestClient(app)
+
+    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
+    response = test_client.post("/chat", json=body)
+
+    # Verify standard HTTP error response
+    assert response.status_code == 429
+    response_json = response.json()
+    # ClientError string representation includes both error code and message
+    assert 'ThrottlingException' in response_json['detail']
+    assert 'Rate limit exceeded' in response_json['detail']
+
+    app.dependency_overrides.clear()
+
+
+def test_post_chat_bedrock_validation_error_returns_400(bedrock_inference_service, mocker):
+    """Test that Bedrock validation errors return 400."""
+    mocker.patch.object(
+        bedrock_inference_service,
+        'invoke_anthropic',
+        side_effect=ClientError(
+            {
+                'Error': {
+                    'Code': 'ValidationException',
+                    'Message': 'Invalid input parameters'
+                },
+                'ResponseMetadata': {
+                    'HTTPStatusCode': 400
+                }
+            },
+            'converse'
+        )
+    )
+
+    def get_fresh_mongo_client():
+        return pymongo.AsyncMongoClient(
+            config.get_config().mongo.uri, uuidRepresentation="standard", timeoutMS=5000
+        )
+
+    def get_fresh_mongo_db():
+        client = get_fresh_mongo_client()
+        return client.get_database("ai_defra_search_agent")
+
+    app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
+    app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+    app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
+        lambda: bedrock_inference_service
+    )
+
+    test_client = fastapi.testclient.TestClient(app)
+
+    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
+    response = test_client.post("/chat", json=body)
+
+    # Verify standard HTTP error response
+    assert response.status_code == 400
+    response_json = response.json()
+    assert 'ValidationException' in response_json['detail']
+    assert 'Invalid input parameters' in response_json['detail']
+
+    app.dependency_overrides.clear()
+
+
+def test_post_chat_bedrock_internal_error_returns_500(bedrock_inference_service, mocker):
+    """Test that Bedrock internal errors return 500."""
+    mocker.patch.object(
+        bedrock_inference_service,
+        'invoke_anthropic',
+        side_effect=ClientError(
+            {
+                'Error': {
+                    'Code': 'InternalServerException',
+                    'Message': 'Internal server error'
+                },
+                'ResponseMetadata': {
+                    'HTTPStatusCode': 500
+                }
+            },
+            'converse'
+        )
+    )
+
+    def get_fresh_mongo_client():
+        return pymongo.AsyncMongoClient(
+            config.get_config().mongo.uri, uuidRepresentation="standard", timeoutMS=5000
+        )
+
+    def get_fresh_mongo_db():
+        client = get_fresh_mongo_client()
+        return client.get_database("ai_defra_search_agent")
+
+    app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
+    app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+    app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
+        lambda: bedrock_inference_service
+    )
+
+    test_client = fastapi.testclient.TestClient(app)
+
+    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
+    response = test_client.post("/chat", json=body)
+
+    # Verify standard HTTP error response
+    assert response.status_code == 500
+    response_json = response.json()
+    assert 'InternalServerException' in response_json['detail']
+    assert 'Internal server error' in response_json['detail']
+
+    app.dependency_overrides.clear()

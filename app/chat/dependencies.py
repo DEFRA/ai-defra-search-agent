@@ -28,9 +28,10 @@ def get_bedrock_runtime_client(
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
             region_name=app_config.aws_region,
+            endpoint_url=app_config.bedrock.bedrock_endpoint_url,
         )
 
-    return boto3.client("bedrock-runtime", region_name=app_config.aws_region)
+    return boto3.client("bedrock-runtime", region_name=app_config.aws_region, endpoint_url=app_config.bedrock.bedrock_endpoint_url)
 
 
 def get_bedrock_client(
@@ -42,9 +43,10 @@ def get_bedrock_client(
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
             region_name=app_config.aws_region,
+            endpoint_url=app_config.bedrock.bedrock_endpoint_url,
         )
 
-    return boto3.client("bedrock", region_name=app_config.aws_region)
+    return boto3.client("bedrock", region_name=app_config.aws_region, endpoint_url=app_config.bedrock.bedrock_endpoint_url)
 
 
 def get_bedrock_inference_service(
@@ -53,7 +55,7 @@ def get_bedrock_inference_service(
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> bedrock_service.BedrockInferenceService:
     return bedrock_service.BedrockInferenceService(
-        api_client=api_client, runtime_client=runtime_client, app_config=app_config
+        api_client=api_client, runtime_client=runtime_client, app_config=app_config,
     )
 
 
