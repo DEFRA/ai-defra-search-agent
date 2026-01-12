@@ -90,28 +90,28 @@ class StubBedrockRuntimeBedrockV2Client:
         from botocore.exceptions import ClientError
 
         error_messages = {
-            'ThrottlingException': 'Rate exceeded',
-            'ValidationException': 'Invalid input parameters',
-            'ModelTimeoutException': 'Model request timed out',
-            'ModelErrorException': 'Model error occurred',
-            'AccessDeniedException': 'Access denied to the requested resource',
-            'ResourceNotFoundException': 'The requested resource was not found',
-            'ServiceUnavailableException': 'Service temporarily unavailable',
-            'InternalServerException': 'Internal server error occurred',
-            'ModelNotReadyException': 'Model is not ready',
+            "ThrottlingException": "Rate exceeded",
+            "ValidationException": "Invalid input parameters",
+            "ModelTimeoutException": "Model request timed out",
+            "ModelErrorException": "Model error occurred",
+            "AccessDeniedException": "Access denied to the requested resource",
+            "ResourceNotFoundException": "The requested resource was not found",
+            "ServiceUnavailableException": "Service temporarily unavailable",
+            "InternalServerException": "Internal server error occurred",
+            "ModelNotReadyException": "Model is not ready",
         }
 
         error_response = {
-            'Error': {
-                'Code': error_code,
-                'Message': error_messages.get(error_code, 'Unknown error occurred')
+            "Error": {
+                "Code": error_code,
+                "Message": error_messages.get(error_code, "Unknown error occurred"),
             },
-            'ResponseMetadata': {
-                'RequestId': 'stub-request-id',
-                'HTTPStatusCode': 400,
-            }
+            "ResponseMetadata": {
+                "RequestId": "stub-request-id",
+                "HTTPStatusCode": 400,
+            },
         }
-        raise ClientError(error_response, 'converse')
+        raise ClientError(error_response, "converse")
 
 
 class StubBedrockClient:

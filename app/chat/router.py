@@ -1,10 +1,11 @@
 import logging
+
 import fastapi
 from botocore.exceptions import ClientError
+from fastapi import status
 
 from app.chat import api_schemas, dependencies, models, service
 from app.models import UnsupportedModelError
-from fastapi import status
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,16 @@ async def chat(
             conversation_id=request.conversation_id,
         )
     except models.ConversationNotFoundError as e:
-        raise fastapi.HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from None
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from None
     except UnsupportedModelError as e:
-        raise fastapi.HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from None
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from None
     except ClientError as e:
         raise fastapi.HTTPException(
-            status_code=e.response['ResponseMetadata']['HTTPStatusCode'],
+            status_code=e.response["ResponseMetadata"]["HTTPStatusCode"],
             detail=str(e),
         ) from None
 
@@ -54,4 +59,3 @@ async def chat(
             for message in conversation.messages
         ],
     )
-
