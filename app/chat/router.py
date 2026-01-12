@@ -18,8 +18,12 @@ router = fastapi.APIRouter(tags=["chat"])
     summary="Send a message to the chatbot",
     description="Sends a user question to the specified model and retrieves the response along with the conversation history.",
     responses={
+        400: {"description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"},
         404: {"description": "Conversation not found"},
-        400: {"description": "Unsupported model ID"},
+        429: {"description": "Too many requests - rate limit exceeded"},
+        500: {"description": "Internal server error from AWS Bedrock"},
+        502: {"description": "Bad gateway - AWS service error"},
+        503: {"description": "Service unavailable"},
     },
 )
 async def chat(
