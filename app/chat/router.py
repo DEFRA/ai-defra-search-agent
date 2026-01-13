@@ -1,6 +1,8 @@
 import logging
 
 import fastapi
+from botocore.exceptions import ClientError
+from fastapi import status
 
 from app.chat import api_schemas, dependencies, models, service
 from app.models import UnsupportedModelError
@@ -16,8 +18,14 @@ router = fastapi.APIRouter(tags=["chat"])
     summary="Send a message to the chatbot",
     description="Sends a user question to the specified model and retrieves the response along with the conversation history.",
     responses={
+        400: {
+            "description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"
+        },
         404: {"description": "Conversation not found"},
-        400: {"description": "Unsupported model ID"},
+        429: {"description": "Too many requests - rate limit exceeded"},
+        500: {"description": "Internal server error from AWS Bedrock"},
+        502: {"description": "Bad gateway - AWS service error"},
+        503: {"description": "Service unavailable"},
     },
 )
 async def chat(
@@ -31,9 +39,18 @@ async def chat(
             conversation_id=request.conversation_id,
         )
     except models.ConversationNotFoundError as e:
-        raise fastapi.HTTPException(status_code=404, detail=str(e)) from None
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from None
     except UnsupportedModelError as e:
-        raise fastapi.HTTPException(status_code=400, detail=str(e)) from None
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from None
+    except ClientError as e:
+        raise fastapi.HTTPException(
+            status_code=e.response["ResponseMetadata"]["HTTPStatusCode"],
+            detail=str(e),
+        ) from None
 
     return api_schemas.ChatResponse(
         conversation_id=conversation.id,

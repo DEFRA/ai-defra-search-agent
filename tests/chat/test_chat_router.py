@@ -1,6 +1,8 @@
 import fastapi.testclient
 import pymongo
 import pytest
+from botocore.exceptions import ClientError
+from fastapi import status
 
 from app import config
 from app.chat import dependencies
@@ -44,7 +46,7 @@ def test_post_chat_nonexistent_conversation_returns_404(client):
 
     response = client.post("/chat", json=body)
 
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_post_chat_empty_question_returns_400(client):
@@ -52,7 +54,7 @@ def test_post_chat_empty_question_returns_400(client):
 
     response = client.post("/chat", json=body)
 
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 def test_post_chat_missing_model_name_returns_400(client):
@@ -60,7 +62,7 @@ def test_post_chat_missing_model_name_returns_400(client):
 
     response = client.post("/chat", json=body)
 
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 def test_post_chat_unsupported_model_returns_400(client):
@@ -68,7 +70,7 @@ def test_post_chat_unsupported_model_returns_400(client):
 
     response = client.post("/chat", json=body)
 
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "Model 'unsupported-model-id' not found"
 
 
@@ -77,7 +79,7 @@ def test_post_sync_chat_valid_question_returns_200(client):
 
     response = client.post("/chat", json=body)
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     assert response.json()["conversationId"] is not None
     assert response.json()["messages"][0]["role"] == "user"
@@ -97,7 +99,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     start_body = {"question": "Hello!", "modelId": "geni-ai-3.5"}
 
     response = client.post("/chat", json=start_body)
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     conversation_id = response.json()["conversationId"]
 
@@ -109,7 +111,7 @@ def test_post_chat_with_existing_conversation_returns_200(client):
 
     response = client.post("/chat", json=continue_body)
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     assert response.json()["conversationId"] is not None
 
@@ -136,3 +138,84 @@ def test_post_chat_with_existing_conversation_returns_200(client):
     assert response.json()["messages"][3]["modelId"] == "geni-ai-3.5"
     assert response.json()["messages"][3]["modelName"] == "Geni AI 3.5"
     assert "timestamp" in response.json()["messages"][3]
+
+
+def test_post_chat_bedrock_throttling_error_returns_429(
+    client, bedrock_inference_service, mocker
+):
+    mocker.patch.object(
+        bedrock_inference_service,
+        "invoke_anthropic",
+        side_effect=ClientError(
+            {
+                "Error": {
+                    "Code": "ThrottlingException",
+                    "Message": "Rate limit exceeded",
+                },
+                "ResponseMetadata": {"HTTPStatusCode": 429},
+            },
+            "converse",
+        ),
+    )
+
+    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    response_json = response.json()
+    assert "ThrottlingException" in response_json["detail"]
+    assert "Rate limit exceeded" in response_json["detail"]
+
+
+def test_post_chat_bedrock_validation_error_returns_400(
+    client, bedrock_inference_service, mocker
+):
+    mocker.patch.object(
+        bedrock_inference_service,
+        "invoke_anthropic",
+        side_effect=ClientError(
+            {
+                "Error": {
+                    "Code": "ValidationException",
+                    "Message": "Invalid input parameters",
+                },
+                "ResponseMetadata": {"HTTPStatusCode": 400},
+            },
+            "converse",
+        ),
+    )
+
+    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    response_json = response.json()
+    assert "ValidationException" in response_json["detail"]
+    assert "Invalid input parameters" in response_json["detail"]
+
+
+def test_post_chat_bedrock_internal_error_returns_500(
+    client, bedrock_inference_service, mocker
+):
+    mocker.patch.object(
+        bedrock_inference_service,
+        "invoke_anthropic",
+        side_effect=ClientError(
+            {
+                "Error": {
+                    "Code": "InternalServerException",
+                    "Message": "Internal server error",
+                },
+                "ResponseMetadata": {"HTTPStatusCode": 500},
+            },
+            "converse",
+        ),
+    )
+
+    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    response_json = response.json()
+    assert "InternalServerException" in response_json["detail"]
+    assert "Internal server error" in response_json["detail"]
