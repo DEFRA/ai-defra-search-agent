@@ -35,7 +35,7 @@ class BedrockInferenceService:
         sources_found: list[models.RagSource] = []
         model_id = model_config.id
 
-        if self.knowledge_retriever and knowledge_group_id:
+        if self.knowledge_retriever and knowledge_group_id and len(messages) == 1:
             rag_docs = self._retrieve_knowledge(messages, knowledge_group_id)
             if rag_docs:
                 system_prompt += self._build_context_string(rag_docs)

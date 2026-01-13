@@ -328,3 +328,45 @@ def test_invoke_with_inference_profile_arn_should_resolve_backing_model(
     assert response.content == [{"text": "Response"}]
     assert response.usage == {"input_tokens": 10, "output_tokens": 20}
     assert response.sources == []
+
+
+def test_invoke_should_only_call_rag_for_first_message(
+    bedrock_inference_service: service.BedrockInferenceService,
+    mocker: MockerFixture,
+):
+    mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
+    mock_retriever.search.return_value = []
+
+    # Mock runtime client converse
+    mocker.patch.object(
+        bedrock_inference_service.runtime_client,
+        "converse",
+        return_value={
+            "output": {"message": {"content": [{"text": "Response"}]}},
+            "usage": {"inputTokens": 10, "outputTokens": 20},
+        },
+    )
+
+    # Case 1: Multiple messages - RAG should NOT be called
+    bedrock_inference_service.invoke_anthropic(
+        model_config=models.ModelConfig(id="geni-ai-3.5"),
+        system_prompt="System prompt.",
+        messages=[
+            {"role": "user", "content": [{"text": "First"}]},
+            {"role": "assistant", "content": [{"text": "Response"}]},
+            {"role": "user", "content": [{"text": "Second"}]},
+        ],
+        knowledge_group_id="group1",
+    )
+    mock_retriever.search.assert_not_called()
+
+    # Case 2: Single message - RAG SHOULD be called
+    bedrock_inference_service.invoke_anthropic(
+        model_config=models.ModelConfig(id="geni-ai-3.5"),
+        system_prompt="System prompt.",
+        messages=[
+            {"role": "user", "content": [{"text": "First"}]},
+        ],
+        knowledge_group_id="group1",
+    )
+    mock_retriever.search.assert_called_once()
