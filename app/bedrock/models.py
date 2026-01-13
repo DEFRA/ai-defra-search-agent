@@ -10,6 +10,13 @@ class ModelConfig:
 
 
 @dataclasses.dataclass(frozen=True)
+class InferenceProfile:
+    id: str
+    name: str
+    models: list[dict[str, Any]]
+
+
+@dataclasses.dataclass(frozen=True)
 class ModelResponse:
     model_id: str
     content: list[dict[str, Any]]
@@ -17,7 +24,16 @@ class ModelResponse:
 
 
 @dataclasses.dataclass(frozen=True)
-class InferenceProfile:
-    id: str
+class RagSource:
     name: str
-    models: list[dict[str, Any]]
+    location: str
+    snippet: str
+    score: float
+
+
+@dataclasses.dataclass(frozen=True)
+class EnhancedModelResponse:
+    model_id: str
+    content: list[dict[str, Any]]
+    usage: dict[str, int]
+    sources: list[RagSource] = dataclasses.field(default_factory=list)

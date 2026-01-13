@@ -9,6 +9,7 @@ __all__ = [
     "Conversation",
     "ConversationNotFoundError",
     "Message",
+    "Source",
     "TokenUsage",
     "UserMessage",
 ]
@@ -47,9 +48,18 @@ class UserMessage(Message):
     role: Literal["user"] = "user"
 
 
+@dataclasses.dataclass(frozen=True)
+class Source:
+    name: str
+    location: str
+    snippet: str
+    score: float
+
+
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class AssistantMessage(Message):
     usage: TokenUsage
+    sources: list[Source] = dataclasses.field(default_factory=list)
     role: Literal["assistant"] = "assistant"
 
 
