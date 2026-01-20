@@ -6,8 +6,8 @@ import pymongo.asynchronous.database
 
 from app import config, dependencies
 from app.bedrock import service as bedrock_service
-from app.chat import agent, repository, service
-from app.common import knowledge, mongo
+from app.chat import agent, job_repository, repository, service
+from app.common import knowledge, mongo, sqs
 from app.models import dependencies as model_dependencies
 from app.models import service as model_service
 from app.prompts.repository import FileSystemPromptRepository
@@ -108,3 +108,86 @@ def get_chat_service(
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
     )
+
+
+def get_job_repository(
+    db: pymongo.asynchronous.database.AsyncDatabase = fastapi.Depends(mongo.get_db),
+) -> job_repository.AbstractJobRepository:
+    return job_repository.MongoJobRepository(db.client, db.name)
+
+def get_sqs_client() -> sqs.SQSClient:
+    return sqs.SQSClient()
+
+
+def get_model_resolution_service() -> model_service.AbstractModelResolutionService:
+    return model_service.ConfigModelResolutionService(config.config)
+
+
+async def initialize_worker_services():
+    """Initialize services for worker without FastAPI dependency injection context."""
+    app_config = config.get_config()
+    
+    # Initialize MongoDB connection
+    mongo_client = await mongo.get_mongo_client(app_config)
+    db = mongo_client[app_config.mongo.database]
+    
+    # Initialize Bedrock clients
+    if app_config.bedrock.use_credentials:
+        bedrock_runtime = boto3.client(
+            "bedrock-runtime",
+            aws_access_key_id=app_config.bedrock.access_key_id,
+            aws_secret_access_key=app_config.bedrock.secret_access_key,
+            region_name=app_config.aws_region,
+        )
+        bedrock_client = boto3.client(
+            "bedrock",
+            aws_access_key_id=app_config.bedrock.access_key_id,
+            aws_secret_access_key=app_config.bedrock.secret_access_key,
+            region_name=app_config.aws_region,
+        )
+    else:
+        bedrock_runtime = boto3.client("bedrock-runtime", region_name=app_config.aws_region)
+        bedrock_client = boto3.client("bedrock", region_name=app_config.aws_region)
+    
+    # Initialize knowledge retriever
+    knowledge_retriever = knowledge.KnowledgeRetriever(
+        base_url=app_config.knowledge.base_url,
+        similarity_threshold=app_config.knowledge.similarity_threshold,
+    )
+    
+    # Initialize bedrock inference service
+    inference_service = bedrock_service.BedrockInferenceService(
+        api_client=bedrock_client,
+        runtime_client=bedrock_runtime,
+        app_config=app_config,
+        knowledge_retriever=knowledge_retriever,
+    )
+    
+    # Initialize prompt repository
+    prompt_repo = FileSystemPromptRepository()
+    
+    # Initialize chat agent
+    chat_agent = agent.BedrockChatAgent(
+        inference_service=inference_service,
+        app_config=app_config,
+        prompt_repository=prompt_repo,
+    )
+    
+    # Initialize repositories
+    conversation_repo = repository.MongoConversationRepository(db=db)
+    job_repo = job_repository.MongoJobRepository(mongo_client, app_config.mongo.database)
+    
+    # Initialize model resolution service
+    model_resolution = model_service.ConfigModelResolutionService(app_config)
+    
+    # Initialize chat service
+    chat_svc = service.ChatService(
+        chat_agent=chat_agent,
+        conversation_repository=conversation_repo,
+        model_resolution_service=model_resolution,
+    )
+    
+    # Initialize SQS client
+    sqs_client = sqs.SQSClient()
+    
+    return chat_svc, job_repo, sqs_client

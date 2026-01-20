@@ -1,7 +1,8 @@
 from pytest_mock import MockerFixture
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.bedrock import service as bedrock_service
-from app.chat import agent, dependencies, repository, service
+from app.chat import agent, dependencies, job_repository, repository, service
 from app.common import knowledge
 
 
@@ -134,3 +135,75 @@ def test_get_chat_service(mocker: MockerFixture):
     assert isinstance(chat_service, service.ChatService)
     assert chat_service.chat_agent == mock_agent
     assert chat_service.conversation_repository == mock_repo
+
+
+def test_get_sqs_client(mocker: MockerFixture):
+    mock_sqs_client = mocker.patch("app.common.sqs.SQSClient")
+
+    client = dependencies.get_sqs_client()
+
+    mock_sqs_client.assert_called_once()
+    assert client == mock_sqs_client.return_value
+
+
+
+
+
+def test_get_job_repository(mocker: MockerFixture):
+    mock_db = mocker.Mock()
+    mock_client = mocker.MagicMock()  # Use MagicMock to support __getitem__
+    mock_database = mocker.Mock()
+    
+    # Configure subscripting
+    mock_client.__getitem__.return_value = mock_database
+    
+    mock_db.client = mock_client
+    mock_db.name = "test_db"
+
+    repo = dependencies.get_job_repository(mock_db)
+
+    assert isinstance(repo, job_repository.MongoJobRepository)
+    mock_client.__getitem__.assert_called_once_with("test_db")
+
+
+import pytest
+
+@pytest.mark.asyncio
+async def test_initialize_worker_services(mocker: MockerFixture):
+    # Mock all the dependencies
+    mock_get_config = mocker.patch("app.chat.dependencies.config.get_config")
+    mock_get_mongo_client = mocker.patch("app.chat.dependencies.mongo.get_mongo_client")
+    mock_get_knowledge_retriever = mocker.patch("app.chat.dependencies.get_knowledge_retriever")
+    mock_boto3 = mocker.patch("boto3.client")  # Mock boto3.client to avoid AWS calls
+    mock_prompt_repository = mocker.patch("app.prompts.repository.FileSystemPromptRepository")
+    mock_get_chat_agent = mocker.patch("app.chat.dependencies.get_chat_agent")
+    mock_model_service = mocker.patch("app.models.service.ConfigModelResolutionService")
+    mock_sqs_client = mocker.patch("app.common.sqs.SQSClient")
+
+    # Mock config object
+    mock_config = mocker.Mock()
+    mock_config.database.uri = "mongodb://localhost:27017"
+    mock_config.database.name = "test_db"
+    mock_config.mongo.database = "test_db"
+    mock_config.aws_region = "us-east-1"
+    mock_config.bedrock.use_credentials = False
+    mock_config.knowledge.base_url = "http://knowledge"
+    mock_config.knowledge.similarity_threshold = 0.5
+    mock_get_config.return_value = mock_config
+
+    # Mock MongoDB client and database
+    mock_client = mocker.MagicMock()
+    mock_db = mocker.Mock()
+    mock_client.__getitem__.return_value = mock_db
+    mock_get_mongo_client.return_value = mock_client
+
+    # Call the async function
+    chat_svc, job_repo, sqs_cli = await dependencies.initialize_worker_services()
+
+    # Verify it returns the right types
+    assert isinstance(chat_svc, service.ChatService)
+    assert isinstance(job_repo, job_repository.MongoJobRepository)
+    
+    # Verify key services were called
+    mock_get_mongo_client.assert_called_once_with(mock_config)
+    mock_sqs_client.assert_called_once()

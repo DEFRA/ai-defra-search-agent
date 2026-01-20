@@ -1,17 +1,39 @@
+import uuid
+from unittest.mock import AsyncMock, MagicMock
+
 import fastapi.testclient
 import pymongo
 import pytest
-from botocore.exceptions import ClientError
 from fastapi import status
 
 from app import config
-from app.chat import dependencies
+from app.chat import dependencies, job_models
 from app.common import mongo
 from app.entrypoints.api import app
 
 
 @pytest.fixture
-def client(monkeypatch, bedrock_inference_service, mongo_uri):
+def mock_job_repository():
+    """Create a mock job repository."""
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_sqs_client():
+    """Create a mock SQS client."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_model_resolution_service():
+    """Create a mock model resolution service."""
+    mock = MagicMock()
+    mock.resolve_model.return_value = None  # Indicates valid model
+    return mock
+
+
+@pytest.fixture
+def client(monkeypatch, mongo_uri, mock_job_repository, mock_sqs_client, mock_model_resolution_service):
     monkeypatch.setenv("MONGO_URI", mongo_uri)
 
     def get_fresh_mongo_client():
@@ -25,10 +47,9 @@ def client(monkeypatch, bedrock_inference_service, mongo_uri):
 
     app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
-
-    app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
-        lambda: bedrock_inference_service
-    )
+    app.dependency_overrides[dependencies.get_job_repository] = lambda: mock_job_repository
+    app.dependency_overrides[dependencies.get_sqs_client] = lambda: mock_sqs_client
+    app.dependency_overrides[dependencies.get_model_resolution_service] = lambda: mock_model_resolution_service
 
     test_client = fastapi.testclient.TestClient(app)
 
@@ -37,27 +58,40 @@ def client(monkeypatch, bedrock_inference_service, mongo_uri):
     app.dependency_overrides.clear()
 
 
-def test_post_chat_nonexistent_conversation_returns_404(client):
-    body = {
-        "question": "Hello",
-        "conversationId": "2c29818a-4367-4114-a789-4494a527b8af",
-        "modelId": "geni-ai-3.5",
-    }
+def test_post_chat_valid_question_returns_202(client, mock_job_repository, mock_sqs_client):
+    """Test POST /chat returns 202 with job_id and queued status."""
+    body = {"question": "Hello, how are you?", "modelId": "anthropic.claude-3-haiku"}
 
     response = client.post("/chat", json=body)
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    response_json = response.json()
+    assert "job_id" in response_json
+    assert response_json["status"] == "queued"
+    assert uuid.UUID(response_json["job_id"])  # Verify it's a valid UUID
+
+    # Verify job was created in repository
+    mock_job_repository.create.assert_called_once()
+    created_job = mock_job_repository.create.call_args[0][0]
+    assert isinstance(created_job, job_models.ChatJob)
+    assert created_job.question == "Hello, how are you?"
+    assert created_job.model_id == "anthropic.claude-3-haiku"
+
+    # Verify message was sent to SQS
+    mock_sqs_client.send_message.assert_called_once()
 
 
 def test_post_chat_empty_question_returns_400(client):
-    body = {"question": "", "modelId": "geni-ai-3.5"}
+    """Test POST /chat with empty question returns 400."""
+    body = {"question": "", "modelId": "anthropic.claude-3-haiku"}
 
     response = client.post("/chat", json=body)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_post_chat_missing_model_name_returns_400(client):
+def test_post_chat_missing_model_id_returns_400(client):
+    """Test POST /chat without model_id returns 400."""
     body = {"question": "Hello"}
 
     response = client.post("/chat", json=body)
@@ -65,157 +99,158 @@ def test_post_chat_missing_model_name_returns_400(client):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_post_chat_unsupported_model_returns_400(client):
-    body = {"question": "Hello", "modelId": "unsupported-model-id"}
+def test_post_chat_unsupported_model_returns_400(client, mock_model_resolution_service):
+    """Test POST /chat with unsupported model returns 400."""
+    from app.models import UnsupportedModelError
+    
+    # Make resolve_model raise for unsupported model
+    mock_model_resolution_service.resolve_model.side_effect = UnsupportedModelError(
+        "Model invalid-model is not supported"
+    )
+    
+    body = {"question": "Hello", "modelId": "invalid-model"}
 
     response = client.post("/chat", json=body)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "Model 'unsupported-model-id' not found"
+    mock_model_resolution_service.resolve_model.assert_called_once_with("invalid-model")
 
 
-def test_post_sync_chat_valid_question_returns_200(client):
-    body = {"question": "Hello, how are you?", "modelId": "geni-ai-3.5"}
-
-    response = client.post("/chat", json=body)
-
-    assert response.status_code == status.HTTP_200_OK
-
-    assert response.json()["conversationId"] is not None
-    assert response.json()["messages"][0]["role"] == "user"
-    assert response.json()["messages"][0]["content"] == "Hello, how are you?"
-    assert response.json()["messages"][0]["modelId"] == "geni-ai-3.5"
-    assert response.json()["messages"][0]["modelName"] == "Geni AI 3.5"
-    assert "timestamp" in response.json()["messages"][0]
-
-    assert response.json()["messages"][1]["role"] == "assistant"
-    assert response.json()["messages"][1]["content"] == "This is a stub response."
-    assert response.json()["messages"][1]["modelId"] == "geni-ai-3.5"
-    assert response.json()["messages"][1]["modelName"] == "Geni AI 3.5"
-    assert "timestamp" in response.json()["messages"][1]
-
-
-def test_post_chat_with_existing_conversation_returns_200(client):
-    start_body = {"question": "Hello!", "modelId": "geni-ai-3.5"}
-
-    response = client.post("/chat", json=start_body)
-    assert response.status_code == status.HTTP_200_OK
-
-    conversation_id = response.json()["conversationId"]
-
-    continue_body = {
-        "question": "How's the weather?",
+def test_post_chat_with_conversation_id(client, mock_job_repository, mock_sqs_client):
+    """Test POST /chat with existing conversation_id."""
+    conversation_id = str(uuid.uuid4())
+    body = {
+        "question": "Follow-up question",
         "conversationId": conversation_id,
-        "modelId": "geni-ai-3.5",
+        "modelId": "anthropic.claude-3-haiku"
     }
 
-    response = client.post("/chat", json=continue_body)
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+
+    # Verify job was created with conversation_id
+    created_job = mock_job_repository.create.call_args[0][0]
+    assert str(created_job.conversation_id) == conversation_id
+
+    # Verify SQS message includes conversation_id
+    sqs_message = mock_sqs_client.send_message.call_args[0][0]
+    assert sqs_message["conversation_id"] == conversation_id
+
+
+def test_get_job_by_id_returns_job(client, mock_job_repository):
+    """Test GET /jobs/{job_id} returns job details."""
+    job_id = uuid.uuid4()
+    mock_job = job_models.ChatJob(
+        job_id=job_id,
+        question="Test question",
+        model_id="anthropic.claude-3-haiku",
+        status=job_models.JobStatus.COMPLETED,
+        result={"conversation_id": str(uuid.uuid4()), "messages": []}
+    )
+    mock_job_repository.get.return_value = mock_job
+
+    response = client.get(f"/jobs/{job_id}")
 
     assert response.status_code == status.HTTP_200_OK
-
-    assert response.json()["conversationId"] is not None
-
-    assert response.json()["messages"][0]["role"] == "user"
-    assert response.json()["messages"][0]["content"] == "Hello!"
-    assert response.json()["messages"][0]["modelId"] == "geni-ai-3.5"
-    assert response.json()["messages"][0]["modelName"] == "Geni AI 3.5"
-    assert "timestamp" in response.json()["messages"][0]
-
-    assert response.json()["messages"][1]["role"] == "assistant"
-    assert response.json()["messages"][1]["content"] == "This is a stub response."
-    assert response.json()["messages"][1]["modelId"] == "geni-ai-3.5"
-    assert response.json()["messages"][1]["modelName"] == "Geni AI 3.5"
-    assert "timestamp" in response.json()["messages"][1]
-
-    assert response.json()["messages"][2]["role"] == "user"
-    assert response.json()["messages"][2]["content"] == "How's the weather?"
-    assert response.json()["messages"][2]["modelId"] == "geni-ai-3.5"
-    assert response.json()["messages"][2]["modelName"] == "Geni AI 3.5"
-    assert "timestamp" in response.json()["messages"][2]
-
-    assert response.json()["messages"][3]["role"] == "assistant"
-    assert response.json()["messages"][3]["content"] == "This is a stub response."
-    assert response.json()["messages"][3]["modelId"] == "geni-ai-3.5"
-    assert response.json()["messages"][3]["modelName"] == "Geni AI 3.5"
-    assert "timestamp" in response.json()["messages"][3]
-
-
-def test_post_chat_bedrock_throttling_error_returns_429(
-    client, bedrock_inference_service, mocker
-):
-    mocker.patch.object(
-        bedrock_inference_service,
-        "invoke_anthropic",
-        side_effect=ClientError(
-            {
-                "Error": {
-                    "Code": "ThrottlingException",
-                    "Message": "Rate limit exceeded",
-                },
-                "ResponseMetadata": {"HTTPStatusCode": 429},
-            },
-            "converse",
-        ),
-    )
-
-    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
-    response = client.post("/chat", json=body)
-
-    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     response_json = response.json()
-    assert "ThrottlingException" in response_json["detail"]
-    assert "Rate limit exceeded" in response_json["detail"]
+    assert response_json["job_id"] == str(job_id)
+    assert response_json["status"] == "completed"
+    assert "result" in response_json
+
+    mock_job_repository.get.assert_called_once_with(job_id)
 
 
-def test_post_chat_bedrock_validation_error_returns_400(
-    client, bedrock_inference_service, mocker
-):
-    mocker.patch.object(
-        bedrock_inference_service,
-        "invoke_anthropic",
-        side_effect=ClientError(
+def test_get_job_not_found_returns_404(client, mock_job_repository):
+    """Test GET /jobs/{job_id} returns 404 when job doesn't exist."""
+    job_id = uuid.uuid4()
+    mock_job_repository.get.return_value = None
+
+    response = client.get(f"/jobs/{job_id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_get_job_completed_with_result(client, mock_job_repository):
+    """Test GET /jobs/{job_id} returns completed job with full result."""
+    job_id = uuid.uuid4()
+    conversation_id = str(uuid.uuid4())
+    result = {
+        "conversation_id": conversation_id,
+        "messages": [
             {
-                "Error": {
-                    "Code": "ValidationException",
-                    "Message": "Invalid input parameters",
-                },
-                "ResponseMetadata": {"HTTPStatusCode": 400},
+                "role": "user",
+                "content": "What is AI?",
+                "model_name": "Claude Sonnet 3.7",
+                "model_id": "anthropic.claude-3-haiku",
+                "timestamp": "2024-01-01T00:00:00"
             },
-            "converse",
-        ),
-    )
-
-    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
-    response = client.post("/chat", json=body)
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    response_json = response.json()
-    assert "ValidationException" in response_json["detail"]
-    assert "Invalid input parameters" in response_json["detail"]
-
-
-def test_post_chat_bedrock_internal_error_returns_500(
-    client, bedrock_inference_service, mocker
-):
-    mocker.patch.object(
-        bedrock_inference_service,
-        "invoke_anthropic",
-        side_effect=ClientError(
             {
-                "Error": {
-                    "Code": "InternalServerException",
-                    "Message": "Internal server error",
-                },
-                "ResponseMetadata": {"HTTPStatusCode": 500},
-            },
-            "converse",
-        ),
+                "role": "assistant",
+                "content": "AI is artificial intelligence",
+                "model_name": "Claude Sonnet 3.7",
+                "model_id": "anthropic.claude-3-haiku",
+                "timestamp": "2024-01-01T00:00:01"
+            }
+        ]
+    }
+
+    mock_job = job_models.ChatJob(
+        job_id=job_id,
+        question="What is AI?",
+        model_id="anthropic.claude-3-haiku",
+        status=job_models.JobStatus.COMPLETED,
+        result=result
     )
+    mock_job_repository.get.return_value = mock_job
 
-    body = {"question": "Hello", "modelId": "geni-ai-3.5"}
-    response = client.post("/chat", json=body)
+    response = client.get(f"/jobs/{job_id}")
 
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert "InternalServerException" in response_json["detail"]
-    assert "Internal server error" in response_json["detail"]
+    assert response_json["status"] == "completed"
+    assert response_json["result"]["conversation_id"] == conversation_id
+    assert len(response_json["result"]["messages"]) == 2
+
+
+def test_get_job_failed_with_error_code(client, mock_job_repository):
+    """Test GET /jobs/{job_id} returns failed job with error details."""
+    job_id = uuid.uuid4()
+    mock_job = job_models.ChatJob(
+        job_id=job_id,
+        question="Test question",
+        model_id="anthropic.claude-3-haiku",
+        status=job_models.JobStatus.FAILED,
+        error_message="ThrottlingException: Rate limit exceeded",
+        error_code=429
+    )
+    mock_job_repository.get.return_value = mock_job
+
+    response = client.get(f"/jobs/{job_id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert response_json["status"] == "failed"
+    assert response_json["error_message"] == "ThrottlingException: Rate limit exceeded"
+    assert response_json["error_code"] == 429
+
+
+def test_get_job_processing_status(client, mock_job_repository):
+    """Test GET /jobs/{job_id} returns job in processing state."""
+    job_id = uuid.uuid4()
+    mock_job = job_models.ChatJob(
+        job_id=job_id,
+        question="Test question",
+        model_id="anthropic.claude-3-haiku",
+        status=job_models.JobStatus.PROCESSING
+    )
+    mock_job_repository.get.return_value = mock_job
+
+    response = client.get(f"/jobs/{job_id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert response_json["status"] == "processing"
+    assert response_json["result"] is None
+
