@@ -23,6 +23,7 @@ class AbstractJobRepository(ABC):
         status: job_models.JobStatus,
         result: dict | None = None,
         error_message: str | None = None,
+        error_code: int | None = None,
     ) -> job_models.ChatJob | None:
         pass
 
@@ -49,14 +50,15 @@ class MongoJobRepository(AbstractJobRepository):
         status: job_models.JobStatus,
         result: dict | None = None,
         error_message: str | None = None,
+        error_code: int | None = None,
     ) -> job_models.ChatJob | None:
         update_data = {"status": status, "updated_at": datetime.now(UTC)}
         if result is not None:
             update_data["result"] = result
         if error_message is not None:
             update_data["error_message"] = error_message
+        if error_code is not None:
+            update_data["error_code"] = error_code
 
-        await self.collection.update_one(
-            {"job_id": str(job_id)}, {"$set": update_data}
-        )
+        await self.collection.update_one({"job_id": str(job_id)}, {"$set": update_data})
         return await self.get(job_id)

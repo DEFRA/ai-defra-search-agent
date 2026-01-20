@@ -21,9 +21,9 @@ class ChatJob(pydantic.BaseModel):
     status: JobStatus = JobStatus.QUEUED
     result: dict[str, Any] | None = None
     error_message: str | None = None
+    error_code: int | None = None
     created_at: datetime = pydantic.Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = pydantic.Field(default_factory=lambda: datetime.now(UTC))
 
     class Config:
         use_enum_values = True
-    
