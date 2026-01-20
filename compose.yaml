@@ -2,12 +2,10 @@ services:
   localstack:
     image: localstack/localstack:4
     ports:
-      - "4566:4566" # LocalStack Gateway
-      - "4510-4559:4510-4559" # external services port range
+      - "5566:4566" # LocalStack Gateway
+      - "5510-5559:4510-4559" # external services port range
     env_file:
       - "compose/aws.env"
-    profiles:
-      - use-localstack
     environment:
       DEBUG: ${DEBUG:-1}
       LS_LOG: WARN # Localstack DEBUG Level
@@ -23,6 +21,8 @@ services:
       retries: 3
     networks:
       - cdp-tenant
+    profiles:
+      - service
 
   mongodb:
     image: mongo:6.0.13
@@ -64,6 +64,24 @@ services:
     networks:
       - cdp-tenant
 
+  chat-worker:
+    build:
+      context: .
+      target: development
+    entrypoint: []
+    command: ["/home/nonroot/.venv/bin/python", "-m", "app.chat.worker"]
+    env_file:
+      - ".env"
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
+      LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
+    depends_on:
+      - mongodb
+      - localstack
+    networks:
+      - cdp-tenant
+    profiles:
+      - service
 volumes:
   mongodb-data:
 
