@@ -1,13 +1,23 @@
 import asyncio
 import json
 import logging
+from datetime import UTC, datetime
 
 from botocore.exceptions import ClientError
+from fastapi import status
 
 from app.chat import dependencies, job_models, models
 from app.common.event_broker import get_event_broker
 
 logger = logging.getLogger(__name__)
+
+# Worker configuration constants
+SQS_MAX_MESSAGES_PER_POLL = 1
+SQS_LONG_POLL_WAIT_SECONDS = 20
+WORKER_ERROR_RETRY_DELAY_SECONDS = 5
+
+# Worker health tracking
+_last_heartbeat: datetime | None = None
 
 
 async def process_job_message(
@@ -62,7 +72,7 @@ async def process_job_message(
             job_id,
             status=job_models.JobStatus.FAILED,
             error_message=f"Conversation not found: {e}",
-            error_code=404,
+            error_code=status.HTTP_404_NOT_FOUND,
         )
         await event_broker.publish(
             job_id,
@@ -70,22 +80,24 @@ async def process_job_message(
                 "status": job_models.JobStatus.FAILED.value,
                 "job_id": job_id,
                 "error_message": f"Conversation not found: {e}",
-                "error_code": 404,
+                "error_code": status.HTTP_404_NOT_FOUND,
             },
         )
     except ClientError as e:
         # Map AWS ClientError to appropriate HTTP status codes
-        error_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 500)
+        error_code = e.response.get("ResponseMetadata", {}).get(
+            "HTTPStatusCode", status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
         error_type = e.response.get("Error", {}).get("Code", "Unknown")
         error_msg = e.response.get("Error", {}).get("Message", str(e))
 
         # Map specific AWS error types to HTTP codes
         if error_type == "ThrottlingException":
-            error_code = 429
+            error_code = status.HTTP_429_TOO_MANY_REQUESTS
         elif error_type == "ServiceUnavailableException":
-            error_code = 503
+            error_code = status.HTTP_503_SERVICE_UNAVAILABLE
         elif error_type in ["InternalServerException", "InternalFailure"]:
-            error_code = 500
+            error_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
         await job_repository.update(
             job_id,
@@ -108,7 +120,7 @@ async def process_job_message(
             job_id,
             status=job_models.JobStatus.FAILED,
             error_message=str(e),
-            error_code=500,
+            error_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
         await event_broker.publish(
             job_id,
@@ -116,14 +128,24 @@ async def process_job_message(
                 "status": job_models.JobStatus.FAILED.value,
                 "job_id": job_id,
                 "error_message": str(e),
-                "error_code": 500,
+                "error_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
             },
         )
     finally:
         await sqs_client.delete_message(receipt_handle)
 
 
+# Worker health tracking
+_last_heartbeat: datetime | None = None
+
+
+def get_last_heartbeat() -> datetime | None:
+    """Get the last worker heartbeat timestamp."""
+    return _last_heartbeat
+
+
 async def run_worker():
+    global _last_heartbeat
     logger.info("Starting chat worker")
 
     (
@@ -136,8 +158,12 @@ async def run_worker():
         while True:
             try:
                 messages = await sqs_client.receive_messages(
-                    max_messages=1, wait_time=20
+                    max_messages=SQS_MAX_MESSAGES_PER_POLL,
+                    wait_time=SQS_LONG_POLL_WAIT_SECONDS,
                 )
+
+                # Update heartbeat after successful poll (even if no messages)
+                _last_heartbeat = datetime.now(UTC)
 
                 for message in messages:
                     await process_job_message(
@@ -145,7 +171,7 @@ async def run_worker():
                     )
             except Exception:
                 logger.exception("Error in worker loop")
-                await asyncio.sleep(5)
+                await asyncio.sleep(WORKER_ERROR_RETRY_DELAY_SECONDS)
 
 
 def main():
