@@ -90,6 +90,11 @@ def client(
 
     event_broker._broker = mock_event_broker
 
+    # Mock worker_task in app state for health checks
+    mock_task = MagicMock()
+    mock_task.done.return_value = False
+    app.state.worker_task = mock_task
+
     # Reset sse-starlette's app status event for each test
     from sse_starlette.sse import AppStatus
 
