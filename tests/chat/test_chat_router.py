@@ -1,3 +1,5 @@
+import asyncio
+import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
@@ -36,7 +38,32 @@ def mock_model_resolution_service():
 
 
 @pytest.fixture
-def client(monkeypatch, mongo_uri, mock_job_repository, mock_sqs_client, mock_model_resolution_service):
+def mock_event_broker():
+    """Create a mock event broker."""
+    mock = AsyncMock()
+    # Mock queue that returns a completed event immediately
+    mock_queue = AsyncMock()
+    mock_queue.get = AsyncMock(
+        return_value={
+            "status": "completed",
+            "job_id": "test-job-id",
+            "result": {"conversation_id": "test-conv-id", "messages": []},
+        }
+    )
+    mock.subscribe = AsyncMock(return_value=mock_queue)
+    mock.unsubscribe = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def client(
+    monkeypatch,
+    mongo_uri,
+    mock_job_repository,
+    mock_sqs_client,
+    mock_model_resolution_service,
+    mock_event_broker,
+):
     monkeypatch.setenv("MONGO_URI", mongo_uri)
 
     def get_fresh_mongo_client():
@@ -50,28 +77,61 @@ def client(monkeypatch, mongo_uri, mock_job_repository, mock_sqs_client, mock_mo
 
     app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
-    app.dependency_overrides[dependencies.get_job_repository] = lambda: mock_job_repository
+    app.dependency_overrides[dependencies.get_job_repository] = (
+        lambda: mock_job_repository
+    )
     app.dependency_overrides[dependencies.get_sqs_client] = lambda: mock_sqs_client
-    app.dependency_overrides[dependencies.get_model_resolution_service] = lambda: mock_model_resolution_service
+    app.dependency_overrides[dependencies.get_model_resolution_service] = (
+        lambda: mock_model_resolution_service
+    )
+
+    # Override the event broker
+    from app.common import event_broker
+
+    event_broker._broker = mock_event_broker
+
+    # Reset sse-starlette's app status event for each test
+    from sse_starlette.sse import AppStatus
+
+    AppStatus.should_exit_event = asyncio.Event()
 
     test_client = fastapi.testclient.TestClient(app)
 
     yield test_client
 
     app.dependency_overrides.clear()
+    event_broker._broker = None
 
 
-def test_post_chat_valid_question_returns_202(client, mock_job_repository, mock_sqs_client):
-    """Test POST /chat returns 202 with job_id and queued status."""
+def test_post_chat_valid_question_returns_200(
+    client, mock_job_repository, mock_sqs_client
+):
+    """Test POST /chat returns 200 with SSE stream containing job status."""
     body = {"question": "Hello, how are you?", "modelId": "anthropic.claude-3-haiku"}
 
-    response = client.post("/chat", json=body)
+    # Make request with stream=True to receive SSE
+    with client.stream("POST", "/chat", json=body) as response:
+        assert response.status_code == status.HTTP_200_OK
+        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
-    assert response.status_code == status.HTTP_202_ACCEPTED
-    response_json = response.json()
-    assert "job_id" in response_json
-    assert response_json["status"] == "queued"
-    assert uuid.UUID(response_json["job_id"])  # Verify it's a valid UUID
+        # Read SSE events
+        events = []
+        for line in response.iter_lines():
+            if line.startswith("data:"):
+                event_data = json.loads(line[5:].strip())
+                events.append(event_data)
+                # Stop after getting a terminal status
+                if event_data.get("status") in ["completed", "failed"]:
+                    break
+
+        # Should have at least 2 events: queued and completed
+        assert len(events) >= 2
+        assert events[0]["status"] == "queued"
+        assert "job_id" in events[0]
+        assert uuid.UUID(events[0]["job_id"])  # Verify it's a valid UUID
+
+        # Last event should be completed
+        assert events[-1]["status"] == "completed"
 
     # Verify job was created in repository
     mock_job_repository.create.assert_called_once()
@@ -105,12 +165,12 @@ def test_post_chat_missing_model_id_returns_400(client):
 def test_post_chat_unsupported_model_returns_400(client, mock_model_resolution_service):
     """Test POST /chat with unsupported model returns 400."""
     from app.models import UnsupportedModelError
-    
+
     # Make resolve_model raise for unsupported model
     mock_model_resolution_service.resolve_model.side_effect = UnsupportedModelError(
         "Model invalid-model is not supported"
     )
-    
+
     body = {"question": "Hello", "modelId": "invalid-model"}
 
     response = client.post("/chat", json=body)
@@ -125,12 +185,18 @@ def test_post_chat_with_conversation_id(client, mock_job_repository, mock_sqs_cl
     body = {
         "question": "Follow-up question",
         "conversationId": conversation_id,
-        "modelId": "anthropic.claude-3-haiku"
+        "modelId": "anthropic.claude-3-haiku",
     }
 
-    response = client.post("/chat", json=body)
+    with client.stream("POST", "/chat", json=body) as response:
+        assert response.status_code == status.HTTP_200_OK
 
-    assert response.status_code == status.HTTP_202_ACCEPTED
+        # Read at least the first event to consume the stream
+        for line in response.iter_lines():
+            if line.startswith("data:"):
+                event_data = json.loads(line[5:].strip())
+                if event_data.get("status") in ["completed", "failed"]:
+                    break
 
     # Verify job was created with conversation_id
     created_job = mock_job_repository.create.call_args[0][0]
@@ -149,7 +215,7 @@ def test_get_job_by_id_returns_job(client, mock_job_repository):
         question="Test question",
         model_id="anthropic.claude-3-haiku",
         status=job_models.JobStatus.COMPLETED,
-        result={"conversation_id": str(uuid.uuid4()), "messages": []}
+        result={"conversation_id": str(uuid.uuid4()), "messages": []},
     )
     mock_job_repository.get.return_value = mock_job
 
@@ -187,16 +253,16 @@ def test_get_job_completed_with_result(client, mock_job_repository):
                 "content": "What is AI?",
                 "model_name": "Claude Sonnet 3.7",
                 "model_id": "anthropic.claude-3-haiku",
-                "timestamp": "2024-01-01T00:00:00"
+                "timestamp": "2024-01-01T00:00:00",
             },
             {
                 "role": "assistant",
                 "content": "AI is artificial intelligence",
                 "model_name": "Claude Sonnet 3.7",
                 "model_id": "anthropic.claude-3-haiku",
-                "timestamp": "2024-01-01T00:00:01"
-            }
-        ]
+                "timestamp": "2024-01-01T00:00:01",
+            },
+        ],
     }
 
     mock_job = job_models.ChatJob(
@@ -204,7 +270,7 @@ def test_get_job_completed_with_result(client, mock_job_repository):
         question="What is AI?",
         model_id="anthropic.claude-3-haiku",
         status=job_models.JobStatus.COMPLETED,
-        result=result
+        result=result,
     )
     mock_job_repository.get.return_value = mock_job
 
@@ -226,7 +292,7 @@ def test_get_job_failed_with_error_code(client, mock_job_repository):
         model_id="anthropic.claude-3-haiku",
         status=job_models.JobStatus.FAILED,
         error_message="ThrottlingException: Rate limit exceeded",
-        error_code=429
+        error_code=429,
     )
     mock_job_repository.get.return_value = mock_job
 
@@ -246,7 +312,7 @@ def test_get_job_processing_status(client, mock_job_repository):
         job_id=job_id,
         question="Test question",
         model_id="anthropic.claude-3-haiku",
-        status=job_models.JobStatus.PROCESSING
+        status=job_models.JobStatus.PROCESSING,
     )
     mock_job_repository.get.return_value = mock_job
 
@@ -256,4 +322,3 @@ def test_get_job_processing_status(client, mock_job_repository):
     response_json = response.json()
     assert response_json["status"] == "processing"
     assert response_json["result"] is None
-

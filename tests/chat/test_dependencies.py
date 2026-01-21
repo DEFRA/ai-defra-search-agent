@@ -1,5 +1,5 @@
+import pytest
 from pytest_mock import MockerFixture
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.bedrock import service as bedrock_service
 from app.chat import agent, dependencies, job_repository, repository, service
@@ -146,17 +146,14 @@ def test_get_sqs_client(mocker: MockerFixture):
     assert client == mock_sqs_client.return_value
 
 
-
-
-
 def test_get_job_repository(mocker: MockerFixture):
     mock_db = mocker.Mock()
     mock_client = mocker.MagicMock()  # Use MagicMock to support __getitem__
     mock_database = mocker.Mock()
-    
+
     # Configure subscripting
     mock_client.__getitem__.return_value = mock_database
-    
+
     mock_db.client = mock_client
     mock_db.name = "test_db"
 
@@ -166,18 +163,16 @@ def test_get_job_repository(mocker: MockerFixture):
     mock_client.__getitem__.assert_called_once_with("test_db")
 
 
-import pytest
-
 @pytest.mark.asyncio
 async def test_initialize_worker_services(mocker: MockerFixture):
     # Mock all the dependencies
     mock_get_config = mocker.patch("app.chat.dependencies.config.get_config")
     mock_get_mongo_client = mocker.patch("app.chat.dependencies.mongo.get_mongo_client")
-    mock_get_knowledge_retriever = mocker.patch("app.chat.dependencies.get_knowledge_retriever")
-    mock_boto3 = mocker.patch("boto3.client")  # Mock boto3.client to avoid AWS calls
-    mock_prompt_repository = mocker.patch("app.prompts.repository.FileSystemPromptRepository")
-    mock_get_chat_agent = mocker.patch("app.chat.dependencies.get_chat_agent")
-    mock_model_service = mocker.patch("app.models.service.ConfigModelResolutionService")
+    mocker.patch("app.chat.dependencies.get_knowledge_retriever")
+    mocker.patch("boto3.client")  # Mock boto3.client to avoid AWS calls
+    mocker.patch("app.prompts.repository.FileSystemPromptRepository")
+    mocker.patch("app.chat.dependencies.get_chat_agent")
+    mocker.patch("app.models.service.ConfigModelResolutionService")
     mock_sqs_client = mocker.patch("app.common.sqs.SQSClient")
 
     # Mock config object
@@ -203,7 +198,7 @@ async def test_initialize_worker_services(mocker: MockerFixture):
     # Verify it returns the right types
     assert isinstance(chat_svc, service.ChatService)
     assert isinstance(job_repo, job_repository.MongoJobRepository)
-    
+
     # Verify key services were called
     mock_get_mongo_client.assert_called_once_with(mock_config)
     mock_sqs_client.assert_called_once()

@@ -12,10 +12,10 @@ def mock_client(mocker):
     client = mocker.MagicMock()
     database = mocker.MagicMock()
     collection = mocker.AsyncMock()
-    
+
     client.__getitem__.return_value = database
     database.chat_jobs = collection
-    
+
     return client
 
 
@@ -27,11 +27,10 @@ def job_repo(mock_client):
 
 class TestMongoJobRepository:
     @pytest.mark.asyncio
-    async def test_create_job(self, job_repo, mock_client):
+    async def test_create_job(self, job_repo):
         """Test creating a new job."""
         job = job_models.ChatJob(
-            question="What is AI?",
-            model_id="anthropic.claude-3-haiku"
+            question="What is AI?", model_id="anthropic.claude-3-haiku"
         )
 
         result = await job_repo.create(job)
@@ -57,7 +56,7 @@ class TestMongoJobRepository:
             "error_message": None,
             "error_code": None,
             "created_at": datetime.now(UTC),
-            "updated_at": datetime.now(UTC)
+            "updated_at": datetime.now(UTC),
         }
         job_repo.collection.find_one.return_value = mock_doc
 
@@ -88,16 +87,13 @@ class TestMongoJobRepository:
             job_id=job_id,
             question="Test",
             model_id="test-model",
-            status=job_models.JobStatus.PROCESSING
+            status=job_models.JobStatus.PROCESSING,
         )
-        
+
         # Mock the get call that happens after update
         job_repo.collection.find_one.return_value = mock_job.model_dump()
 
-        result = await job_repo.update(
-            job_id=job_id,
-            status=job_models.JobStatus.PROCESSING
-        )
+        await job_repo.update(job_id=job_id, status=job_models.JobStatus.PROCESSING)
 
         job_repo.collection.update_one.assert_called_once()
         update_call = job_repo.collection.update_one.call_args
@@ -111,22 +107,20 @@ class TestMongoJobRepository:
         job_id = uuid.uuid4()
         result_data = {
             "conversation_id": "conv-123",
-            "messages": [{"role": "user", "content": "Hello"}]
+            "messages": [{"role": "user", "content": "Hello"}],
         }
-        
+
         mock_job = job_models.ChatJob(
             job_id=job_id,
             question="Test",
             model_id="test-model",
             status=job_models.JobStatus.COMPLETED,
-            result=result_data
+            result=result_data,
         )
         job_repo.collection.find_one.return_value = mock_job.model_dump()
 
-        result = await job_repo.update(
-            job_id=job_id,
-            status=job_models.JobStatus.COMPLETED,
-            result=result_data
+        await job_repo.update(
+            job_id=job_id, status=job_models.JobStatus.COMPLETED, result=result_data
         )
 
         update_call = job_repo.collection.update_one.call_args
@@ -137,27 +131,29 @@ class TestMongoJobRepository:
     async def test_update_job_with_error(self, job_repo):
         """Test updating job with error details."""
         job_id = uuid.uuid4()
-        
+
         mock_job = job_models.ChatJob(
             job_id=job_id,
             question="Test",
             model_id="test-model",
             status=job_models.JobStatus.FAILED,
             error_message="ThrottlingException: Rate limit exceeded",
-            error_code=429
+            error_code=429,
         )
         job_repo.collection.find_one.return_value = mock_job.model_dump()
 
-        result = await job_repo.update(
+        await job_repo.update(
             job_id=job_id,
             status=job_models.JobStatus.FAILED,
             error_message="ThrottlingException: Rate limit exceeded",
-            error_code=429
+            error_code=429,
         )
 
         update_call = job_repo.collection.update_one.call_args
         update_data = update_call[0][1]["$set"]
-        assert update_data["error_message"] == "ThrottlingException: Rate limit exceeded"
+        assert (
+            update_data["error_message"] == "ThrottlingException: Rate limit exceeded"
+        )
         assert update_data["error_code"] == 429
         assert update_data["status"] == job_models.JobStatus.FAILED
 
@@ -165,23 +161,20 @@ class TestMongoJobRepository:
     async def test_update_only_includes_provided_fields(self, job_repo):
         """Test that update only includes fields that are provided."""
         job_id = uuid.uuid4()
-        
+
         mock_job = job_models.ChatJob(
             job_id=job_id,
             question="Test",
             model_id="test-model",
-            status=job_models.JobStatus.PROCESSING
+            status=job_models.JobStatus.PROCESSING,
         )
         job_repo.collection.find_one.return_value = mock_job.model_dump()
 
-        await job_repo.update(
-            job_id=job_id,
-            status=job_models.JobStatus.PROCESSING
-        )
+        await job_repo.update(job_id=job_id, status=job_models.JobStatus.PROCESSING)
 
         update_call = job_repo.collection.update_one.call_args
         update_data = update_call[0][1]["$set"]
-        
+
         # Should only have status and updated_at
         assert "status" in update_data
         assert "updated_at" in update_data
@@ -194,9 +187,7 @@ class TestMongoJobRepository:
         """Test creating a job with an existing conversation_id."""
         conversation_id = uuid.uuid4()
         job = job_models.ChatJob(
-            conversation_id=conversation_id,
-            question="Follow-up",
-            model_id="test-model"
+            conversation_id=conversation_id, question="Follow-up", model_id="test-model"
         )
 
         await job_repo.create(job)
@@ -212,7 +203,7 @@ class TestMongoJobRepository:
             question="Test",
             model_id="test-model",
             created_at=created_time,
-            updated_at=created_time
+            updated_at=created_time,
         )
 
         await job_repo.create(job)

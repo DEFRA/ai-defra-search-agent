@@ -1,8 +1,6 @@
 import uuid
 from datetime import UTC, datetime
 
-import pytest
-
 from app.chat import job_models
 
 
@@ -24,8 +22,7 @@ class TestChatJob:
     def test_chat_job_creation_with_defaults(self):
         """Test creating a ChatJob with only required fields."""
         job = job_models.ChatJob(
-            question="What is AI?",
-            model_id="anthropic.claude-3-haiku"
+            question="What is AI?", model_id="anthropic.claude-3-haiku"
         )
 
         assert isinstance(job.job_id, uuid.UUID)
@@ -45,7 +42,7 @@ class TestChatJob:
         job = job_models.ChatJob(
             conversation_id=conversation_id,
             question="Follow-up question?",
-            model_id="anthropic.claude-3-haiku"
+            model_id="anthropic.claude-3-haiku",
         )
 
         assert job.conversation_id == conversation_id
@@ -55,7 +52,7 @@ class TestChatJob:
         job = job_models.ChatJob(
             question="Test question",
             model_id="test-model",
-            status=job_models.JobStatus.PROCESSING
+            status=job_models.JobStatus.PROCESSING,
         )
 
         assert job.status == job_models.JobStatus.PROCESSING
@@ -66,14 +63,14 @@ class TestChatJob:
             "conversation_id": "test-conv-id",
             "messages": [
                 {"role": "user", "content": "Hello"},
-                {"role": "assistant", "content": "Hi there!"}
-            ]
+                {"role": "assistant", "content": "Hi there!"},
+            ],
         }
         job = job_models.ChatJob(
             question="Hello",
             model_id="test-model",
             status=job_models.JobStatus.COMPLETED,
-            result=result
+            result=result,
         )
 
         assert job.result == result
@@ -86,7 +83,7 @@ class TestChatJob:
             model_id="test-model",
             status=job_models.JobStatus.FAILED,
             error_message="ThrottlingException: Rate limit exceeded",
-            error_code=429
+            error_code=429,
         )
 
         assert job.status == job_models.JobStatus.FAILED
@@ -95,10 +92,7 @@ class TestChatJob:
 
     def test_chat_job_model_dump(self):
         """Test serializing ChatJob to dict."""
-        job = job_models.ChatJob(
-            question="Test",
-            model_id="test-model"
-        )
+        job = job_models.ChatJob(question="Test", model_id="test-model")
 
         dumped = job.model_dump()
 
@@ -112,10 +106,7 @@ class TestChatJob:
     def test_chat_job_timestamps_auto_set(self):
         """Test that timestamps are automatically set to UTC."""
         before = datetime.now(UTC)
-        job = job_models.ChatJob(
-            question="Test",
-            model_id="test-model"
-        )
+        job = job_models.ChatJob(question="Test", model_id="test-model")
         after = datetime.now(UTC)
 
         assert before <= job.created_at <= after
@@ -128,7 +119,7 @@ class TestChatJob:
         job = job_models.ChatJob(
             question="Test",
             model_id="test-model",
-            status=job_models.JobStatus.PROCESSING
+            status=job_models.JobStatus.PROCESSING,
         )
 
         dumped = job.model_dump()

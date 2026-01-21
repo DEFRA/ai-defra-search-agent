@@ -1,10 +1,14 @@
+import asyncio
+import json
 import logging
 import uuid
 
 import fastapi
 from fastapi import status
+from sse_starlette.sse import EventSourceResponse
 
 from app.chat import api_schemas, dependencies, job_models
+from app.common.event_broker import get_event_broker
 from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
@@ -14,11 +18,11 @@ router = fastapi.APIRouter(tags=["chat"])
 
 @router.post(
     "/chat",
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Send a message to the chatbot",
-    description="Sends a user question to the specified model and retrieves the response along with the conversation history.",
+    status_code=status.HTTP_200_OK,
+    summary="Send a message to the chatbot with SSE streaming",
+    description="Sends a user question to the specified model and streams the response status updates via Server-Sent Events.",
     responses={
-        202: {"description": "Request accepted and queued for processing"},
+        200: {"description": "SSE stream of job status updates"},
         400: {
             "description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"
         },
@@ -38,7 +42,7 @@ async def chat(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from None
 
-    # Create
+    # Create job
     job = job_models.ChatJob(
         conversation_id=request.conversation_id,
         question=request.question,
@@ -60,7 +64,49 @@ async def chat(
             }
         )
 
-    return {"job_id": job.job_id, "status": job.status}
+    # Stream job status updates via SSE
+    async def event_generator():
+        event_broker = get_event_broker()
+        queue = await event_broker.subscribe(str(job.job_id))
+
+        try:
+            # Send initial queued status
+            yield {
+                "event": "status",
+                "data": json.dumps(
+                    {
+                        "job_id": str(job.job_id),
+                        "status": job_models.JobStatus.QUEUED.value,
+                    }
+                ),
+            }
+
+            # Stream updates from event broker
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=60.0)
+                    yield {
+                        "event": "status",
+                        "data": json.dumps(event),
+                    }
+
+                    # End stream after terminal status
+                    if event.get("status") in [
+                        job_models.JobStatus.COMPLETED.value,
+                        job_models.JobStatus.FAILED.value,
+                    ]:
+                        break
+
+                except TimeoutError:
+                    # Send keepalive comment
+                    yield {"event": "keepalive", "data": ""}
+
+        except asyncio.CancelledError:
+            logger.info("SSE connection cancelled for job %s", job.job_id)
+        finally:
+            await event_broker.unsubscribe(str(job.job_id), queue)
+
+    return EventSourceResponse(event_generator(), ping=None)
 
 
 @router.get(
