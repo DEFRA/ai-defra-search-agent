@@ -30,6 +30,7 @@ services:
       HOST: ${HOST:-0.0.0.0}
       LOCALSTACK_URL: http://host.docker.internal:4566
       CHAT_QUEUE_URL: http://sqs.eu-west-2.host.docker.internal:4566/000000000000/chat-job-queue
+      KNOWLEDGE_BASE_URL: http://host.docker.internal:8085
     volumes:
       - ./app:/home/nonroot/app
     develop:
@@ -52,6 +53,7 @@ services:
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       LOCALSTACK_URL: http://host.docker.internal:4566
       CHAT_QUEUE_URL: http://sqs.eu-west-2.host.docker.internal:4566/000000000000/chat-job-queue
+      KNOWLEDGE_BASE_URL: http://host.docker.internal:8085
     depends_on:
       - mongodb
     networks:
