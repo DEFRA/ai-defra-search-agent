@@ -14,7 +14,7 @@ class TestProcessJobMessage:
         """Create mock services for testing."""
         chat_service = AsyncMock()
         job_repository = AsyncMock()
-        sqs_client = MagicMock()
+        sqs_client = AsyncMock()
         return chat_service, job_repository, sqs_client
 
     @pytest.fixture

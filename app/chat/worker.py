@@ -79,7 +79,7 @@ async def process_job_message(
             error_code=500,
         )
     finally:
-        sqs_client.delete_message(receipt_handle)
+        await sqs_client.delete_message(receipt_handle)
 
 
 async def run_worker():
@@ -87,18 +87,24 @@ async def run_worker():
 
     chat_service, job_repository, sqs_client = await dependencies.initialize_worker_services()
 
-    while True:
-        try:
-            messages = sqs_client.receive_messages(max_messages=1, wait_time=20)
+    async with sqs_client:
+        while True:
+            try:
+                messages = await sqs_client.receive_messages(max_messages=1, wait_time=20)
 
-            for message in messages:
-                await process_job_message(
-                    message, chat_service, job_repository, sqs_client
-                )
-        except Exception:
-            logger.exception("Error in worker loop")
-            await asyncio.sleep(5)
+                for message in messages:
+                    await process_job_message(
+                        message, chat_service, job_repository, sqs_client
+                    )
+            except Exception:
+                logger.exception("Error in worker loop")
+                await asyncio.sleep(5)
+
+
+def main():
+    """Entry point for running worker as a module."""
+    asyncio.run(run_worker())
 
 
 if __name__ == "__main__":
-    asyncio.run(run_worker())
+    main()

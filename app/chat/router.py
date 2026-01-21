@@ -48,16 +48,17 @@ async def chat(
     await job_repository.create(job)
 
     # Queue for processing
-    sqs_client.send_message(
-        {
-            "job_id": str(job.job_id),
-            "conversation_id": str(request.conversation_id)
-            if request.conversation_id
-            else None,
-            "question": request.question,
-            "model_id": request.model_id,
-        }
-    )
+    async with sqs_client:
+        await sqs_client.send_message(
+            {
+                "job_id": str(job.job_id),
+                "conversation_id": str(request.conversation_id)
+                if request.conversation_id
+                else None,
+                "question": request.question,
+                "model_id": request.model_id,
+            }
+        )
 
     return {"job_id": job.job_id, "status": job.status}
 

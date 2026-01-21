@@ -1,29 +1,4 @@
 services:
-  localstack:
-    image: localstack/localstack:4
-    ports:
-      - "5566:4566" # LocalStack Gateway
-      - "5510-5559:4510-4559" # external services port range
-    env_file:
-      - "compose/aws.env"
-    environment:
-      DEBUG: ${DEBUG:-1}
-      LS_LOG: WARN # Localstack DEBUG Level
-      SERVICES: s3,sqs,sns,firehose
-      LOCALSTACK_HOST: 127.0.0.1
-    volumes:
-      - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
-      - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
-    healthcheck:
-      test: ["CMD", "curl", "localhost:4566"]
-      interval: 5s
-      start_period: 5s
-      retries: 3
-    networks:
-      - cdp-tenant
-    profiles:
-      - service
-
   mongodb:
     image: mongo:6.0.13
     networks:
@@ -53,7 +28,8 @@ services:
       PORT: ${PORT:-8086}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
-      LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
+      LOCALSTACK_URL: http://host.docker.internal:4566
+      CHAT_QUEUE_URL: http://sqs.eu-west-2.host.docker.internal:4566/000000000000/chat-job-queue
     volumes:
       - ./app:/home/nonroot/app
     develop:
@@ -69,15 +45,15 @@ services:
       context: .
       target: development
     entrypoint: []
-    command: ["/home/nonroot/.venv/bin/python", "-m", "app.chat.worker"]
+    command: ["/home/nonroot/.venv/bin/python", "-c", "from app.chat.worker import main; main()"]
     env_file:
       - ".env"
     environment:
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
-      LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
+      LOCALSTACK_URL: http://host.docker.internal:4566
+      CHAT_QUEUE_URL: http://sqs.eu-west-2.host.docker.internal:4566/000000000000/chat-job-queue
     depends_on:
       - mongodb
-      - localstack
     networks:
       - cdp-tenant
     profiles:
@@ -87,4 +63,5 @@ volumes:
 
 networks:
   cdp-tenant:
-    driver: bridge
+    external: true
+    name: ai-defra-search-data_cdp-tenant

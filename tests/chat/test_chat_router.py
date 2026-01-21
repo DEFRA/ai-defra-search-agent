@@ -20,8 +20,11 @@ def mock_job_repository():
 
 @pytest.fixture
 def mock_sqs_client():
-    """Create a mock SQS client."""
-    return MagicMock()
+    """Create a mock SQS client with async context manager support."""
+    mock = AsyncMock()
+    mock.__aenter__.return_value = mock
+    mock.__aexit__.return_value = None
+    return mock
 
 
 @pytest.fixture
