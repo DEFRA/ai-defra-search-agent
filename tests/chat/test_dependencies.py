@@ -2,7 +2,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from app.bedrock import service as bedrock_service
-from app.chat import agent, dependencies, job_repository, repository, service
+from app.chat import agent, dependencies, repository, service
 from app.common import knowledge
 
 
@@ -146,23 +146,6 @@ def test_get_sqs_client(mocker: MockerFixture):
     assert client == mock_sqs_client.return_value
 
 
-def test_get_job_repository(mocker: MockerFixture):
-    mock_db = mocker.Mock()
-    mock_client = mocker.MagicMock()  # Use MagicMock to support __getitem__
-    mock_database = mocker.Mock()
-
-    # Configure subscripting
-    mock_client.__getitem__.return_value = mock_database
-
-    mock_db.client = mock_client
-    mock_db.name = "test_db"
-
-    repo = dependencies.get_job_repository(mock_db)
-
-    assert isinstance(repo, job_repository.MongoJobRepository)
-    mock_client.__getitem__.assert_called_once_with("test_db")
-
-
 @pytest.mark.asyncio
 async def test_initialize_worker_services(mocker: MockerFixture):
     # Mock all the dependencies
@@ -193,11 +176,15 @@ async def test_initialize_worker_services(mocker: MockerFixture):
     mock_get_mongo_client.return_value = mock_client
 
     # Call the async function
-    chat_svc, job_repo, sqs_cli = await dependencies.initialize_worker_services()
+    (
+        chat_svc,
+        conversation_repo,
+        sqs_client,
+    ) = await dependencies.initialize_worker_services()
 
     # Verify it returns the right types
     assert isinstance(chat_svc, service.ChatService)
-    assert isinstance(job_repo, job_repository.MongoJobRepository)
+    assert isinstance(conversation_repo, repository.MongoConversationRepository)
 
     # Verify key services were called
     mock_get_mongo_client.assert_called_once_with(mock_config)

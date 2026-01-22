@@ -6,7 +6,7 @@ import pymongo.asynchronous.database
 
 from app import config, dependencies
 from app.bedrock import service as bedrock_service
-from app.chat import agent, job_repository, repository, service
+from app.chat import agent, repository, service
 from app.common import knowledge, mongo, sqs
 from app.models import dependencies as model_dependencies
 from app.models import service as model_service
@@ -110,12 +110,6 @@ def get_chat_service(
     )
 
 
-def get_job_repository(
-    db: pymongo.asynchronous.database.AsyncDatabase = fastapi.Depends(mongo.get_db),
-) -> job_repository.AbstractJobRepository:
-    return job_repository.MongoJobRepository(db.client, db.name)
-
-
 def get_sqs_client() -> sqs.SQSClient:
     return sqs.SQSClient()
 
@@ -178,9 +172,6 @@ async def initialize_worker_services():
 
     # Initialize repositories
     conversation_repo = repository.MongoConversationRepository(db=db)
-    job_repo = job_repository.MongoJobRepository(
-        mongo_client, app_config.mongo.database
-    )
 
     # Initialize model resolution service
     model_resolution = model_service.ConfigModelResolutionService(app_config)
@@ -195,4 +186,4 @@ async def initialize_worker_services():
     # Initialize SQS client
     sqs_client = sqs.SQSClient()
 
-    return chat_svc, job_repo, sqs_client
+    return chat_svc, conversation_repo, sqs_client

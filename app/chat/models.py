@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 import uuid
 from typing import Any, Literal
 
@@ -9,10 +10,20 @@ __all__ = [
     "Conversation",
     "ConversationNotFoundError",
     "Message",
+    "MessageStatus",
     "Source",
     "TokenUsage",
     "UserMessage",
 ]
+
+
+class MessageStatus(str, enum.Enum):
+    """Status of a message processing job."""
+
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -35,6 +46,10 @@ class Message:
     content: str
     model_id: str
     model_name: str
+    message_id: uuid.UUID = dataclasses.field(default_factory=uuid.uuid4)
+    status: MessageStatus = MessageStatus.COMPLETED
+    error_message: str | None = None
+    error_code: int | None = None
     timestamp: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )

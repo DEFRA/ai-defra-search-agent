@@ -9,14 +9,14 @@ import pytest
 from fastapi import status
 
 from app import config
-from app.chat import dependencies, job_models
+from app.chat import models
 from app.common import mongo
 from app.entrypoints.api import app
 
 
 @pytest.fixture
-def mock_job_repository():
-    """Create a mock job repository."""
+def mock_conversation_repository():
+    """Create a mock conversation repository."""
     return AsyncMock()
 
 
@@ -46,7 +46,7 @@ def mock_event_broker():
     mock_queue.get = AsyncMock(
         return_value={
             "status": "completed",
-            "job_id": "test-job-id",
+            "message_id": "test-message-id",
             "result": {"conversation_id": "test-conv-id", "messages": []},
         }
     )
@@ -59,7 +59,7 @@ def mock_event_broker():
 def client(
     monkeypatch,
     mongo_uri,
-    mock_job_repository,
+    mock_conversation_repository,
     mock_sqs_client,
     mock_model_resolution_service,
     mock_event_broker,
@@ -75,10 +75,12 @@ def client(
         client = get_fresh_mongo_client()
         return client.get_database("ai_defra_search_agent")
 
+    from app.chat import dependencies
+
     app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
-    app.dependency_overrides[dependencies.get_job_repository] = (
-        lambda: mock_job_repository
+    app.dependency_overrides[dependencies.get_conversation_repository] = (
+        lambda: mock_conversation_repository
     )
     app.dependency_overrides[dependencies.get_sqs_client] = lambda: mock_sqs_client
     app.dependency_overrides[dependencies.get_model_resolution_service] = (
@@ -109,9 +111,9 @@ def client(
 
 
 def test_post_chat_valid_question_returns_200(
-    client, mock_job_repository, mock_sqs_client
+    client, mock_conversation_repository, mock_sqs_client
 ):
-    """Test POST /chat returns 200 with SSE stream containing job status."""
+    """Test POST /chat returns 200 with SSE stream containing message status."""
     body = {"question": "Hello, how are you?", "modelId": "anthropic.claude-3-haiku"}
 
     # Make request with stream=True to receive SSE
@@ -132,18 +134,19 @@ def test_post_chat_valid_question_returns_200(
         # Should have at least 2 events: queued and completed
         assert len(events) >= 2
         assert events[0]["status"] == "queued"
-        assert "job_id" in events[0]
-        assert uuid.UUID(events[0]["job_id"])  # Verify it's a valid UUID
+        assert "message_id" in events[0]
+        assert uuid.UUID(events[0]["message_id"])  # Verify it's a valid UUID
 
         # Last event should be completed
         assert events[-1]["status"] == "completed"
 
-    # Verify job was created in repository
-    mock_job_repository.create.assert_called_once()
-    created_job = mock_job_repository.create.call_args[0][0]
-    assert isinstance(created_job, job_models.ChatJob)
-    assert created_job.question == "Hello, how are you?"
-    assert created_job.model_id == "anthropic.claude-3-haiku"
+    # Verify conversation was saved with message
+    mock_conversation_repository.save.assert_called_once()
+    saved_conversation = mock_conversation_repository.save.call_args[0][0]
+    assert isinstance(saved_conversation, models.Conversation)
+    assert len(saved_conversation.messages) == 1
+    assert saved_conversation.messages[0].content == "Hello, how are you?"
+    assert saved_conversation.messages[0].status == models.MessageStatus.QUEUED
 
     # Verify message was sent to SQS
     mock_sqs_client.send_message.assert_called_once()
@@ -184,7 +187,9 @@ def test_post_chat_unsupported_model_returns_400(client, mock_model_resolution_s
     mock_model_resolution_service.resolve_model.assert_called_once_with("invalid-model")
 
 
-def test_post_chat_with_conversation_id(client, mock_job_repository, mock_sqs_client):
+def test_post_chat_with_conversation_id(
+    client, mock_conversation_repository, mock_sqs_client
+):
     """Test POST /chat with existing conversation_id."""
     conversation_id = str(uuid.uuid4())
     body = {
@@ -192,6 +197,21 @@ def test_post_chat_with_conversation_id(client, mock_job_repository, mock_sqs_cl
         "conversationId": conversation_id,
         "modelId": "anthropic.claude-3-haiku",
     }
+
+    # Mock existing conversation
+    existing_conversation = models.Conversation(
+        id=uuid.UUID(conversation_id),
+        messages=[
+            models.UserMessage(
+                content="Previous question",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                message_id=uuid.uuid4(),
+                status=models.MessageStatus.COMPLETED,
+            )
+        ],
+    )
+    mock_conversation_repository.get.return_value = existing_conversation
 
     with client.stream("POST", "/chat", json=body) as response:
         assert response.status_code == status.HTTP_200_OK
@@ -203,127 +223,155 @@ def test_post_chat_with_conversation_id(client, mock_job_repository, mock_sqs_cl
                 if event_data.get("status") in ["completed", "failed"]:
                     break
 
-    # Verify job was created with conversation_id
-    created_job = mock_job_repository.create.call_args[0][0]
-    assert str(created_job.conversation_id) == conversation_id
+    # Verify conversation was loaded
+    mock_conversation_repository.get.assert_called_once_with(uuid.UUID(conversation_id))
+
+    # Verify conversation was saved with new message
+    saved_conversation = mock_conversation_repository.save.call_args[0][0]
+    assert str(saved_conversation.id) == conversation_id
+    assert len(saved_conversation.messages) == 2  # Previous + new message
 
     # Verify SQS message includes conversation_id
     sqs_message = mock_sqs_client.send_message.call_args[0][0]
     assert sqs_message["conversation_id"] == conversation_id
 
 
-def test_get_job_by_id_returns_job(client, mock_job_repository):
-    """Test GET /jobs/{job_id} returns job details."""
-    job_id = uuid.uuid4()
-    mock_job = job_models.ChatJob(
-        job_id=job_id,
-        question="Test question",
-        model_id="anthropic.claude-3-haiku",
-        status=job_models.JobStatus.COMPLETED,
-        result={"conversation_id": str(uuid.uuid4()), "messages": []},
+def test_get_conversation_by_id_returns_conversation(
+    client, mock_conversation_repository
+):
+    """Test GET /conversations/{conversation_id} returns conversation details."""
+    conversation_id = uuid.uuid4()
+    mock_conversation = models.Conversation(
+        id=conversation_id,
+        messages=[
+            models.UserMessage(
+                content="Test question",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                message_id=uuid.uuid4(),
+                status=models.MessageStatus.COMPLETED,
+            ),
+            models.AssistantMessage(
+                content="Test answer",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                usage=models.TokenUsage(
+                    input_tokens=10, output_tokens=20, total_tokens=30
+                ),
+            ),
+        ],
     )
-    mock_job_repository.get.return_value = mock_job
+    mock_conversation_repository.get.return_value = mock_conversation
 
-    response = client.get(f"/jobs/{job_id}")
+    response = client.get(f"/conversations/{conversation_id}")
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert response_json["job_id"] == str(job_id)
-    assert response_json["status"] == "completed"
-    assert "result" in response_json
+    assert response_json["conversation_id"] == str(conversation_id)
+    assert len(response_json["messages"]) == 2
 
-    mock_job_repository.get.assert_called_once_with(job_id)
+    mock_conversation_repository.get.assert_called_once_with(conversation_id)
 
 
-def test_get_job_not_found_returns_404(client, mock_job_repository):
-    """Test GET /jobs/{job_id} returns 404 when job doesn't exist."""
-    job_id = uuid.uuid4()
-    mock_job_repository.get.return_value = None
+def test_get_conversation_not_found_returns_404(client, mock_conversation_repository):
+    """Test GET /conversations/{conversation_id} returns 404 when conversation doesn't exist."""
+    conversation_id = uuid.uuid4()
+    mock_conversation_repository.get.return_value = None
 
-    response = client.get(f"/jobs/{job_id}")
+    response = client.get(f"/conversations/{conversation_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_get_job_completed_with_result(client, mock_job_repository):
-    """Test GET /jobs/{job_id} returns completed job with full result."""
-    job_id = uuid.uuid4()
-    conversation_id = str(uuid.uuid4())
-    result = {
-        "conversation_id": conversation_id,
-        "messages": [
-            {
-                "role": "user",
-                "content": "What is AI?",
-                "model_name": "Claude Sonnet 3.7",
-                "model_id": "anthropic.claude-3-haiku",
-                "timestamp": "2024-01-01T00:00:00",
-            },
-            {
-                "role": "assistant",
-                "content": "AI is artificial intelligence",
-                "model_name": "Claude Sonnet 3.7",
-                "model_id": "anthropic.claude-3-haiku",
-                "timestamp": "2024-01-01T00:00:01",
-            },
+def test_get_conversation_with_message_statuses(client, mock_conversation_repository):
+    """Test GET /conversations/{conversation_id} returns messages with status."""
+    conversation_id = uuid.uuid4()
+    message_id = uuid.uuid4()
+    mock_conversation = models.Conversation(
+        id=conversation_id,
+        messages=[
+            models.UserMessage(
+                content="What is AI?",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                message_id=message_id,
+                status=models.MessageStatus.PROCESSING,
+            ),
         ],
-    }
-
-    mock_job = job_models.ChatJob(
-        job_id=job_id,
-        question="What is AI?",
-        model_id="anthropic.claude-3-haiku",
-        status=job_models.JobStatus.COMPLETED,
-        result=result,
     )
-    mock_job_repository.get.return_value = mock_job
+    mock_conversation_repository.get.return_value = mock_conversation
 
-    response = client.get(f"/jobs/{job_id}")
+    response = client.get(f"/conversations/{conversation_id}")
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert response_json["status"] == "completed"
-    assert response_json["result"]["conversation_id"] == conversation_id
-    assert len(response_json["result"]["messages"]) == 2
+    assert len(response_json["messages"]) == 1
+    assert response_json["messages"][0]["status"] == "processing"
+    assert response_json["messages"][0]["message_id"] == str(message_id)
 
 
-def test_get_job_failed_with_error_code(client, mock_job_repository):
-    """Test GET /jobs/{job_id} returns failed job with error details."""
-    job_id = uuid.uuid4()
-    mock_job = job_models.ChatJob(
-        job_id=job_id,
-        question="Test question",
-        model_id="anthropic.claude-3-haiku",
-        status=job_models.JobStatus.FAILED,
-        error_message="ThrottlingException: Rate limit exceeded",
-        error_code=429,
+def test_get_conversation_with_failed_message(client, mock_conversation_repository):
+    """Test GET /conversations/{conversation_id} returns failed message with error."""
+    conversation_id = uuid.uuid4()
+    message_id = uuid.uuid4()
+    mock_conversation = models.Conversation(
+        id=conversation_id,
+        messages=[
+            models.UserMessage(
+                content="Test question",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                message_id=message_id,
+                status=models.MessageStatus.FAILED,
+                error_message="ThrottlingException: Rate limit exceeded",
+                error_code=429,
+            ),
+        ],
     )
-    mock_job_repository.get.return_value = mock_job
+    mock_conversation_repository.get.return_value = mock_conversation
 
-    response = client.get(f"/jobs/{job_id}")
+    response = client.get(f"/conversations/{conversation_id}")
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert response_json["status"] == "failed"
-    assert response_json["error_message"] == "ThrottlingException: Rate limit exceeded"
-    assert response_json["error_code"] == 429
+    message = response_json["messages"][0]
+    assert message["status"] == "failed"
+    assert message["error_message"] == "ThrottlingException: Rate limit exceeded"
+    assert message["error_code"] == 429
 
 
-def test_get_job_processing_status(client, mock_job_repository):
-    """Test GET /jobs/{job_id} returns job in processing state."""
-    job_id = uuid.uuid4()
-    mock_job = job_models.ChatJob(
-        job_id=job_id,
-        question="Test question",
-        model_id="anthropic.claude-3-haiku",
-        status=job_models.JobStatus.PROCESSING,
+def test_get_conversation_with_completed_messages(client, mock_conversation_repository):
+    """Test GET /conversations/{conversation_id} returns conversation with completed exchange."""
+    conversation_id = uuid.uuid4()
+    mock_conversation = models.Conversation(
+        id=conversation_id,
+        messages=[
+            models.UserMessage(
+                content="What is AI?",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                message_id=uuid.uuid4(),
+                status=models.MessageStatus.COMPLETED,
+            ),
+            models.AssistantMessage(
+                content="AI is artificial intelligence",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                usage=models.TokenUsage(
+                    input_tokens=10, output_tokens=30, total_tokens=40
+                ),
+            ),
+        ],
     )
-    mock_job_repository.get.return_value = mock_job
+    mock_conversation_repository.get.return_value = mock_conversation
 
-    response = client.get(f"/jobs/{job_id}")
+    response = client.get(f"/conversations/{conversation_id}")
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert response_json["status"] == "processing"
-    assert response_json["result"] is None
+    assert response_json["conversation_id"] == str(conversation_id)
+    assert len(response_json["messages"]) == 2
+    assert response_json["messages"][0]["role"] == "user"
+    assert response_json["messages"][0]["status"] == "completed"
+    assert response_json["messages"][1]["role"] == "assistant"
