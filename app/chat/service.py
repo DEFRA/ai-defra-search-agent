@@ -31,12 +31,25 @@ class ChatService:
             msg = f"Conversation with id {conversation_id} not found"
             raise models.ConversationNotFoundError(msg)
 
-        user_message = models.UserMessage(
-            content=question,
-            model_id=model_id,
-            model_name=model_info.name,
-        )
-        conversation.add_message(user_message)
+        # Only add user message if it doesn't already exist (for async flow, message is pre-created)
+        # Check if the last message is a user message with matching content
+        should_add_user_message = True
+        if conversation.messages:
+            last_message = conversation.messages[-1]
+            if (
+                isinstance(last_message, models.UserMessage)
+                and last_message.content == question
+                and last_message.status in [models.MessageStatus.QUEUED, models.MessageStatus.PROCESSING]
+            ):
+                should_add_user_message = False
+
+        if should_add_user_message:
+            user_message = models.UserMessage(
+                content=question,
+                model_id=model_id,
+                model_name=model_info.name,
+            )
+            conversation.add_message(user_message)
 
         # TODO: maybe execute_flow should return both question and response so we can add
         # token count and model-id to the user message?

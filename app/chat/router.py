@@ -5,7 +5,7 @@ import uuid
 
 import fastapi
 from fastapi import status
-from sse_starlette.sse import EventSourceResponse
+from sse_starlette import EventSourceResponse
 
 from app.chat import api_schemas, dependencies, models
 from app.common.event_broker import get_event_broker
@@ -18,11 +18,11 @@ router = fastapi.APIRouter(tags=["chat"])
 
 @router.post(
     "/chat",
-    status_code=status.HTTP_200_OK,
-    summary="Send a message to the chatbot with SSE streaming",
-    description="Sends a user question to the specified model and streams the response status updates via Server-Sent Events.",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Send a message to the chatbot",
+    description="Sends a user question to the specified model and queues it for processing. Returns conversation and message IDs for streaming via GET /chat/stream/{message_id}.",
     responses={
-        200: {"description": "SSE stream of message status updates"},
+        202: {"description": "Message queued successfully"},
         400: {
             "description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"
         },
@@ -75,10 +75,30 @@ async def chat(
             }
         )
 
+    # Return immediately with IDs for client to open SSE stream
+    return {
+        "message_id": str(user_message.message_id),
+        "conversation_id": str(conversation.id),
+        "status": models.MessageStatus.QUEUED.value,
+    }
+
+
+@router.get(
+    "/chat/stream/{message_id}",
+    summary="Stream message status updates via SSE",
+    description="Opens a Server-Sent Events stream for status updates of a specific message.",
+    responses={
+        200: {"description": "SSE stream of message status updates"},
+        404: {"description": "Message not found"},
+    },
+)
+async def chat_stream(
+    message_id: uuid.UUID,
+):
     # Stream message status updates via SSE
     async def event_generator():
         event_broker = get_event_broker()
-        queue = await event_broker.subscribe(str(user_message.message_id))
+        queue = await event_broker.subscribe(str(message_id))
 
         try:
             # Send initial queued status
@@ -86,8 +106,7 @@ async def chat(
                 "event": "status",
                 "data": json.dumps(
                     {
-                        "message_id": str(user_message.message_id),
-                        "conversation_id": str(conversation.id),
+                        "message_id": str(message_id),
                         "status": models.MessageStatus.QUEUED.value,
                     }
                 ),
@@ -115,10 +134,10 @@ async def chat(
 
         except asyncio.CancelledError:
             logger.info(
-                "SSE connection cancelled for message %s", user_message.message_id
+                "SSE connection cancelled for message %s", message_id
             )
         finally:
-            await event_broker.unsubscribe(str(user_message.message_id), queue)
+            await event_broker.unsubscribe(str(message_id), queue)
 
     return EventSourceResponse(event_generator(), ping=None)
 
