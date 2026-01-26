@@ -1,5 +1,3 @@
-import asyncio
-import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
@@ -38,31 +36,12 @@ def mock_model_resolution_service():
 
 
 @pytest.fixture
-def mock_event_broker():
-    """Create a mock event broker."""
-    mock = AsyncMock()
-    # Mock queue that returns a completed event immediately
-    mock_queue = AsyncMock()
-    mock_queue.get = AsyncMock(
-        return_value={
-            "status": "completed",
-            "message_id": "test-message-id",
-            "result": {"conversation_id": "test-conv-id", "messages": []},
-        }
-    )
-    mock.subscribe = AsyncMock(return_value=mock_queue)
-    mock.unsubscribe = AsyncMock()
-    return mock
-
-
-@pytest.fixture
 def client(
     monkeypatch,
     mongo_uri,
     mock_conversation_repository,
     mock_sqs_client,
     mock_model_resolution_service,
-    mock_event_broker,
 ):
     monkeypatch.setenv("MONGO_URI", mongo_uri)
 
@@ -87,58 +66,33 @@ def client(
         lambda: mock_model_resolution_service
     )
 
-    # Override the event broker
-    from app.common import event_broker
-
-    event_broker._broker = mock_event_broker
-
     # Mock worker_task in app state for health checks
     mock_task = MagicMock()
     mock_task.done.return_value = False
     app.state.worker_task = mock_task
-
-    # Reset sse-starlette's app status event for each test
-    from sse_starlette.sse import AppStatus
-
-    AppStatus.should_exit_event = asyncio.Event()
 
     test_client = fastapi.testclient.TestClient(app)
 
     yield test_client
 
     app.dependency_overrides.clear()
-    event_broker._broker = None
 
 
-def test_post_chat_valid_question_returns_200(
+def test_post_chat_valid_question_returns_202(
     client, mock_conversation_repository, mock_sqs_client
 ):
-    """Test POST /chat returns 200 with SSE stream containing message status."""
+    """Test POST /chat returns 202 with queued message details."""
     body = {"question": "Hello, how are you?", "modelId": "anthropic.claude-3-haiku"}
 
-    # Make request with stream=True to receive SSE
-    with client.stream("POST", "/chat", json=body) as response:
-        assert response.status_code == status.HTTP_200_OK
-        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+    response = client.post("/chat", json=body)
 
-        # Read SSE events
-        events = []
-        for line in response.iter_lines():
-            if line.startswith("data:"):
-                event_data = json.loads(line[5:].strip())
-                events.append(event_data)
-                # Stop after getting a terminal status
-                if event_data.get("status") in ["completed", "failed"]:
-                    break
-
-        # Should have at least 2 events: queued and completed
-        assert len(events) >= 2
-        assert events[0]["status"] == "queued"
-        assert "message_id" in events[0]
-        assert uuid.UUID(events[0]["message_id"])  # Verify it's a valid UUID
-
-        # Last event should be completed
-        assert events[-1]["status"] == "completed"
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    response_json = response.json()
+    assert response_json["status"] == "queued"
+    assert "message_id" in response_json
+    assert "conversation_id" in response_json
+    assert uuid.UUID(response_json["message_id"])  # Verify it's a valid UUID
+    assert uuid.UUID(response_json["conversation_id"])  # Verify it's a valid UUID
 
     # Verify conversation was saved with message
     mock_conversation_repository.save.assert_called_once()
@@ -213,15 +167,9 @@ def test_post_chat_with_conversation_id(
     )
     mock_conversation_repository.get.return_value = existing_conversation
 
-    with client.stream("POST", "/chat", json=body) as response:
-        assert response.status_code == status.HTTP_200_OK
+    response = client.post("/chat", json=body)
 
-        # Read at least the first event to consume the stream
-        for line in response.iter_lines():
-            if line.startswith("data:"):
-                event_data = json.loads(line[5:].strip())
-                if event_data.get("status") in ["completed", "failed"]:
-                    break
+    assert response.status_code == status.HTTP_202_ACCEPTED
 
     # Verify conversation was loaded
     mock_conversation_repository.get.assert_called_once_with(uuid.UUID(conversation_id))

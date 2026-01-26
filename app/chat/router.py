@@ -1,14 +1,10 @@
-import asyncio
-import json
 import logging
 import uuid
 
 import fastapi
 from fastapi import status
-from sse_starlette import EventSourceResponse
 
 from app.chat import api_schemas, dependencies, models
-from app.common.event_broker import get_event_broker
 from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
@@ -81,65 +77,6 @@ async def chat(
         "conversation_id": str(conversation.id),
         "status": models.MessageStatus.QUEUED.value,
     }
-
-
-@router.get(
-    "/chat/stream/{message_id}",
-    summary="Stream message status updates via SSE",
-    description="Opens a Server-Sent Events stream for status updates of a specific message.",
-    responses={
-        200: {"description": "SSE stream of message status updates"},
-        404: {"description": "Message not found"},
-    },
-)
-async def chat_stream(
-    message_id: uuid.UUID,
-):
-    # Stream message status updates via SSE
-    async def event_generator():
-        event_broker = get_event_broker()
-        queue = await event_broker.subscribe(str(message_id))
-
-        try:
-            # Send initial queued status
-            yield {
-                "event": "status",
-                "data": json.dumps(
-                    {
-                        "message_id": str(message_id),
-                        "status": models.MessageStatus.QUEUED.value,
-                    }
-                ),
-            }
-
-            # Stream updates from event broker
-            while True:
-                try:
-                    event = await asyncio.wait_for(queue.get(), timeout=60.0)
-                    yield {
-                        "event": "status",
-                        "data": json.dumps(event),
-                    }
-
-                    # End stream after terminal status
-                    if event.get("status") in [
-                        models.MessageStatus.COMPLETED.value,
-                        models.MessageStatus.FAILED.value,
-                    ]:
-                        break
-
-                except TimeoutError:
-                    # Send keepalive comment
-                    yield {"event": "keepalive", "data": ""}
-
-        except asyncio.CancelledError:
-            logger.info(
-                "SSE connection cancelled for message %s", message_id
-            )
-        finally:
-            await event_broker.unsubscribe(str(message_id), queue)
-
-    return EventSourceResponse(event_generator(), ping=None)
 
 
 @router.get(

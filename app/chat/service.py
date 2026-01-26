@@ -39,7 +39,8 @@ class ChatService:
             if (
                 isinstance(last_message, models.UserMessage)
                 and last_message.content == question
-                and last_message.status in [models.MessageStatus.QUEUED, models.MessageStatus.PROCESSING]
+                and last_message.status
+                in [models.MessageStatus.QUEUED, models.MessageStatus.PROCESSING]
             ):
                 should_add_user_message = False
 

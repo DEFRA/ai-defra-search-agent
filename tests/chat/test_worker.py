@@ -35,13 +35,9 @@ class TestProcessJobMessage:
         }
 
     @pytest.mark.asyncio
-    async def test_process_job_success(self, mock_services, sample_message, mocker):
+    async def test_process_job_success(self, mock_services, sample_message):
         """Test successful message processing."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock conversation response
         mock_conversation = MagicMock()
@@ -80,22 +76,15 @@ class TestProcessJobMessage:
         second_call = conversation_repository.update_message_status.call_args_list[1]
         assert second_call[1]["status"] == models.MessageStatus.COMPLETED
 
-        # Verify event broker publishes
-        assert mock_event_broker.publish.call_count == 2
-
         # Verify message deletion
         sqs_client.delete_message.assert_awaited_once_with("test-receipt-handle")
 
     @pytest.mark.asyncio
     async def test_process_job_conversation_not_found(
-        self, mock_services, sample_message, mocker
+        self, mock_services, sample_message
     ):
         """Test handling of conversation not found error."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock to raise ConversationNotFoundError
         chat_service.execute_chat.side_effect = models.ConversationNotFoundError(
@@ -126,14 +115,10 @@ class TestProcessJobMessage:
 
     @pytest.mark.asyncio
     async def test_process_job_throttling_exception(
-        self, mock_services, sample_message, mocker
+        self, mock_services, sample_message
     ):
         """Test handling of AWS throttling exception."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock to raise ClientError with ThrottlingException
         error_response = {
@@ -159,14 +144,10 @@ class TestProcessJobMessage:
 
     @pytest.mark.asyncio
     async def test_process_job_service_unavailable_exception(
-        self, mock_services, sample_message, mocker
+        self, mock_services, sample_message
     ):
         """Test handling of AWS service unavailable exception."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock to raise ClientError with ServiceUnavailableException
         error_response = {
@@ -195,14 +176,10 @@ class TestProcessJobMessage:
 
     @pytest.mark.asyncio
     async def test_process_job_internal_server_exception(
-        self, mock_services, sample_message, mocker
+        self, mock_services, sample_message
     ):
         """Test handling of AWS internal server exception."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock to raise ClientError with InternalServerException
         error_response = {
@@ -228,14 +205,10 @@ class TestProcessJobMessage:
 
     @pytest.mark.asyncio
     async def test_process_job_generic_client_error(
-        self, mock_services, sample_message, mocker
+        self, mock_services, sample_message
     ):
         """Test handling of generic AWS client error."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock to raise ClientError with unknown error code
         error_response = {
@@ -260,15 +233,9 @@ class TestProcessJobMessage:
         sqs_client.delete_message.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_process_job_generic_exception(
-        self, mock_services, sample_message, mocker
-    ):
+    async def test_process_job_generic_exception(self, mock_services, sample_message):
         """Test handling of generic exception."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         # Setup mock to raise generic exception
         chat_service.execute_chat.side_effect = Exception("Test error")
@@ -289,14 +256,10 @@ class TestProcessJobMessage:
 
     @pytest.mark.asyncio
     async def test_process_job_deletes_message_on_exception(
-        self, mock_services, sample_message, mocker
+        self, mock_services, sample_message
     ):
         """Test that SQS message is always deleted even when an exception occurs."""
         chat_service, conversation_repository, sqs_client = mock_services
-
-        # Mock event broker
-        mock_event_broker = AsyncMock()
-        mocker.patch("app.chat.worker.get_event_broker", return_value=mock_event_broker)
 
         chat_service.execute_chat.side_effect = Exception("Test error")
 

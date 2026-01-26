@@ -8,7 +8,6 @@ from botocore.exceptions import ClientError
 from fastapi import status
 
 from app.chat import dependencies, models
-from app.common.event_broker import get_event_broker
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +27,12 @@ def get_last_heartbeat() -> datetime | None:
 
 async def _update_message_failed(
     conversation_repository,
-    event_broker,
     conversation_id: uuid.UUID | None,
     message_id: uuid.UUID,
     error_message: str,
     error_code: int,
 ) -> None:
-    """Update message status to FAILED and publish failure event."""
+    """Update message status to FAILED."""
     if conversation_id:
         await conversation_repository.update_message_status(
             conversation_id=conversation_id,
@@ -43,15 +41,6 @@ async def _update_message_failed(
             error_message=error_message,
             error_code=error_code,
         )
-    await event_broker.publish(
-        str(message_id),
-        {
-            "status": models.MessageStatus.FAILED.value,
-            "message_id": str(message_id),
-            "error_message": error_message,
-            "error_code": error_code,
-        },
-    )
 
 
 async def process_job_message(
@@ -65,7 +54,6 @@ async def process_job_message(
     question = body["question"]
     model_id = body["model_id"]
     receipt_handle = message["ReceiptHandle"]
-    event_broker = get_event_broker()
 
     try:
         # Update message status to PROCESSING
@@ -75,13 +63,6 @@ async def process_job_message(
                 message_id=message_id,
                 status=models.MessageStatus.PROCESSING,
             )
-        await event_broker.publish(
-            str(message_id),
-            {
-                "status": models.MessageStatus.PROCESSING.value,
-                "message_id": str(message_id),
-            },
-        )
 
         # Execute chat
         conversation = await chat_service.execute_chat(
@@ -97,35 +78,9 @@ async def process_job_message(
             status=models.MessageStatus.COMPLETED,
         )
 
-        # Publish completion event with full conversation
-        result = {
-            "conversation_id": str(conversation.id),
-            "messages": [
-                {
-                    "message_id": str(msg.message_id),
-                    "role": msg.role,
-                    "content": msg.content,
-                    "model_name": msg.model_name,
-                    "model_id": msg.model_id,
-                    "status": msg.status.value,
-                    "timestamp": msg.timestamp.isoformat(),
-                }
-                for msg in conversation.messages
-            ],
-        }
-
-        await event_broker.publish(
-            str(message_id),
-            {
-                "status": models.MessageStatus.COMPLETED.value,
-                "message_id": str(message_id),
-                "result": result,
-            },
-        )
     except models.ConversationNotFoundError as e:
         await _update_message_failed(
             conversation_repository,
-            event_broker,
             conversation_id,
             message_id,
             f"Conversation not found: {e}",
@@ -149,7 +104,6 @@ async def process_job_message(
 
         await _update_message_failed(
             conversation_repository,
-            event_broker,
             conversation_id,
             message_id,
             f"{error_type}: {error_msg}",
@@ -159,7 +113,6 @@ async def process_job_message(
         logger.exception("Failed to process message %s", message_id)
         await _update_message_failed(
             conversation_repository,
-            event_broker,
             conversation_id,
             message_id,
             str(e),
