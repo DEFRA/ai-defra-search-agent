@@ -30,13 +30,13 @@ def test_chat():
     message_id = result["message_id"]
     status = result["status"]
 
-    print(f"\n✓ Message queued successfully")
+    print("\n✓ Message queued successfully")
     print(f"  Conversation ID: {conversation_id}")
     print(f"  Message ID: {message_id}")
     print(f"  Initial Status: {status}")
 
     # Step 2: Poll for results
-    print(f"\n--- Polling for Results ---\n")
+    print("\n--- Polling for Results ---\n")
     conversation_url = f"http://localhost:8086/conversations/{conversation_id}"
 
     max_attempts = 30
@@ -91,7 +91,9 @@ def test_chat():
 
             print()  # New line for next attempt
 
-    print(f"\n✗ Timeout: Message did not complete within {max_attempts * poll_interval} seconds")
+    print(
+        f"\n✗ Timeout: Message did not complete within {max_attempts * poll_interval} seconds"
+    )
 
 
 if __name__ == "__main__":
