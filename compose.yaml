@@ -70,5 +70,4 @@ volumes:
 
 networks:
   cdp-tenant:
-    external: true
-    name: ai-defra-search-data_cdp-tenant
+    driver: bridge
