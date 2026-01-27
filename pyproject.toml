@@ -5,7 +5,7 @@ description = "ai-defra-search-agent"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "boto3>=1.41.0,<1.42.31",
+    "boto3==1.42.30",
     "aiohttp==3.13.3",
     "anthropic==0.64.0",
     "asgi-logger==0.1.0",
