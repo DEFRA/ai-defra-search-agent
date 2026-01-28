@@ -1,10 +1,10 @@
 import logging
+import uuid
 
 import fastapi
-from botocore.exceptions import ClientError
 from fastapi import status
 
-from app.chat import api_schemas, dependencies, models, service
+from app.chat import api_schemas, dependencies, models
 from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
@@ -14,54 +14,99 @@ router = fastapi.APIRouter(tags=["chat"])
 
 @router.post(
     "/chat",
-    response_model=api_schemas.ChatResponse,
+    status_code=status.HTTP_202_ACCEPTED,
     summary="Send a message to the chatbot",
-    description="Sends a user question to the specified model and retrieves the response along with the conversation history.",
+    description="Sends a user question to the specified model and queues it for processing. Returns conversation and message IDs for streaming via GET /chat/stream/{message_id}.",
     responses={
+        202: {"description": "Message queued successfully"},
         400: {
             "description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"
         },
-        404: {"description": "Conversation not found"},
-        429: {"description": "Too many requests - rate limit exceeded"},
-        500: {"description": "Internal server error from AWS Bedrock"},
-        502: {"description": "Bad gateway - AWS service error"},
-        503: {"description": "Service unavailable"},
     },
 )
 async def chat(
     request: api_schemas.ChatRequest,
-    chat_service: service.ChatService = fastapi.Depends(dependencies.get_chat_service),
+    conversation_repository=fastapi.Depends(dependencies.get_conversation_repository),
+    sqs_client=fastapi.Depends(dependencies.get_sqs_client),
+    model_resolution_service=fastapi.Depends(dependencies.get_model_resolution_service),
 ):
+    # Validate model immediately
     try:
-        conversation = await chat_service.execute_chat(
-            question=request.question,
-            model_id=request.model_id,
-            conversation_id=request.conversation_id,
-        )
-    except models.ConversationNotFoundError as e:
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from None
+        resolved_model = model_resolution_service.resolve_model(request.model_id)
     except UnsupportedModelError as e:
         raise fastapi.HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from None
-    except ClientError as e:
-        raise fastapi.HTTPException(
-            status_code=e.response["ResponseMetadata"]["HTTPStatusCode"],
-            detail=str(e),
-        ) from None
 
-    return api_schemas.ChatResponse(
-        conversation_id=conversation.id,
-        messages=[
-            api_schemas.MessageResponse(
-                role=message.role,
-                content=message.content,
-                model_name=message.model_name,
-                model_id=message.model_id,
-                timestamp=message.timestamp,
-            )
-            for message in conversation.messages
-        ],
+    # Create user message with QUEUED status
+    user_message = models.UserMessage(
+        content=request.question,
+        model_id=request.model_id,
+        model_name=resolved_model.name if resolved_model else request.model_id,
+        status=models.MessageStatus.QUEUED,
     )
+
+    # Get or create conversation
+    if request.conversation_id:
+        conversation = await conversation_repository.get(request.conversation_id)
+        if not conversation:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+            )
+        conversation.add_message(user_message)
+    else:
+        conversation = models.Conversation(messages=[user_message])
+
+    # Save conversation with queued message
+    await conversation_repository.save(conversation)
+
+    # Queue message for processing
+    async with sqs_client:
+        await sqs_client.send_message(
+            {
+                "message_id": str(user_message.message_id),
+                "conversation_id": str(conversation.id),
+                "question": request.question,
+                "model_id": request.model_id,
+            }
+        )
+
+    # Return immediately with IDs for client to open SSE stream
+    return {
+        "message_id": str(user_message.message_id),
+        "conversation_id": str(conversation.id),
+        "status": models.MessageStatus.QUEUED.value,
+    }
+
+
+@router.get(
+    "/conversations/{conversation_id}",
+    summary="Get conversation by ID",
+    description="Retrieve a conversation with all its messages.",
+)
+async def get_conversation(
+    conversation_id: uuid.UUID,
+    conversation_repository=fastapi.Depends(dependencies.get_conversation_repository),
+):
+    conversation = await conversation_repository.get(conversation_id)
+    if conversation is None:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+        )
+    return {
+        "conversation_id": str(conversation.id),
+        "messages": [
+            {
+                "message_id": str(msg.message_id),
+                "role": msg.role,
+                "content": msg.content,
+                "model_id": msg.model_id,
+                "model_name": msg.model_name,
+                "status": msg.status.value,
+                "error_message": msg.error_message,
+                "error_code": msg.error_code,
+                "timestamp": msg.timestamp.isoformat(),
+            }
+            for msg in conversation.messages
+        ],
+    }

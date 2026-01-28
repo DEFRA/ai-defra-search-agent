@@ -16,6 +16,17 @@ class AbstractConversationRepository(abc.ABC):
     async def get(self, conversation_id: uuid.UUID) -> models.Conversation | None:
         """Get the conversation from the repository."""
 
+    @abc.abstractmethod
+    async def update_message_status(
+        self,
+        conversation_id: uuid.UUID,
+        message_id: uuid.UUID,
+        status: models.MessageStatus,
+        error_message: str | None = None,
+        error_code: int | None = None,
+    ) -> None:
+        """Update the status of a specific message."""
+
 
 class MongoConversationRepository(AbstractConversationRepository):
     def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
@@ -32,10 +43,14 @@ class MongoConversationRepository(AbstractConversationRepository):
                     "conversation_id": conversation.id,
                     "messages": [
                         {
+                            "message_id": msg.message_id,
                             "role": msg.role,
                             "content": msg.content,
                             "model": msg.model_id,
                             "model_name": msg.model_name,
+                            "status": msg.status.value,
+                            "error_message": msg.error_message,
+                            "error_code": msg.error_code,
                             "timestamp": msg.timestamp,
                             "usage": dataclasses.asdict(msg.usage)
                             if isinstance(msg, models.AssistantMessage)
@@ -63,6 +78,10 @@ class MongoConversationRepository(AbstractConversationRepository):
             model_id = msg["model"]
             model_name = msg["model_name"]
             timestamp = msg["timestamp"]
+            message_id = msg.get("message_id")
+            status_str = msg.get("status", models.MessageStatus.COMPLETED.value)
+            error_message = msg.get("error_message")
+            error_code = msg.get("error_code")
 
             common_args = {
                 "role": role,
@@ -70,7 +89,13 @@ class MongoConversationRepository(AbstractConversationRepository):
                 "model_id": model_id,
                 "model_name": model_name,
                 "timestamp": timestamp,
+                "status": models.MessageStatus(status_str),
+                "error_message": error_message,
+                "error_code": error_code,
             }
+
+            if message_id:
+                common_args["message_id"] = message_id
 
             if role == "user":
                 messages.append(models.UserMessage(**common_args))
@@ -89,4 +114,26 @@ class MongoConversationRepository(AbstractConversationRepository):
         return models.Conversation(
             id=conversation["conversation_id"],
             messages=messages,
+        )
+
+    async def update_message_status(
+        self,
+        conversation_id: uuid.UUID,
+        message_id: uuid.UUID,
+        status: models.MessageStatus,
+        error_message: str | None = None,
+        error_code: int | None = None,
+    ) -> None:
+        """Update the status of a specific message in a conversation."""
+        update_data = {
+            "messages.$.status": status.value,
+        }
+        if error_message is not None:
+            update_data["messages.$.error_message"] = error_message
+        if error_code is not None:
+            update_data["messages.$.error_code"] = error_code
+
+        await self.conversations.update_one(
+            {"conversation_id": conversation_id, "messages.message_id": message_id},
+            {"$set": update_data},
         )
