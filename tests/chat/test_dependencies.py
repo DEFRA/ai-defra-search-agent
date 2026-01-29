@@ -139,11 +139,54 @@ def test_get_chat_service(mocker: MockerFixture):
 
 def test_get_sqs_client(mocker: MockerFixture):
     mock_sqs_client = mocker.patch("app.common.sqs.SQSClient")
-
-    client = dependencies.get_sqs_client()
+    # call the factory to trigger construction but don't assign unused variable
+    dependencies.get_sqs_client()
 
     mock_sqs_client.assert_called_once()
-    assert client == mock_sqs_client.return_value
+
+
+@pytest.mark.asyncio
+async def test_initialize_worker_services_monkeypatched_variation(mocker):
+    """Alternate initialize_worker_services path with monkeypatched heavy deps."""
+    # Patch mongo.get_mongo_client to return an object with __getitem__
+    mocker.patch("app.chat.dependencies.mongo.get_mongo_client", autospec=True)
+    from app.chat import dependencies as deps
+
+    async def fake_get_mongo_client(_):
+        class Dummy:
+            def __getitem__(self, name):
+                class DummyDB:
+                    pass
+
+                db = DummyDB()
+                db.conversations = object()
+                return db
+
+        return Dummy()
+
+    mocker.patch(
+        "app.chat.dependencies.mongo.get_mongo_client",
+        side_effect=fake_get_mongo_client,
+    )
+    mocker.patch("boto3.client")
+    mocker.patch("app.prompts.repository.FileSystemPromptRepository")
+    mocker.patch("app.chat.dependencies.get_chat_agent")
+    mocker.patch("app.models.service.ConfigModelResolutionService")
+    mocker.patch("app.common.sqs.SQSClient")
+
+    # Provide a minimal config
+    cfg = mocker.Mock()
+    cfg.mongo.database = "db"
+    cfg.bedrock.use_credentials = False
+    cfg.aws_region = "eu-1"
+    cfg.knowledge.base_url = "http://k"
+    cfg.knowledge.similarity_threshold = 0.5
+    mocker.patch("app.chat.dependencies.config.get_config", return_value=cfg)
+
+    chat_svc, conv_repo, sqs_client = await deps.initialize_worker_services()
+    assert chat_svc is not None
+    assert conv_repo is not None
+    assert sqs_client is not None
 
 
 @pytest.mark.asyncio

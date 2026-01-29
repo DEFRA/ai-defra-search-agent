@@ -1,3 +1,4 @@
+import dataclasses
 import uuid
 
 import pytest
@@ -377,3 +378,35 @@ def test_build_knowledge_reference_str_formats_correctly(chat_service):
 
     result = chat_service._build_knowledge_reference_str(sources)
     assert result == expected_output
+
+
+@pytest.mark.asyncio
+async def test_execute_chat_does_not_duplicate_user_message(
+    chat_service, mock_agent, mock_repository
+):
+    # When the last message is a user message with same content and status QUEUED/PROCESSING,
+    # ChatService should not add a duplicate user message.
+    convo = models.Conversation(id=str(uuid.uuid4()))
+    last_user = models.UserMessage(
+        content=MOCK_QUESTION, model_id=MOCK_MODEL_ID, model_name=MOCK_MODEL_NAME
+    )
+    # set status to QUEUED to simulate already-queued message
+    last_user = dataclasses.replace(last_user, status=models.MessageStatus.QUEUED)
+    convo.messages.append(last_user)
+
+    mock_repository.get.return_value = convo
+
+    mock_agent.execute_flow.return_value = [
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_1,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
+        )
+    ]
+
+    result = await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID, convo.id)
+
+    # Should not duplicate the user message; still only one user message at index 0
+    user_messages = [m for m in result.messages if m.role == "user"]
+    assert len(user_messages) == 1
