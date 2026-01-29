@@ -14,6 +14,19 @@ def mock_services():
     chat_service = AsyncMock()
     conversation_repository = AsyncMock()
     sqs_client = AsyncMock()
+
+    # Emulate repository behaviour for claiming: when a real repository
+    # reserves a message it will also set the message status to PROCESSING.
+    async def _mock_claim(conversation_id, message_id):
+        await conversation_repository.update_message_status(
+            conversation_id=conversation_id,
+            message_id=message_id,
+            status=models.MessageStatus.PROCESSING,
+        )
+        return True
+
+    conversation_repository.claim_message = AsyncMock(side_effect=_mock_claim)
+
     return chat_service, conversation_repository, sqs_client
 
 

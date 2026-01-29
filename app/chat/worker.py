@@ -69,6 +69,48 @@ async def _update_message_failed(
         )
 
 
+async def _claim_or_skip(
+    conversation_repository,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+) -> bool:
+    """Attempt to reserve a queued message (set to PROCESSING) or acknowledge & skip it.
+
+    This performs a single repository update that checks the current
+    status and sets it to `processing`. If the reservation fails, the helper inspects the
+    current message status and acknowledges the SQS message when it's
+    already completed, missing, or otherwise being handled by another
+    worker.
+
+    Returns True when processing should be skipped (message acknowledged or
+    another worker is handling it). Returns False when the caller should
+    proceed to process the message.
+    """
+
+    claimed = await conversation_repository.claim_message(
+        conversation_id=conversation_id, message_id=message_id
+    )
+    if claimed:
+        return False
+
+    current_status = await conversation_repository.get_message_status(
+        conversation_id=conversation_id, message_id=message_id
+    )
+    if current_status is None:
+        logger.warning(
+            "No DB record found for message %s; acknowledged and skipping", message_id
+        )
+        return True
+
+    if current_status == models.MessageStatus.COMPLETED:
+        # Already processed successfully
+        return True
+
+    # Not queued and not completed; skip processing to avoid duplicate work.
+    logger.info("Skipping message %s with status %s", message_id, current_status)
+    return True
+
+
 async def process_job_message(
     message: dict, chat_service, conversation_repository, sqs_client
 ) -> None:
@@ -100,13 +142,17 @@ async def process_job_message(
     receipt_handle = message["ReceiptHandle"]
 
     try:
-        # Update message status to PROCESSING
+        # Attempt to reserve the queued message for processing by checking
+        # the current status and setting it to `processing` in a single
+        # repository update. If the reservation fails, the helper will
+        # acknowledge the message and indicate that processing should be
+        # skipped.
         if conversation_id:
-            await conversation_repository.update_message_status(
-                conversation_id=conversation_id,
-                message_id=message_id,
-                status=models.MessageStatus.PROCESSING,
+            should_skip = await _claim_or_skip(
+                conversation_repository, conversation_id, message_id
             )
+            if should_skip:
+                return
 
         # Execute chat
         conversation = await chat_service.execute_chat(
