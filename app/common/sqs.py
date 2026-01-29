@@ -22,7 +22,7 @@ class SQSClient:
     """
 
     def __init__(self):
-        self.queue_url = config.config.chat_queue_url
+        self.queue_url = config.config.sqs_chat_queue_url
         self.region_name = config.config.aws_region
         self.endpoint_url = config.config.localstack_url
         self._client = None

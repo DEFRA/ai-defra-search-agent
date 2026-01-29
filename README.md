@@ -82,6 +82,11 @@ The following environment variables can be configured for the application:
 | `AWS_BEARER_TOKEN_BEDROCK` | No | N/A | Bearer token for AWS Bedrock authentication |
 | `AWS_BEDROCK_DEFAULT_GENERATION_MODEL` | Yes | N/A | Default AI model to use for generation |
 | `AWS_BEDROCK_AVAILABLE_GENERATION_MODELS` | Yes | N/A | JSON array of available AI models for generation |
+| `KNOWLEDGE_BASE_URL` | No | N/A | URL of the knowledge base service used for RAG lookup |
+| `KNOWLEDGE_GROUP_ID` | No | N/A | Knowledge group identifier for retrieval queries |
+| `KNOWLEDGE_SIMILARITY_THRESHOLD` | No | `0.5` | Similarity threshold for knowledge retrieval matches (0-1) |
+| `LOCALSTACK_URL` | No | N/A | Base URL for LocalStack when running AWS services locally |
+| `SQS_CHAT_QUEUE_URL` | No | N/A | SQS queue URL used by the worker for chat job messages |
 
 In CDP, environment variables and secrets need to be set using CDP conventions:
 - [CDP App Config](https://github.com/DEFRA/cdp-documentation/blob/main/how-to/config.md)
@@ -269,6 +274,25 @@ This command will:
 2. Generate coverage reports in the `./coverage` directory
 
 Testing follows the [FastAPI documented approach](https://fastapi.tiangolo.com/tutorial/testing/), using pytest and Starlette.
+
+### Manual test: queue a message and retrieve conversation
+
+Start the service locally (for example with Docker Compose), then queue a message and fetch the conversation:
+
+```bash
+# Queue a message (returns `conversation_id` and `message_id`)
+curl -X POST http://localhost:8086/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is AI?",
+    "model_id": "anthropic.claude-3-haiku"
+  }'
+
+# Retrieve the conversation by ID (replace <conversation_id> with the value returned above)
+curl http://localhost:8086/conversations/<conversation_id>
+```
+
+The POST returns `conversation_id` and `message_id` which you can use to poll the GET endpoint or open an SSE stream if configured.
 
 ## Security Scanning
 

@@ -113,7 +113,6 @@ class BedrockInferenceService:
         if not self.knowledge_retriever:
             return []
 
-        # TODO: Make more robust - function to filter only last _user_message?
         query = messages[-1]["content"][0]["text"]
         return self.knowledge_retriever.search(group_id=knowledge_group_id, query=query)
 

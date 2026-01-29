@@ -33,7 +33,7 @@ async def test_sqs_client_send_receive_delete(monkeypatch):
 
     # Provide a fake config so client picks up queue and endpoint values
     class Cfg:
-        chat_queue_url = "http://example"
+        sqs_chat_queue_url = "http://example"
         aws_region = "eu-west-2"
         localstack_url = None
 

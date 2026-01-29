@@ -113,7 +113,7 @@ class AppConfig(pydantic_settings.BaseSettings):
     log_config: str = pydantic.Field(...)
     aws_region: str = pydantic.Field(...)
     localstack_url: str | None = None
-    chat_queue_url: str = pydantic.Field(..., alias="CHAT_QUEUE_URL")
+    sqs_chat_queue_url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
     http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"

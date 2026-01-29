@@ -52,8 +52,7 @@ class ChatService:
             )
             conversation.add_message(user_message)
 
-        # TODO: maybe execute_flow should return both question and response so we can add
-        # token count and model-id to the user message?
+        # token count and model-id are currently not attached to the user message
         agent_request = models.AgentRequest(
             question=question,
             model_id=model_id,
@@ -82,7 +81,6 @@ class ChatService:
 
         return conversation
 
-    # TODO: This should not be concerned with markdown formatting, this is a display concern
     def _build_knowledge_reference_str(self, sources: list[models.Source]) -> str:
         formatted_sources = []
         for i, source in enumerate(sources, 1):

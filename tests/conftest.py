@@ -55,7 +55,7 @@ def set_test_env(monkeypatch, bedrock_generation_models):
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")  # noqa: S105
     monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-base.com")
     monkeypatch.setenv(
-        "CHAT_QUEUE_URL",
+        "SQS_CHAT_QUEUE_URL",
         "http://sqs.eu-central-1.localstack:4566/000000000000/chat-job-queue",
     )
     monkeypatch.setenv("KNOWLEDGE_GROUP_ID", "kg-1234567890")
