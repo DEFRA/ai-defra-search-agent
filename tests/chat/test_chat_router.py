@@ -179,8 +179,13 @@ def test_post_chat_with_conversation_id(
     assert str(saved_conversation.id) == conversation_id
     assert len(saved_conversation.messages) == 2  # Previous + new message
 
-    # Verify SQS message includes conversation_id
+    # Verify SQS message includes conversation_id (client may send JSON string)
+    import json as _json
+
     sqs_message = mock_sqs_client.send_message.call_args[0][0]
+    if isinstance(sqs_message, str):
+        sqs_message = _json.loads(sqs_message)
+
     assert sqs_message["conversation_id"] == conversation_id
 
 

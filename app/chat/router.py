@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 
@@ -30,6 +31,14 @@ async def chat(
     sqs_client=fastapi.Depends(dependencies.get_sqs_client),
     model_resolution_service=fastapi.Depends(dependencies.get_model_resolution_service),
 ):
+    """Accept a chat request and enqueue it for asynchronous processing.
+
+    The endpoint validates the requested model synchronously, persists a
+    conversation/message with status `QUEUED` and sends a job message to the
+    configured SQS queue. The response contains the `conversation_id` and
+    `message_id` so clients can stream or poll for updates.
+    """
+
     # Validate model immediately
     try:
         resolved_model = model_resolution_service.resolve_model(request.model_id)
@@ -60,15 +69,18 @@ async def chat(
     # Save conversation with queued message
     await conversation_repository.save(conversation)
 
-    # Queue message for processing
+    # Queue message for processing (serialize at call site so SQSClient
+    # remains a transport-only helper)
     async with sqs_client:
         await sqs_client.send_message(
-            {
-                "message_id": str(user_message.message_id),
-                "conversation_id": str(conversation.id),
-                "question": request.question,
-                "model_id": request.model_id,
-            }
+            json.dumps(
+                {
+                    "message_id": str(user_message.message_id),
+                    "conversation_id": str(conversation.id),
+                    "question": request.question,
+                    "model_id": request.model_id,
+                }
+            )
         )
 
     # Return immediately with IDs for client to open SSE stream
@@ -88,6 +100,13 @@ async def get_conversation(
     conversation_id: uuid.UUID,
     conversation_repository=fastapi.Depends(dependencies.get_conversation_repository),
 ):
+    """Retrieve a conversation by its UUID.
+
+    Returns a JSON serialisable dictionary containing the conversation ID
+    and a list of messages with their status and payload fields. Raises
+    HTTP 404 if the conversation is not found.
+    """
+
     conversation = await conversation_repository.get(conversation_id)
     if conversation is None:
         raise fastapi.HTTPException(

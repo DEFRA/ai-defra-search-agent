@@ -1,3 +1,5 @@
+import json
+
 import boto3
 import pytest
 
@@ -44,7 +46,7 @@ async def test_sqs_client_send_receive_delete(monkeypatch):
 
     try:
         async with sqs.SQSClient() as client:
-            msg_id = await client.send_message({"hello": "world"})
+            msg_id = await client.send_message(json.dumps({"hello": "world"}))
             assert msg_id == "msg-123"
 
             messages = await client.receive_messages(max_messages=1, wait_time=0)

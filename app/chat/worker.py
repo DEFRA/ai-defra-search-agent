@@ -1,3 +1,11 @@
+"""Background worker for processing chat messages from SQS.
+
+This module implements the long-running worker loop that polls SQS for
+queued chat messages, dispatches them to the `ChatService` for processing,
+and updates message status in the conversation repository. It also
+exposes a small health helper to report the worker's last heartbeat time.
+"""
+
 import asyncio
 import json
 import logging
@@ -21,7 +29,13 @@ _last_heartbeat: datetime | None = None
 
 
 def get_last_heartbeat() -> datetime | None:
-    """Get the last worker heartbeat timestamp."""
+    """Return the timestamp of the last successful SQS poll.
+
+    Returns:
+        datetime | None: UTC timestamp of the last worker heartbeat, or
+        ``None`` if the worker has not yet completed a poll.
+    """
+
     return _last_heartbeat
 
 
@@ -32,7 +46,19 @@ async def _update_message_failed(
     error_message: str,
     error_code: int,
 ) -> None:
-    """Update message status to FAILED."""
+    """Mark a message as failed in the conversation repository.
+
+    The helper only updates the repository when a `conversation_id` is
+    available (some SQS jobs may not carry a conversation reference).
+
+    Args:
+        conversation_repository: Repository implementing `update_message_status`.
+        conversation_id: Optional UUID of the conversation to update.
+        message_id: UUID of the failed message.
+        error_message: Human readable error message to store.
+        error_code: HTTP-like error code to record.
+    """
+
     if conversation_id:
         await conversation_repository.update_message_status(
             conversation_id=conversation_id,
@@ -46,6 +72,24 @@ async def _update_message_failed(
 async def process_job_message(
     message: dict, chat_service, conversation_repository, sqs_client
 ) -> None:
+    """Process a single SQS job message.
+
+    This function is responsible for:
+    - Decoding the SQS message body
+    - Transitioning the message status to PROCESSING
+    - Calling the `chat_service.execute_chat` to produce a conversation
+      result
+    - Updating the message status to COMPLETED or FAILED depending on
+      errors
+    - Ensuring the message is deleted from SQS after processing
+
+    Args:
+        message: Raw SQS message dictionary as returned by boto3.
+        chat_service: Service implementing `execute_chat`.
+        conversation_repository: Repository managing conversations/messages.
+        sqs_client: SQS client wrapper with `delete_message`.
+    """
+
     body = json.loads(message["Body"])
     conversation_id = (
         uuid.UUID(body["conversation_id"]) if body.get("conversation_id") else None
@@ -133,6 +177,14 @@ async def run_worker():
     ) = await dependencies.initialize_worker_services()
 
     async with sqs_client:
+        """Run the continuous worker loop.
+
+        The loop performs long-poll receives from SQS and processes each
+        message via `process_job_message`. On unexpected exceptions the
+        worker logs the error and sleeps briefly before retrying to avoid
+        tight error loops.
+        """
+
         while True:
             try:
                 messages = await sqs_client.receive_messages(

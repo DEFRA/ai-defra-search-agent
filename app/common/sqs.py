@@ -1,5 +1,12 @@
+"""Asynchronous helper wrapper around boto3 SQS client.
+
+This module exposes `SQSClient`, a small async-friendly wrapper that
+delegates blocking boto3 calls to threads via `asyncio.to_thread`. It
+provides simple `send_message`, `receive_messages` and `delete_message`
+operations and supports use as an async context manager.
+"""
+
 import asyncio
-import json
 import logging
 
 import boto3
@@ -29,10 +36,12 @@ class SQSClient:
         self._resolved_queue_url = None
 
     async def __aenter__(self):
-        """Create boto3 SQS client on async context manager entry.
+        """Create the underlying boto3 SQS client.
 
-        Creating the client is fast and synchronous; we do it directly and
-        wrap long-running operations (send/receive/delete) in threads.
+        The boto3 client is synchronous; long-running operations are executed
+        in a thread to avoid blocking the event loop. The resolved queue URL
+        is loaded from the runtime configuration (which may point to
+        LocalStack in development).
         """
         # Create synchronous boto3 client
         self._client = boto3.client(
@@ -41,7 +50,7 @@ class SQSClient:
 
         # Use configured queue URL directly (LocalStack handles routing)
         self._resolved_queue_url = self.queue_url
-        logger.info("Using queue URL: %s", self._resolved_queue_url)
+        logger.debug("Using queue URL: %s", self._resolved_queue_url)
 
         return self
 
@@ -50,12 +59,19 @@ class SQSClient:
         if self._client:
             await asyncio.to_thread(self._client.close)
 
-    async def send_message(self, message_body: dict) -> str:
-        """Send a message to the SQS queue using a thread to avoid blocking."""
+    async def send_message(self, message_body: str) -> str:
+        """Send a raw string message body to the configured SQS queue.
+
+        Args:
+            message_body: Raw string to send as the SQS `MessageBody`.
+
+        Returns:
+            str: The SQS `MessageId` assigned by the queue.
+        """
 
         def _send():
             return self._client.send_message(
-                QueueUrl=self._resolved_queue_url, MessageBody=json.dumps(message_body)
+                QueueUrl=self._resolved_queue_url, MessageBody=message_body
             )
 
         response = await asyncio.to_thread(_send)
@@ -66,11 +82,19 @@ class SQSClient:
         max_messages: int = DEFAULT_MAX_MESSAGES,
         wait_time: int = DEFAULT_LONG_POLL_WAIT_SECONDS,
     ) -> list:
-        """Receive messages from the SQS queue with long polling.
+        """Long-poll the configured SQS queue and return any messages.
 
-        Long-polling is blocking in boto3; this runs in a thread so the event
-        loop remains responsive. For high throughput consider using a separate
-        worker process instead.
+        Long-polling is blocking in boto3; this implementation runs the
+        underlying call in a thread so the async event loop remains
+        responsive. The returned messages are raw boto3 dictionary objects as
+        returned by `receive_message`.
+
+        Args:
+            max_messages: Maximum messages to request in a single poll.
+            wait_time: Long poll wait time in seconds.
+
+        Returns:
+            list: Sequence of message dicts, or an empty list.
         """
 
         def _receive():
@@ -84,7 +108,11 @@ class SQSClient:
         return response.get("Messages", [])
 
     async def delete_message(self, receipt_handle: str) -> None:
-        """Delete a message from the SQS queue using a thread."""
+        """Delete a message from SQS using its `ReceiptHandle`.
+
+        Args:
+            receipt_handle: The SQS receipt handle for the message to delete.
+        """
 
         def _delete():
             return self._client.delete_message(
