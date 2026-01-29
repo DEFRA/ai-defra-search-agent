@@ -6,6 +6,9 @@ import pymongo.asynchronous.database
 
 from app.chat import models
 
+# Reusable Mongo field names
+MESSAGES_MESSAGE_ID = "messages.message_id"
+
 
 class AbstractConversationRepository(abc.ABC):
     @abc.abstractmethod
@@ -152,7 +155,7 @@ class MongoConversationRepository(AbstractConversationRepository):
             update_data["messages.$.error_code"] = error_code
 
         await self.conversations.update_one(
-            {"conversation_id": conversation_id, "messages.message_id": message_id},
+            {"conversation_id": conversation_id, MESSAGES_MESSAGE_ID: message_id},
             {"$set": update_data},
         )
 
@@ -168,7 +171,7 @@ class MongoConversationRepository(AbstractConversationRepository):
         result = await self.conversations.update_one(
             {
                 "conversation_id": conversation_id,
-                "messages.message_id": message_id,
+                MESSAGES_MESSAGE_ID: message_id,
                 "messages.status": models.MessageStatus.QUEUED.value,
             },
             {
@@ -188,7 +191,7 @@ class MongoConversationRepository(AbstractConversationRepository):
         conversation could not be found.
         """
         doc = await self.conversations.find_one(
-            {"conversation_id": conversation_id, "messages.message_id": message_id},
+            {"conversation_id": conversation_id, MESSAGES_MESSAGE_ID: message_id},
             {"messages.$": 1},
         )
         if not doc:
