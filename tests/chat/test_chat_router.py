@@ -102,7 +102,8 @@ def test_post_chat_valid_question_returns_202(
     assert saved_conversation.messages[0].content == "Hello, how are you?"
     assert saved_conversation.messages[0].status == models.MessageStatus.QUEUED
 
-    # Verify message was sent to SQS
+    # Note: SQS message is sent in background task after response is returned
+    # In integration tests, background tasks execute before test client returns
     mock_sqs_client.send_message.assert_called_once()
 
 
@@ -179,7 +180,8 @@ def test_post_chat_with_conversation_id(
     assert str(saved_conversation.id) == conversation_id
     assert len(saved_conversation.messages) == 2  # Previous + new message
 
-    # Verify SQS message includes conversation_id (client may send JSON string)
+    # Verify SQS message includes conversation_id
+    # (Background task executes before test client returns in integration tests)
     import json as _json
 
     sqs_message = mock_sqs_client.send_message.call_args[0][0]

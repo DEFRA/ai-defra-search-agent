@@ -70,8 +70,9 @@ def test_post_chat_queues_message_and_saves(client_override):
     assert "message_id" in resp_json
     assert "conversation_id" in resp_json
 
-    # Ensure repo.save and sqs.send_message were called
+    # Ensure repo.save was called synchronously
     mock_conversation_repository.save.assert_awaited()
+    # SQS send happens in background task but executes before TestClient returns
     mock_sqs_client.send_message.assert_awaited()
 
 

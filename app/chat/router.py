@@ -27,6 +27,7 @@ router = fastapi.APIRouter(tags=["chat"])
 )
 async def chat(
     request: api_schemas.ChatRequest,
+    background_tasks: fastapi.BackgroundTasks,
     conversation_repository=fastapi.Depends(dependencies.get_conversation_repository),
     sqs_client=fastapi.Depends(dependencies.get_sqs_client),
     model_resolution_service=fastapi.Depends(dependencies.get_model_resolution_service),
@@ -69,26 +70,46 @@ async def chat(
     # Save conversation with queued message
     await conversation_repository.save(conversation)
 
-    # Queue message for processing (serialize at call site so SQSClient
-    # remains a transport-only helper)
-    async with sqs_client:
-        await sqs_client.send_message(
-            json.dumps(
-                {
-                    "message_id": str(user_message.message_id),
-                    "conversation_id": str(conversation.id),
-                    "question": request.question,
-                    "model_id": request.model_id,
-                }
-            )
-        )
-
-    # Return immediately with IDs for client to open SSE stream
-    return {
+    # Return immediately with IDs for client to redirect
+    response_data = {
         "message_id": str(user_message.message_id),
         "conversation_id": str(conversation.id),
         "status": models.MessageStatus.QUEUED.value,
     }
+
+    # Queue message for processing in background (after response is sent)
+    # This minimizes redirect delay for the frontend
+    background_tasks.add_task(
+        _queue_message_to_sqs,
+        sqs_client,
+        user_message.message_id,
+        conversation.id,
+        request.question,
+        request.model_id,
+    )
+
+    return response_data
+
+
+async def _queue_message_to_sqs(
+    sqs_client, message_id, conversation_id, question, model_id
+):
+    """Background task to queue message to SQS after response is sent."""
+    try:
+        async with sqs_client:
+            await sqs_client.send_message(
+                json.dumps(
+                    {
+                        "message_id": str(message_id),
+                        "conversation_id": str(conversation_id),
+                        "question": question,
+                        "model_id": model_id,
+                    }
+                )
+            )
+        logger.info("Successfully queued message %s to SQS", message_id)
+    except Exception as e:
+        logger.error("Failed to queue message %s to SQS: %s", message_id, e)
 
 
 @router.get(
