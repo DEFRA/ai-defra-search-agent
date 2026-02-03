@@ -1,41 +1,34 @@
 #!/bin/bash
-set -e
-
 export AWS_REGION=eu-west-2
 export AWS_DEFAULT_REGION=eu-west-2
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
 
-echo "Waiting for LocalStack to be ready..."
-max_attempts=30
-attempt=0
+create_queue() {
+  local QUEUE_NAME_TO_CREATE=$1
+  local VISIBILITY_TIMEOUT=$2
+  local DLQ_NAME="${QUEUE_NAME_TO_CREATE}-deadletter"
 
-while [ $attempt -lt $max_attempts ]; do
-  if awslocal sqs list-queues > /dev/null 2>&1; then
-    echo "LocalStack is ready!"
-    break
-  fi
-  attempt=$((attempt + 1))
-  echo "Attempt $attempt/$max_attempts - LocalStack not ready yet..."
-  sleep 1
-done
+  awslocal --endpoint-url=http://${LOCALSTACK_HOST}:${PORT} sqs create-queue \
+    --queue-name ${DLQ_NAME} \
+    --region ${AWS_REGION} \
+    --attributes VisibilityTimeout=60
 
-if [ $attempt -eq $max_attempts ]; then
-  echo "ERROR: LocalStack failed to become ready after $max_attempts attempts"
-  exit 1
-fi
+  local DLQ_ARN=$(awslocal --endpoint-url=http://${LOCALSTACK_HOST}:${PORT} sqs get-queue-attributes \
+    --queue-url http://sqs.${AWS_REGION}.${LOCALSTACK_HOST}.localstack.cloud:${PORT}/000000000000/${DLQ_NAME} \
+    --attribute-names QueueArn \
+    --query 'Attributes.QueueArn' \
+    --output text)
 
-echo "Creating SQS queue: ai-defra-search-agent-invoke"
-awslocal sqs create-queue \
-  --queue-name ai-defra-search-agent-invoke \
-  --attributes VisibilityTimeout=300 \
-  --region eu-west-2 2>&1 | grep -v "QueueAlreadyExists" || echo "Queue created or already exists"
+  awslocal --endpoint-url=http://${LOCALSTACK_HOST}:${PORT} sqs create-queue \
+    --queue-name ${QUEUE_NAME_TO_CREATE} \
+    --region ${AWS_REGION} \
+    --attributes '{
+      "VisibilityTimeout": "'${VISIBILITY_TIMEOUT}'",
+      "RedrivePolicy": "{\"deadLetterTargetArn\":\"'${DLQ_ARN}'\",\"maxReceiveCount\":\"3\"}"
+    }'
 
-echo "Verifying queue creation..."
-queue_url=$(awslocal sqs get-queue-url --queue-name ai-defra-search-agent-invoke --region eu-west-2 --query 'QueueUrl' --output text)
-echo "Queue URL: $queue_url"
+  echo "Queue ${QUEUE_NAME_TO_CREATE} created successfully"
+}
 
-echo "Listing all queues:"
-awslocal sqs list-queues --region eu-west-2
-
-echo "LocalStack initialization complete!"
+create_queue "ai-defra-search-agent-invoke" 60

@@ -11,6 +11,7 @@ services:
       LS_LOG: WARN # Localstack DEBUG Level
       SERVICES: sqs
       LOCALSTACK_HOST: 127.0.0.1
+      PORT: 4566
     volumes:
       - "${TMPDIR:-/tmp}/localstack-agent:/var/lib/localstack"
       - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
