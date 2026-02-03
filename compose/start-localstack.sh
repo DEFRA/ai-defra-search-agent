@@ -25,14 +25,14 @@ if [ $attempt -eq $max_attempts ]; then
   exit 1
 fi
 
-echo "Creating SQS queue: chat-job-queue"
+echo "Creating SQS queue: ai-defra-search-agent-invoke"
 awslocal sqs create-queue \
-  --queue-name chat-job-queue \
+  --queue-name ai-defra-search-agent-invoke \
   --attributes VisibilityTimeout=300 \
   --region eu-west-2 2>&1 | grep -v "QueueAlreadyExists" || echo "Queue created or already exists"
 
 echo "Verifying queue creation..."
-queue_url=$(awslocal sqs get-queue-url --queue-name chat-job-queue --region eu-west-2 --query 'QueueUrl' --output text)
+queue_url=$(awslocal sqs get-queue-url --queue-name ai-defra-search-agent-invoke --region eu-west-2 --query 'QueueUrl' --output text)
 echo "Queue URL: $queue_url"
 
 echo "Listing all queues:"
