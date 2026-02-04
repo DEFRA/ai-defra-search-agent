@@ -16,7 +16,7 @@ router = fastapi.APIRouter(tags=["chat"])
     "/chat",
     status_code=status.HTTP_202_ACCEPTED,
     summary="Send a message to the chatbot",
-    description="Sends a user question to the specified model and queues it for processing. Returns conversation and message IDs for streaming via GET /chat/stream/{message_id}.",
+    description="Queues a user question for asynchronous processing. Poll GET /conversations/{conversation_id} to retrieve responses.",
     responses={
         202: {"description": "Message queued successfully"},
         400: {
