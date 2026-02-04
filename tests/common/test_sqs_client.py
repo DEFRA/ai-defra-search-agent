@@ -30,10 +30,19 @@ def test_sqs_client_send_receive_delete(monkeypatch):
 
     monkeypatch.setattr(boto3, "client", _fake_boto_client)
 
+    class ChatQueueCfg:
+        queue_url = "http://example"
+
+    class SQSCfg:
+        region = "eu-west-2"
+        endpoint_url = None
+        use_credentials = False
+        access_key_id = None
+        secret_access_key = None
+
     class Cfg:
-        sqs_chat_queue_url = "http://example"
-        aws_region = "eu-west-2"
-        localstack_url = None
+        chat_queue = ChatQueueCfg()
+        sqs = SQSCfg()
 
     from app import config
 

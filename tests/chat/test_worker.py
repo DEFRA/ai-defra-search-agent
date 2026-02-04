@@ -105,10 +105,13 @@ async def test_run_worker_polls_and_processes(monkeypatch):
     evt = _asyncio.Event()
     proc_called = _asyncio.Event()
 
-    class MockConfig:
-        sqs_long_poll_wait_seconds = 0.01
+    class ChatQueueCfg:
+        long_poll_wait_seconds = 0.01
         worker_error_retry_delay_seconds = 0.01
-        sqs_max_messages_per_poll = 1
+        max_messages_per_poll = 1
+
+    class MockConfig:
+        chat_queue = ChatQueueCfg()
 
     class DummySQS:
         def __init__(self):

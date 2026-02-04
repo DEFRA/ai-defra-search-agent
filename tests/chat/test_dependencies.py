@@ -21,7 +21,7 @@ def test_get_knowledge_retriever(mocker: MockerFixture):
 def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
-    mock_config.aws_region = "us-east-1"
+    mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
 
@@ -36,7 +36,7 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.use_credentials = True
     mock_config.bedrock.access_key_id = "test-key"
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
-    mock_config.aws_region = "us-east-1"
+    mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
 
@@ -54,7 +54,7 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
 def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
-    mock_config.aws_region = "us-east-1"
+    mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
 
@@ -69,7 +69,7 @@ def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.use_credentials = True
     mock_config.bedrock.access_key_id = "test-key"
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
-    mock_config.aws_region = "us-east-1"
+    mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
 
@@ -178,7 +178,7 @@ async def test_initialize_worker_services_monkeypatched_variation(mocker):
     cfg = mocker.Mock()
     cfg.mongo.database = "db"
     cfg.bedrock.use_credentials = False
-    cfg.aws_region = "eu-1"
+    cfg.sqs.region = "eu-1"
     cfg.knowledge.base_url = "http://k"
     cfg.knowledge.similarity_threshold = 0.5
     mocker.patch("app.chat.dependencies.config.get_config", return_value=cfg)
@@ -206,7 +206,7 @@ async def test_initialize_worker_services(mocker: MockerFixture):
     mock_config.database.uri = "mongodb://localhost:27017"
     mock_config.database.name = "test_db"
     mock_config.mongo.database = "test_db"
-    mock_config.aws_region = "us-east-1"
+    mock_config.sqs.region = "us-east-1"
     mock_config.bedrock.use_credentials = False
     mock_config.knowledge.base_url = "http://knowledge"
     mock_config.knowledge.similarity_threshold = 0.5

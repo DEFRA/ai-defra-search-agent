@@ -36,10 +36,10 @@ def get_bedrock_runtime_client(
             "bedrock-runtime",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region,
+            region_name=app_config.sqs.region,
         )
 
-    return boto3.client("bedrock-runtime", region_name=app_config.aws_region)
+    return boto3.client("bedrock-runtime", region_name=app_config.sqs.region)
 
 
 def get_bedrock_client(
@@ -50,10 +50,10 @@ def get_bedrock_client(
             "bedrock",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region,
+            region_name=app_config.sqs.region,
         )
 
-    return boto3.client("bedrock", region_name=app_config.aws_region)
+    return boto3.client("bedrock", region_name=app_config.sqs.region)
 
 
 def get_bedrock_inference_service(
@@ -134,19 +134,19 @@ async def initialize_worker_services():
             "bedrock-runtime",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region,
+            region_name=app_config.sqs.region,
         )
         bedrock_client = boto3.client(
             "bedrock",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region,
+            region_name=app_config.sqs.region,
         )
     else:
         bedrock_runtime = boto3.client(
-            "bedrock-runtime", region_name=app_config.aws_region
+            "bedrock-runtime", region_name=app_config.sqs.region
         )
-        bedrock_client = boto3.client("bedrock", region_name=app_config.aws_region)
+        bedrock_client = boto3.client("bedrock", region_name=app_config.sqs.region)
 
     # Initialize knowledge retriever
     knowledge_retriever = knowledge.KnowledgeRetriever(

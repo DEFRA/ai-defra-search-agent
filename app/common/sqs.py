@@ -22,17 +22,29 @@ class SQSClient:
     """Synchronous boto3 SQS client wrapper."""
 
     def __init__(self):
-        self.queue_url = config.config.sqs_chat_queue_url
-        self.region_name = config.config.aws_region
-        self.endpoint_url = config.config.localstack_url
+        self.queue_url = config.config.chat_queue.queue_url
+        self.region_name = config.config.sqs.region
+        self.endpoint_url = config.config.sqs.endpoint_url
+        self.use_credentials = config.config.sqs.use_credentials
+        self.access_key_id = config.config.sqs.access_key_id
+        self.secret_access_key = config.config.sqs.secret_access_key
         self._client = None
         self._resolved_queue_url = None
 
     def __enter__(self):
         """Create the underlying boto3 SQS client."""
-        self._client = boto3.client(
-            "sqs", region_name=self.region_name, endpoint_url=self.endpoint_url
-        )
+        if self.use_credentials:
+            self._client = boto3.client(
+                "sqs",
+                region_name=self.region_name,
+                endpoint_url=self.endpoint_url,
+                aws_access_key_id=self.access_key_id,
+                aws_secret_access_key=self.secret_access_key,
+            )
+        else:
+            self._client = boto3.client(
+                "sqs", region_name=self.region_name, endpoint_url=self.endpoint_url
+            )
 
         self._resolved_queue_url = self.queue_url
         logger.debug("Using queue URL: %s", self._resolved_queue_url)

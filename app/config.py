@@ -105,25 +105,52 @@ class MongoConfig(pydantic_settings.BaseSettings):
     )
 
 
+class SQSConfig(pydantic_settings.BaseSettings):
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
+    region: str = pydantic.Field(..., alias="AWS_REGION")
+    use_credentials: bool = pydantic.Field(
+        default=False, alias="AWS_SQS_USE_CREDENTIALS"
+    )
+    endpoint_url: str | None = pydantic.Field(
+        default=None, alias="AWS_SQS_ENDPOINT_URL"
+    )
+    access_key_id: str | None = pydantic.Field(
+        default=None, alias="AWS_SQS_ACCESS_KEY_ID"
+    )
+    secret_access_key: str | None = pydantic.Field(
+        default=None, alias="AWS_SQS_SECRET_ACCESS_KEY"
+    )
+
+
+class ChatQueueConfig(pydantic_settings.BaseSettings):
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
+    queue_url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
+    max_messages_per_poll: int = pydantic.Field(
+        default=1, alias="SQS_MAX_MESSAGES_PER_POLL"
+    )
+    long_poll_wait_seconds: int = pydantic.Field(
+        default=20, alias="SQS_LONG_POLL_WAIT_SECONDS"
+    )
+    worker_error_retry_delay_seconds: int = pydantic.Field(
+        default=5, alias="WORKER_ERROR_RETRY_DELAY_SECONDS"
+    )
+
+
 class AppConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
     host: str = "127.0.0.1"
     port: int = 8086
     log_config: str = pydantic.Field(...)
-    aws_region: str = pydantic.Field(...)
-    localstack_url: str | None = None
-    sqs_chat_queue_url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
-    sqs_max_messages_per_poll: int = 1
-    sqs_long_poll_wait_seconds: int = 20
-    worker_error_retry_delay_seconds: int = 5
     http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
 
+    sqs: SQSConfig = pydantic.Field(default_factory=SQSConfig)
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     knowledge: KnowledgeConfig = pydantic.Field(default_factory=KnowledgeConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
+    chat_queue: ChatQueueConfig = pydantic.Field(default_factory=ChatQueueConfig)
 
 
 config: AppConfig | None = None
