@@ -153,10 +153,10 @@ async def process_job_message(
         conversation = await chat_service.execute_chat(
             question=question,
             model_id=model_id,
+            message_id=message_id,
             conversation_id=conversation_id,
         )
 
-        # Update message status to COMPLETED
         await conversation_repository.update_message_status(
             conversation_id=conversation.id,
             message_id=message_id,

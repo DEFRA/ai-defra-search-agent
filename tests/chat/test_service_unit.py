@@ -42,9 +42,8 @@ async def test_execute_chat_adds_messages_and_saves():
         model_resolution_service=model_resolution_service,
     )
 
-    conv = await svc.execute_chat("q", "mid")
+    conv = await svc.execute_chat("q", "mid", uuid.uuid4())
 
-    # ensure conversation saved and contains assistant message
     conversation_repository.save.assert_awaited()
     assert any(isinstance(m, models.AssistantMessage) for m in conv.messages)
 
@@ -82,10 +81,10 @@ async def test_build_knowledge_reference_str_and_execute_chat_happy_path():
         model_resolution_service=model_resolution,
     )
 
-    # When conversation_id is provided, repo.get called
-    result = await svc.execute_chat(question="q", model_id="m1", conversation_id=None)
+    result = await svc.execute_chat(
+        question="q", model_id="m1", message_id=uuid.uuid4(), conversation_id=None
+    )
 
-    # Ensure messages were added and saved
     assert any(isinstance(m, models.AssistantMessage) for m in result.messages)
     conversation_repository.save.assert_awaited_once()
 

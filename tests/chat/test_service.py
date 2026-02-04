@@ -88,9 +88,11 @@ async def test_executes_with_existing_conversation(
     mock_agent.execute_flow.return_value = mock_agent_responses
     mock_repository.get.return_value = mock_existing_conversation
 
-    # Execute
     result = await chat_service.execute_chat(
-        MOCK_QUESTION, "Geni AI-3.5", mock_existing_conversation.id
+        MOCK_QUESTION,
+        "Geni AI-3.5",
+        uuid.uuid4(),
+        mock_existing_conversation.id,
     )
 
     # Assert repository.get called correctly
@@ -143,8 +145,7 @@ async def test_creates_new_conversation_when_none_provided(
     ]
     mock_agent.execute_flow.return_value = mock_agent_responses
 
-    # Execute - no conversation_id provided
-    result = await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID)
+    result = await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4())
 
     # Assert repository.get NOT called
     mock_repository.get.assert_not_called()
@@ -188,10 +189,9 @@ async def test_raises_when_conversation_not_found(
     mock_conversation_id = uuid.uuid4()
     mock_repository.get.side_effect = models.ConversationNotFoundError()
 
-    # Execute & Assert
     with pytest.raises(models.ConversationNotFoundError):
         await chat_service.execute_chat(
-            MOCK_QUESTION, MOCK_MODEL_ID, mock_conversation_id
+            MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4(), mock_conversation_id
         )
 
     # Assert repository.get was called
@@ -235,9 +235,8 @@ async def test_adds_all_agent_responses(chat_service, mock_agent, mock_repositor
     mock_agent.execute_flow.return_value = mock_agent_responses
     mock_repository.get.return_value = mock_conversation
 
-    # Execute
     result = await chat_service.execute_chat(
-        MOCK_QUESTION, MOCK_MODEL_ID, mock_conversation.id
+        MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4(), mock_conversation.id
     )
 
     # Assert agent called with question, model name, and conversation history
@@ -314,10 +313,10 @@ async def test_execute_chat_with_multi_turn_conversation_includes_full_history(
     ]
     mock_agent.execute_flow.return_value = mock_agent_responses
 
-    # Execute - ask a third question
     result = await chat_service.execute_chat(
         question="When was it created?",
         model_id=MOCK_MODEL_ID,
+        message_id=uuid.uuid4(),
         conversation_id=conversation_id,
     )
 
@@ -384,13 +383,14 @@ def test_build_knowledge_reference_str_formats_correctly(chat_service):
 async def test_execute_chat_does_not_duplicate_user_message(
     chat_service, mock_agent, mock_repository
 ):
-    # When the last message is a user message with same content and status QUEUED/PROCESSING,
-    # ChatService should not add a duplicate user message.
     convo = models.Conversation(id=str(uuid.uuid4()))
+    existing_message_id = uuid.uuid4()
     last_user = models.UserMessage(
-        content=MOCK_QUESTION, model_id=MOCK_MODEL_ID, model_name=MOCK_MODEL_NAME
+        message_id=existing_message_id,
+        content=MOCK_QUESTION,
+        model_id=MOCK_MODEL_ID,
+        model_name=MOCK_MODEL_NAME,
     )
-    # set status to QUEUED to simulate already-queued message
     last_user = dataclasses.replace(last_user, status=models.MessageStatus.QUEUED)
     convo.messages.append(last_user)
 
@@ -405,8 +405,9 @@ async def test_execute_chat_does_not_duplicate_user_message(
         )
     ]
 
-    result = await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID, convo.id)
+    result = await chat_service.execute_chat(
+        MOCK_QUESTION, MOCK_MODEL_ID, existing_message_id, convo.id
+    )
 
-    # Should not duplicate the user message; still only one user message at index 0
     user_messages = [m for m in result.messages if m.role == "user"]
     assert len(user_messages) == 1

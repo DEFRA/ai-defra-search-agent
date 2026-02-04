@@ -24,7 +24,11 @@ class ChatService:
         self.sqs_client = sqs_client
 
     async def execute_chat(
-        self, question: str, model_id: str, conversation_id: uuid.UUID | None = None
+        self,
+        question: str,
+        model_id: str,
+        message_id: uuid.UUID,
+        conversation_id: uuid.UUID | None = None,
     ) -> models.Conversation:
         model_info = self.model_resolution_service.resolve_model(model_id)
 
@@ -37,20 +41,10 @@ class ChatService:
             msg = f"Conversation with id {conversation_id} not found"
             raise models.ConversationNotFoundError(msg)
 
-        # For async flow, message may already exist as pre-created
-        should_add_user_message = True
-        if conversation.messages:
-            last_message = conversation.messages[-1]
-            if (
-                isinstance(last_message, models.UserMessage)
-                and last_message.content == question
-                and last_message.status
-                in [models.MessageStatus.QUEUED, models.MessageStatus.PROCESSING]
-            ):
-                should_add_user_message = False
-
-        if should_add_user_message:
+        message_exists = any(m.message_id == message_id for m in conversation.messages)
+        if not message_exists:
             user_message = models.UserMessage(
+                message_id=message_id,
                 content=question,
                 model_id=model_id,
                 model_name=model_info.name,
