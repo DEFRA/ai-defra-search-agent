@@ -1,6 +1,6 @@
 import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
@@ -13,10 +13,8 @@ def mock_services():
     """Create mock services for testing."""
     chat_service = AsyncMock()
     conversation_repository = AsyncMock()
-    sqs_client = AsyncMock()
+    sqs_client = MagicMock()
 
-    # Emulate repository behaviour for claiming: when a real repository
-    # reserves a message it will also set the message status to PROCESSING.
     async def _mock_claim(conversation_id, message_id):
         await conversation_repository.update_message_status(
             conversation_id=conversation_id,
@@ -53,7 +51,6 @@ async def test_process_job_success(mock_services, sample_message):
     """Test successful message processing."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock conversation response
     mock_conversation = MagicMock()
     mock_conversation.id = uuid.uuid4()
     mock_message = MagicMock()
@@ -69,29 +66,29 @@ async def test_process_job_success(mock_services, sample_message):
     mock_conversation.messages = [mock_message]
     chat_service.execute_chat.return_value = mock_conversation
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify message status updates
-    body = json.loads(sample_message["Body"])
-    message_id = uuid.UUID(body["message_id"])
-    conversation_id = uuid.UUID(body["conversation_id"])
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Should update to PROCESSING first
-    assert conversation_repository.update_message_status.call_count == 2
-    first_call = conversation_repository.update_message_status.call_args_list[0]
-    assert first_call[1]["conversation_id"] == conversation_id
-    assert first_call[1]["message_id"] == message_id
-    assert first_call[1]["status"] == models.MessageStatus.PROCESSING
+        body = json.loads(sample_message["Body"])
+        message_id = uuid.UUID(body["message_id"])
+        conversation_id = uuid.UUID(body["conversation_id"])
 
-    # Then to COMPLETED
-    second_call = conversation_repository.update_message_status.call_args_list[1]
-    assert second_call[1]["status"] == models.MessageStatus.COMPLETED
+        assert conversation_repository.update_message_status.call_count == 2
+        first_call = conversation_repository.update_message_status.call_args_list[0]
+        assert first_call[1]["conversation_id"] == conversation_id
+        assert first_call[1]["message_id"] == message_id
+        assert first_call[1]["status"] == models.MessageStatus.PROCESSING
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once_with("test-receipt-handle")
+        second_call = conversation_repository.update_message_status.call_args_list[1]
+        assert second_call[1]["status"] == models.MessageStatus.COMPLETED
+
+        mock_to_thread.assert_called_once_with(
+            sqs_client.delete_message, "test-receipt-handle"
+        )
 
 
 @pytest.mark.asyncio
@@ -105,24 +102,23 @@ async def test_run_worker_polls_and_processes(monkeypatch):
     from app.chat import worker as worker_mod
 
     evt = _asyncio.Event()
+    proc_called = _asyncio.Event()
 
     class DummySQS:
         def __init__(self):
             self.receive_calls = 0
             self.deleted = []
 
-        async def __aenter__(self):
+        def __enter__(self):
             return self
 
-        async def __aexit__(self, exc_type, exc, tb):
+        def __exit__(self, exc_type, exc, tb):
             return False
 
-        async def receive_messages(self, max_messages=None, wait_time=None):
-            # reference the params so linters don't mark them unused
+        def receive_messages(self, max_messages=None, wait_time=None):
             _ = max_messages
             _ = wait_time
             self.receive_calls += 1
-            # signal test that we've received at least one poll
             evt.set()
             if self.receive_calls == 1:
                 return [
@@ -138,11 +134,10 @@ async def test_run_worker_polls_and_processes(monkeypatch):
                         "ReceiptHandle": "rh",
                     }
                 ]
-            # On subsequent calls, raise to trigger the exception path
             msg = "stop"
             raise Exception(msg)
 
-        async def delete_message(self, receipt_handle):
+        def delete_message(self, receipt_handle):
             self.deleted.append(receipt_handle)
 
     dummy = DummySQS()
@@ -154,21 +149,26 @@ async def test_run_worker_polls_and_processes(monkeypatch):
         "initialize_worker_services",
         AsyncMock(return_value=(chat_service, conv_repo, dummy)),
     )
-    proc = AsyncMock()
+
+    async def mock_process(*_args, **_kwargs):
+        proc_called.set()
+
+    proc = AsyncMock(side_effect=mock_process)
     monkeypatch.setattr(worker_mod, "process_job_message", proc)
 
-    # Speed up loops
     monkeypatch.setattr(worker_mod, "SQS_LONG_POLL_WAIT_SECONDS", 0.01)
     monkeypatch.setattr(worker_mod, "WORKER_ERROR_RETRY_DELAY_SECONDS", 0.01)
 
     task = _asyncio.create_task(worker_mod.run_worker())
-    # Wait deterministically until first receive happens
     await _asyncio.wait_for(evt.wait(), timeout=1.0)
+
+    with _contextlib.suppress(TimeoutError):
+        await _asyncio.wait_for(proc_called.wait(), timeout=0.5)
+
     task.cancel()
     with _contextlib.suppress(_asyncio.CancelledError):
         await task
 
-    # Assertions
     assert proc.await_count >= 1
     assert dummy.receive_calls >= 1
     assert worker_mod.get_last_heartbeat() is not None
@@ -205,32 +205,30 @@ async def test_process_job_conversation_not_found(mock_services, sample_message)
     """Test handling of conversation not found error."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock to raise ConversationNotFoundError
     chat_service.execute_chat.side_effect = models.ConversationNotFoundError(
         "Conversation not found"
     )
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify message status updated to FAILED
-    body = json.loads(sample_message["Body"])
-    message_id = uuid.UUID(body["message_id"])
-    conversation_id = uuid.UUID(body["conversation_id"])
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Should update to PROCESSING, then FAILED
-    assert conversation_repository.update_message_status.call_count == 2
-    failed_call = conversation_repository.update_message_status.call_args_list[1]
-    assert failed_call[1]["conversation_id"] == conversation_id
-    assert failed_call[1]["message_id"] == message_id
-    assert failed_call[1]["status"] == models.MessageStatus.FAILED
-    assert "Conversation not found" in failed_call[1]["error_message"]
-    assert failed_call[1]["error_code"] == 404
+        body = json.loads(sample_message["Body"])
+        message_id = uuid.UUID(body["message_id"])
+        conversation_id = uuid.UUID(body["conversation_id"])
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once()
+        assert conversation_repository.update_message_status.call_count == 2
+        failed_call = conversation_repository.update_message_status.call_args_list[1]
+        assert failed_call[1]["conversation_id"] == conversation_id
+        assert failed_call[1]["message_id"] == message_id
+        assert failed_call[1]["status"] == models.MessageStatus.FAILED
+        assert "Conversation not found" in failed_call[1]["error_message"]
+        assert failed_call[1]["error_code"] == 404
+
+        mock_to_thread.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -238,25 +236,24 @@ async def test_process_job_throttling_exception(mock_services, sample_message):
     """Test handling of AWS throttling exception."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock to raise ClientError with ThrottlingException
     error_response = {
         "Error": {"Code": "ThrottlingException", "Message": "Rate exceeded"},
         "ResponseMetadata": {"HTTPStatusCode": 400},
     }
     chat_service.execute_chat.side_effect = ClientError(error_response, "InvokeModel")
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify error code mapping
-    failed_call = conversation_repository.update_message_status.call_args_list[1]
-    assert failed_call[1]["status"] == models.MessageStatus.FAILED
-    assert failed_call[1]["error_code"] == 429  # HTTP_TOO_MANY_REQUESTS
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once()
+        failed_call = conversation_repository.update_message_status.call_args_list[1]
+        assert failed_call[1]["status"] == models.MessageStatus.FAILED
+        assert failed_call[1]["error_code"] == 429
+
+        mock_to_thread.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -264,7 +261,6 @@ async def test_process_job_service_unavailable_exception(mock_services, sample_m
     """Test handling of AWS service unavailable exception."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock to raise ClientError with ServiceUnavailableException
     error_response = {
         "Error": {
             "Code": "ServiceUnavailableException",
@@ -274,18 +270,18 @@ async def test_process_job_service_unavailable_exception(mock_services, sample_m
     }
     chat_service.execute_chat.side_effect = ClientError(error_response, "InvokeModel")
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify error code mapping
-    failed_call = conversation_repository.update_message_status.call_args_list[1]
-    assert failed_call[1]["status"] == models.MessageStatus.FAILED
-    assert failed_call[1]["error_code"] == 503  # HTTP_SERVICE_UNAVAILABLE
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once()
+        failed_call = conversation_repository.update_message_status.call_args_list[1]
+        assert failed_call[1]["status"] == models.MessageStatus.FAILED
+        assert failed_call[1]["error_code"] == 503
+
+        mock_to_thread.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -293,25 +289,24 @@ async def test_process_job_internal_server_exception(mock_services, sample_messa
     """Test handling of AWS internal server exception."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock to raise ClientError with InternalServerException
     error_response = {
         "Error": {"Code": "InternalServerException", "Message": "Internal error"},
         "ResponseMetadata": {"HTTPStatusCode": 500},
     }
     chat_service.execute_chat.side_effect = ClientError(error_response, "InvokeModel")
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify error code mapping
-    failed_call = conversation_repository.update_message_status.call_args_list[1]
-    assert failed_call[1]["status"] == models.MessageStatus.FAILED
-    assert failed_call[1]["error_code"] == 500  # HTTP_INTERNAL_SERVER_ERROR
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once()
+        failed_call = conversation_repository.update_message_status.call_args_list[1]
+        assert failed_call[1]["status"] == models.MessageStatus.FAILED
+        assert failed_call[1]["error_code"] == 500
+
+        mock_to_thread.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -319,25 +314,24 @@ async def test_process_job_generic_client_error(mock_services, sample_message):
     """Test handling of generic AWS client error."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock to raise ClientError with unknown error code
     error_response = {
         "Error": {"Code": "UnknownError", "Message": "Unknown error"},
         "ResponseMetadata": {"HTTPStatusCode": 400},
     }
     chat_service.execute_chat.side_effect = ClientError(error_response, "InvokeModel")
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify error preserved from response
-    failed_call = conversation_repository.update_message_status.call_args_list[1]
-    assert failed_call[1]["status"] == models.MessageStatus.FAILED
-    assert "UnknownError" in failed_call[1]["error_message"]
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once()
+        failed_call = conversation_repository.update_message_status.call_args_list[1]
+        assert failed_call[1]["status"] == models.MessageStatus.FAILED
+        assert "UnknownError" in failed_call[1]["error_message"]
+
+        mock_to_thread.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -345,22 +339,21 @@ async def test_process_job_generic_exception(mock_services, sample_message):
     """Test handling of generic exception."""
     chat_service, conversation_repository, sqs_client = mock_services
 
-    # Setup mock to raise generic exception
     chat_service.execute_chat.side_effect = Exception("Test error")
 
-    # Execute
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify error handling
-    failed_call = conversation_repository.update_message_status.call_args_list[1]
-    assert failed_call[1]["status"] == models.MessageStatus.FAILED
-    assert failed_call[1]["error_message"] == "Test error"
-    assert failed_call[1]["error_code"] == 500
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
 
-    # Verify message deletion
-    sqs_client.delete_message.assert_awaited_once()
+        failed_call = conversation_repository.update_message_status.call_args_list[1]
+        assert failed_call[1]["status"] == models.MessageStatus.FAILED
+        assert failed_call[1]["error_message"] == "Test error"
+        assert failed_call[1]["error_code"] == 500
+
+        mock_to_thread.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -370,9 +363,13 @@ async def test_process_job_deletes_message_on_exception(mock_services, sample_me
 
     chat_service.execute_chat.side_effect = Exception("Test error")
 
-    await worker.process_job_message(
-        sample_message, chat_service, conversation_repository, sqs_client
-    )
+    with patch("asyncio.to_thread") as mock_to_thread:
+        mock_to_thread.return_value = None
 
-    # Verify message was deleted despite exception
-    sqs_client.delete_message.assert_awaited_once_with("test-receipt-handle")
+        await worker.process_job_message(
+            sample_message, chat_service, conversation_repository, sqs_client
+        )
+
+        mock_to_thread.assert_called_once_with(
+            sqs_client.delete_message, "test-receipt-handle"
+        )

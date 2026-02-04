@@ -209,7 +209,7 @@ async def process_job_message(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     finally:
-        await sqs_client.delete_message(receipt_handle)
+        await asyncio.to_thread(sqs_client.delete_message, receipt_handle)
 
 
 async def run_worker():
@@ -222,23 +222,15 @@ async def run_worker():
         sqs_client,
     ) = await dependencies.initialize_worker_services()
 
-    async with sqs_client:
-        """Run the continuous worker loop.
-
-        The loop performs long-poll receives from SQS and processes each
-        message via `process_job_message`. On unexpected exceptions the
-        worker logs the error and sleeps briefly before retrying to avoid
-        tight error loops.
-        """
-
+    with sqs_client:
         while True:
             try:
-                messages = await sqs_client.receive_messages(
+                messages = await asyncio.to_thread(
+                    sqs_client.receive_messages,
                     max_messages=SQS_MAX_MESSAGES_PER_POLL,
                     wait_time=SQS_LONG_POLL_WAIT_SECONDS,
                 )
 
-                # Update heartbeat after successful poll (even if no messages)
                 _last_heartbeat = datetime.now(UTC)
 
                 for message in messages:

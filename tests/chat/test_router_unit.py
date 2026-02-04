@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import fastapi.testclient
 import pytest
@@ -38,28 +38,16 @@ def client_override():
 def test_post_chat_queues_message_and_saves(client_override):
     test_client = client_override
 
-    # Prepare mocks for dependencies
-    mock_conversation_repository = AsyncMock()
-    mock_sqs_client = AsyncMock()
-    mock_sqs_client.__aenter__.return_value = mock_sqs_client
-    mock_sqs_client.__aexit__.return_value = None
+    mock_chat_service = AsyncMock()
+    mock_chat_service.queue_chat.return_value = (
+        uuid.uuid4(),
+        uuid.uuid4(),
+        models.MessageStatus.QUEUED,
+    )
 
-    mock_model_resolution_service = MagicMock()
-    mock_model_resolution_service.resolve_model.return_value = MagicMock(
-        name="Model", spec=["name"]
-    )  # type: ignore
-    mock_model_resolution_service.resolve_model.return_value.name = "MockModel"
-
-    # Override dependencies on the app
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_conversation_repository] = (
-        lambda: mock_conversation_repository
-    )
-    app.dependency_overrides[dependencies.get_sqs_client] = lambda: mock_sqs_client
-    app.dependency_overrides[dependencies.get_model_resolution_service] = (
-        lambda: mock_model_resolution_service
-    )
+    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
 
     body = {"question": "Hello", "modelId": "mid"}
 
@@ -69,34 +57,24 @@ def test_post_chat_queues_message_and_saves(client_override):
     resp_json = resp.json()
     assert "message_id" in resp_json
     assert "conversation_id" in resp_json
+    assert resp_json["status"] == "queued"
 
-    # Ensure repo.save was called synchronously
-    mock_conversation_repository.save.assert_awaited()
-    # SQS send happens in background task but executes before TestClient returns
-    mock_sqs_client.send_message.assert_awaited()
+    mock_chat_service.queue_chat.assert_awaited_once_with(
+        question="Hello", model_id="mid", conversation_id=None
+    )
 
 
 def test_post_chat_with_nonexistent_conversation_returns_404(client_override):
     test_client = client_override
 
-    mock_conversation_repository = AsyncMock()
-    mock_conversation_repository.get.return_value = None
-    mock_sqs_client = AsyncMock()
-    mock_sqs_client.__aenter__.return_value = mock_sqs_client
-    mock_sqs_client.__aexit__.return_value = None
-
-    mock_model_resolution_service = MagicMock()
-    mock_model_resolution_service.resolve_model.return_value = MagicMock(name="Model")
+    mock_chat_service = AsyncMock()
+    mock_chat_service.queue_chat.side_effect = models.ConversationNotFoundError(
+        "Conversation not found"
+    )
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_conversation_repository] = (
-        lambda: mock_conversation_repository
-    )
-    app.dependency_overrides[dependencies.get_sqs_client] = lambda: mock_sqs_client
-    app.dependency_overrides[dependencies.get_model_resolution_service] = (
-        lambda: mock_model_resolution_service
-    )
+    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
 
     body = {
         "question": "Hi",
@@ -111,14 +89,12 @@ def test_post_chat_with_nonexistent_conversation_returns_404(client_override):
 def test_get_conversation_not_found(client_override):
     test_client = client_override
 
-    mock_conversation_repository = AsyncMock()
-    mock_conversation_repository.get.return_value = None
+    mock_chat_service = AsyncMock()
+    mock_chat_service.get_conversation.return_value = None
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_conversation_repository] = (
-        lambda: mock_conversation_repository
-    )
+    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
 
     resp = test_client.get(f"/conversations/{uuid.uuid4()}")
     assert resp.status_code == 404
@@ -127,7 +103,6 @@ def test_get_conversation_not_found(client_override):
 def test_get_conversation_returns_data(client_override):
     test_client = client_override
 
-    # Build a conversation with messages
     conversation = models.Conversation()
     user_msg = models.UserMessage(content="q", model_id="m", model_name="mn")
     assistant_msg = models.AssistantMessage(
@@ -139,17 +114,67 @@ def test_get_conversation_returns_data(client_override):
     conversation.add_message(user_msg)
     conversation.add_message(assistant_msg)
 
-    mock_conversation_repository = AsyncMock()
-    mock_conversation_repository.get.return_value = conversation
+    mock_chat_service = AsyncMock()
+    mock_chat_service.get_conversation.return_value = conversation
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_conversation_repository] = (
-        lambda: mock_conversation_repository
-    )
+    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
 
     resp = test_client.get(f"/conversations/{conversation.id}")
     assert resp.status_code == 200
     data = resp.json()
     assert data["conversation_id"] == str(conversation.id)
     assert len(data["messages"]) == 2
+
+
+def test_post_chat_with_unsupported_model_returns_400(client_override):
+    test_client = client_override
+
+    mock_chat_service = AsyncMock()
+    from app.models import UnsupportedModelError
+
+    mock_chat_service.queue_chat.side_effect = UnsupportedModelError("bad model")
+
+    from app.chat import dependencies
+
+    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+
+    body = {"question": "Hi", "modelId": "invalid"}
+
+    resp = test_client.post("/chat", json=body)
+    assert resp.status_code == 400
+    assert "bad model" in resp.text
+
+
+def test_post_chat_with_existing_conversation(client_override):
+    test_client = client_override
+
+    conv_id = uuid.uuid4()
+    msg_id = uuid.uuid4()
+    mock_chat_service = AsyncMock()
+    mock_chat_service.queue_chat.return_value = (
+        msg_id,
+        conv_id,
+        models.MessageStatus.QUEUED,
+    )
+
+    from app.chat import dependencies
+
+    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+
+    body = {
+        "question": "Follow up",
+        "modelId": "mid",
+        "conversationId": str(conv_id),
+    }
+
+    resp = test_client.post("/chat", json=body)
+    assert resp.status_code == 202
+    resp_json = resp.json()
+    assert resp_json["conversation_id"] == str(conv_id)
+    assert resp_json["message_id"] == str(msg_id)
+
+    mock_chat_service.queue_chat.assert_awaited_once_with(
+        question="Follow up", model_id="mid", conversation_id=conv_id
+    )

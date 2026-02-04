@@ -1,8 +1,13 @@
 import dataclasses
+import json
+import logging
 import uuid
 
 from app.chat import agent, models, repository
+from app.common import sqs
 from app.models import service as model_service
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService:
@@ -11,15 +16,16 @@ class ChatService:
         chat_agent: agent.AbstractChatAgent,
         conversation_repository: repository.AbstractConversationRepository,
         model_resolution_service: model_service.AbstractModelResolutionService,
+        sqs_client: sqs.SQSClient | None = None,
     ):
         self.chat_agent = chat_agent
         self.conversation_repository = conversation_repository
         self.model_resolution_service = model_resolution_service
+        self.sqs_client = sqs_client
 
     async def execute_chat(
         self, question: str, model_id: str, conversation_id: uuid.UUID | None = None
     ) -> models.Conversation:
-        # Resolve model information to get the model name
         model_info = self.model_resolution_service.resolve_model(model_id)
 
         if conversation_id:
@@ -31,8 +37,7 @@ class ChatService:
             msg = f"Conversation with id {conversation_id} not found"
             raise models.ConversationNotFoundError(msg)
 
-        # Only add user message if it doesn't already exist (for async flow, message is pre-created)
-        # Check if the last message is a user message with matching content
+        # For async flow, message may already exist as pre-created
         should_add_user_message = True
         if conversation.messages:
             last_message = conversation.messages[-1]
@@ -52,7 +57,6 @@ class ChatService:
             )
             conversation.add_message(user_message)
 
-        # token count and model-id are currently not attached to the user message
         agent_request = models.AgentRequest(
             question=question,
             model_id=model_id,
@@ -90,3 +94,59 @@ class ChatService:
             )
 
         return "\n\n### Sources\n\n" + "\n\n".join(formatted_sources)
+
+    async def queue_chat(
+        self,
+        question: str,
+        model_id: str,
+        conversation_id: uuid.UUID | None = None,
+    ) -> tuple[uuid.UUID, uuid.UUID, models.MessageStatus]:
+        """Queue a chat message for async processing via SQS."""
+        resolved_model = self.model_resolution_service.resolve_model(model_id)
+
+        user_message = models.UserMessage(
+            content=question,
+            model_id=model_id,
+            model_name=resolved_model.name if resolved_model else model_id,
+            status=models.MessageStatus.QUEUED,
+        )
+
+        if conversation_id:
+            conversation = await self.conversation_repository.get(conversation_id)
+            if not conversation:
+                msg = f"Conversation with id {conversation_id} not found"
+                raise models.ConversationNotFoundError(msg)
+            conversation.add_message(user_message)
+        else:
+            conversation = models.Conversation(messages=[user_message])
+
+        await self.conversation_repository.save(conversation)
+
+        if self.sqs_client:
+            try:
+                with self.sqs_client:
+                    self.sqs_client.send_message(
+                        json.dumps(
+                            {
+                                "message_id": str(user_message.message_id),
+                                "conversation_id": str(conversation.id),
+                                "question": question,
+                                "model_id": model_id,
+                            }
+                        )
+                    )
+                logger.info(
+                    "Successfully queued message %s to SQS", user_message.message_id
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to queue message %s to SQS: %s", user_message.message_id, e
+                )
+
+        return user_message.message_id, conversation.id, user_message.status
+
+    async def get_conversation(
+        self, conversation_id: uuid.UUID
+    ) -> models.Conversation | None:
+        """Retrieve a conversation by ID."""
+        return await self.conversation_repository.get(conversation_id)

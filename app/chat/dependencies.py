@@ -94,6 +94,10 @@ def get_conversation_repository(
     return repository.MongoConversationRepository(db=db)
 
 
+def get_sqs_client() -> sqs.SQSClient:
+    return sqs.SQSClient()
+
+
 def get_chat_service(
     chat_agent: agent.AbstractChatAgent = fastapi.Depends(get_chat_agent),
     conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
@@ -102,16 +106,14 @@ def get_chat_service(
     model_resolution_service: model_service.AbstractModelResolutionService = fastapi.Depends(
         model_dependencies.get_model_resolution_service
     ),
+    sqs_client: sqs.SQSClient = fastapi.Depends(get_sqs_client),
 ) -> service.ChatService:
     return service.ChatService(
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
+        sqs_client=sqs_client,
     )
-
-
-def get_sqs_client() -> sqs.SQSClient:
-    return sqs.SQSClient()
 
 
 def get_model_resolution_service() -> model_service.AbstractModelResolutionService:

@@ -1,4 +1,3 @@
-import json
 import logging
 import uuid
 
@@ -23,93 +22,34 @@ router = fastapi.APIRouter(tags=["chat"])
         400: {
             "description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"
         },
+        404: {"description": "Conversation not found"},
     },
 )
 async def chat(
     request: api_schemas.ChatRequest,
-    background_tasks: fastapi.BackgroundTasks,
-    conversation_repository=fastapi.Depends(dependencies.get_conversation_repository),
-    sqs_client=fastapi.Depends(dependencies.get_sqs_client),
-    model_resolution_service=fastapi.Depends(dependencies.get_model_resolution_service),
+    chat_service=fastapi.Depends(dependencies.get_chat_service),
 ):
-    """Accept a chat request and enqueue it for asynchronous processing.
-
-    The endpoint validates the requested model synchronously, persists a
-    conversation/message with status `QUEUED` and sends a job message to the
-    configured SQS queue. The response contains the `conversation_id` and
-    `message_id` so clients can stream or poll for updates.
-    """
-
-    # Validate model immediately
+    """Queue a chat request and return message/conversation IDs for streaming."""
     try:
-        resolved_model = model_resolution_service.resolve_model(request.model_id)
+        message_id, conversation_id, status_value = await chat_service.queue_chat(
+            question=request.question,
+            model_id=request.model_id,
+            conversation_id=request.conversation_id,
+        )
     except UnsupportedModelError as e:
         raise fastapi.HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from None
+    except models.ConversationNotFoundError as e:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from None
 
-    # Create user message with QUEUED status
-    user_message = models.UserMessage(
-        content=request.question,
-        model_id=request.model_id,
-        model_name=resolved_model.name if resolved_model else request.model_id,
-        status=models.MessageStatus.QUEUED,
-    )
-
-    # Get or create conversation
-    if request.conversation_id:
-        conversation = await conversation_repository.get(request.conversation_id)
-        if not conversation:
-            raise fastapi.HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
-            )
-        conversation.add_message(user_message)
-    else:
-        conversation = models.Conversation(messages=[user_message])
-
-    # Save conversation with queued message
-    await conversation_repository.save(conversation)
-
-    # Return immediately with IDs for client to redirect
-    response_data = {
-        "message_id": str(user_message.message_id),
-        "conversation_id": str(conversation.id),
-        "status": models.MessageStatus.QUEUED.value,
+    return {
+        "message_id": str(message_id),
+        "conversation_id": str(conversation_id),
+        "status": status_value.value,
     }
-
-    # Queue message for processing in background (after response is sent)
-    # This minimizes redirect delay for the frontend
-    background_tasks.add_task(
-        _queue_message_to_sqs,
-        sqs_client,
-        user_message.message_id,
-        conversation.id,
-        request.question,
-        request.model_id,
-    )
-
-    return response_data
-
-
-async def _queue_message_to_sqs(
-    sqs_client, message_id, conversation_id, question, model_id
-):
-    """Background task to queue message to SQS after response is sent."""
-    try:
-        async with sqs_client:
-            await sqs_client.send_message(
-                json.dumps(
-                    {
-                        "message_id": str(message_id),
-                        "conversation_id": str(conversation_id),
-                        "question": question,
-                        "model_id": model_id,
-                    }
-                )
-            )
-        logger.info("Successfully queued message %s to SQS", message_id)
-    except Exception as e:
-        logger.error("Failed to queue message %s to SQS: %s", message_id, e)
 
 
 @router.get(
@@ -119,16 +59,10 @@ async def _queue_message_to_sqs(
 )
 async def get_conversation(
     conversation_id: uuid.UUID,
-    conversation_repository=fastapi.Depends(dependencies.get_conversation_repository),
+    chat_service=fastapi.Depends(dependencies.get_chat_service),
 ):
-    """Retrieve a conversation by its UUID.
-
-    Returns a JSON serialisable dictionary containing the conversation ID
-    and a list of messages with their status and payload fields. Raises
-    HTTP 404 if the conversation is not found.
-    """
-
-    conversation = await conversation_repository.get(conversation_id)
+    """Retrieve a conversation with all its messages."""
+    conversation = await chat_service.get_conversation(conversation_id)
     if conversation is None:
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
