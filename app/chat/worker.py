@@ -15,16 +15,11 @@ from datetime import UTC, datetime
 from botocore.exceptions import ClientError
 from fastapi import status
 
+from app import config
 from app.chat import dependencies, models
 
 logger = logging.getLogger(__name__)
 
-# Worker configuration constants
-SQS_MAX_MESSAGES_PER_POLL = 1
-SQS_LONG_POLL_WAIT_SECONDS = 20
-WORKER_ERROR_RETRY_DELAY_SECONDS = 5
-
-# Worker health tracking
 _last_heartbeat: datetime | None = None
 
 
@@ -227,8 +222,8 @@ async def run_worker():
             try:
                 messages = await asyncio.to_thread(
                     sqs_client.receive_messages,
-                    max_messages=SQS_MAX_MESSAGES_PER_POLL,
-                    wait_time=SQS_LONG_POLL_WAIT_SECONDS,
+                    max_messages=config.config.sqs_max_messages_per_poll,
+                    wait_time=config.config.sqs_long_poll_wait_seconds,
                 )
 
                 _last_heartbeat = datetime.now(UTC)
@@ -239,7 +234,7 @@ async def run_worker():
                     )
             except Exception:
                 logger.exception("Error in worker loop")
-                await asyncio.sleep(WORKER_ERROR_RETRY_DELAY_SECONDS)
+                await asyncio.sleep(config.config.worker_error_retry_delay_seconds)
 
 
 def main():

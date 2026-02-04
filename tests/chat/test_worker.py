@@ -98,11 +98,17 @@ async def test_run_worker_polls_and_processes(monkeypatch):
     import contextlib as _contextlib
     import json as _json
 
+    from app import config as config_mod
     from app.chat import dependencies as deps_mod
     from app.chat import worker as worker_mod
 
     evt = _asyncio.Event()
     proc_called = _asyncio.Event()
+
+    class MockConfig:
+        sqs_long_poll_wait_seconds = 0.01
+        worker_error_retry_delay_seconds = 0.01
+        sqs_max_messages_per_poll = 1
 
     class DummySQS:
         def __init__(self):
@@ -144,6 +150,7 @@ async def test_run_worker_polls_and_processes(monkeypatch):
     chat_service = AsyncMock()
     conv_repo = AsyncMock()
 
+    monkeypatch.setattr(config_mod, "config", MockConfig())
     monkeypatch.setattr(
         deps_mod,
         "initialize_worker_services",
@@ -155,9 +162,6 @@ async def test_run_worker_polls_and_processes(monkeypatch):
 
     proc = AsyncMock(side_effect=mock_process)
     monkeypatch.setattr(worker_mod, "process_job_message", proc)
-
-    monkeypatch.setattr(worker_mod, "SQS_LONG_POLL_WAIT_SECONDS", 0.01)
-    monkeypatch.setattr(worker_mod, "WORKER_ERROR_RETRY_DELAY_SECONDS", 0.01)
 
     task = _asyncio.create_task(worker_mod.run_worker())
     await _asyncio.wait_for(evt.wait(), timeout=1.0)

@@ -114,6 +114,9 @@ class AppConfig(pydantic_settings.BaseSettings):
     aws_region: str = pydantic.Field(...)
     localstack_url: str | None = None
     sqs_chat_queue_url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
+    sqs_max_messages_per_poll: int = 1
+    sqs_long_poll_wait_seconds: int = 20
+    worker_error_retry_delay_seconds: int = 5
     http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
