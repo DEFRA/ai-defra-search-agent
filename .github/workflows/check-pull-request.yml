@@ -37,6 +37,10 @@ jobs:
     name: Run Journey Tests
     needs: security-scan
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t defradigital/ai-defra-search-agent:${{github.sha}} .
