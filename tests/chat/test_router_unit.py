@@ -90,7 +90,9 @@ def test_get_conversation_not_found(client_override):
     test_client = client_override
 
     mock_chat_service = AsyncMock()
-    mock_chat_service.get_conversation.return_value = None
+    mock_chat_service.get_conversation.side_effect = models.ConversationNotFoundError(
+        "Conversation not found"
+    )
 
     from app.chat import dependencies
 

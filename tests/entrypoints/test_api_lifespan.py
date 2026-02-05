@@ -44,7 +44,7 @@ async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch):
 
     The lifecycle manager cancels the background worker and awaits it; when
     awaiting a cancelled task a `CancelledError` is raised by the task. The
-    `finally` block must still run and close the mongo client.
+    shutdown process catches this error and still closes the mongo client.
     """
 
     from unittest.mock import AsyncMock
@@ -68,7 +68,7 @@ async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch):
 
     # entering/exiting may raise a CancelledError when the worker task is
     # cancelled during shutdown. Accept that but ensure the mongo client's
-    # close method was still awaited in the lifespan finally block.
+    # close method was still awaited during shutdown.
     from concurrent.futures import CancelledError
 
     try:

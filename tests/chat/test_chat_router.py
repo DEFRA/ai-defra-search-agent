@@ -180,7 +180,9 @@ def test_get_conversation_by_id_returns_conversation(client, mock_chat_service):
 def test_get_conversation_not_found_returns_404(client, mock_chat_service):
     """Test GET /conversations/{conversation_id} returns 404 when conversation doesn't exist."""
     conversation_id = uuid.uuid4()
-    mock_chat_service.get_conversation.return_value = None
+    mock_chat_service.get_conversation.side_effect = models.ConversationNotFoundError(
+        "Conversation not found"
+    )
 
     response = client.get(f"/conversations/{conversation_id}")
 

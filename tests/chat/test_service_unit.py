@@ -298,7 +298,7 @@ async def test_get_conversation_returns_conversation():
 
 
 @pytest.mark.asyncio
-async def test_get_conversation_returns_none_when_not_found():
+async def test_get_conversation_raises_error_when_not_found():
     conversation_repository = AsyncMock()
     conversation_repository.get.return_value = None
 
@@ -308,6 +308,5 @@ async def test_get_conversation_returns_none_when_not_found():
         model_resolution_service=None,
     )
 
-    result = await svc.get_conversation(uuid.uuid4())
-
-    assert result is None
+    with pytest.raises(models.ConversationNotFoundError):
+        await svc.get_conversation(uuid.uuid4())
