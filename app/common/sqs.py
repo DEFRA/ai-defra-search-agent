@@ -71,12 +71,14 @@ class SQSClient:
         self,
         max_messages: int | None = None,
         wait_time: int | None = None,
+        visibility_timeout: int | None = None,
     ) -> list:
         """Long-poll the configured SQS queue and return any messages.
 
         Args:
             max_messages: Maximum messages to request in a single poll.
             wait_time: Long poll wait time in seconds.
+            visibility_timeout: Message visibility timeout in seconds.
 
         Returns:
             list: Sequence of message dicts, or an empty list.
@@ -85,11 +87,14 @@ class SQSClient:
             max_messages = config.config.chat_queue.batch_size
         if wait_time is None:
             wait_time = config.config.chat_queue.wait_time
+        if visibility_timeout is None:
+            visibility_timeout = config.config.chat_queue.visibility_timeout
 
         response = self._client.receive_message(
             QueueUrl=self._resolved_queue_url,
             MaxNumberOfMessages=max_messages,
             WaitTimeSeconds=wait_time,
+            VisibilityTimeout=visibility_timeout,
         )
         return response.get("Messages", [])
 

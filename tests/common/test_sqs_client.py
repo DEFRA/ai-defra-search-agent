@@ -32,6 +32,9 @@ def test_sqs_client_send_receive_delete(monkeypatch):
 
     class ChatQueueCfg:
         url = "http://example"
+        batch_size = 10
+        wait_time = 20
+        visibility_timeout = 120
 
     class SQSCfg:
         region = "eu-west-2"

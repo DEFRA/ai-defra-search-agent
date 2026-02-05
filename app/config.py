@@ -127,6 +127,9 @@ class ChatQueueConfig(pydantic_settings.BaseSettings):
     url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
     batch_size: int = pydantic.Field(default=10, alias="SQS_CHAT_QUEUE_BATCH_SIZE")
     wait_time: int = pydantic.Field(default=20, alias="SQS_CHAT_QUEUE_WAIT_TIME")
+    visibility_timeout: int = pydantic.Field(
+        default=120, alias="SQS_CHAT_QUEUE_VISIBILITY_TIMEOUT"
+    )
     polling_interval: int = pydantic.Field(
         default=5, alias="SQS_CHAT_QUEUE_POLLING_INTERVAL"
     )
