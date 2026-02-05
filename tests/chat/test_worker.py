@@ -106,9 +106,9 @@ async def test_run_worker_polls_and_processes(monkeypatch):
     proc_called = _asyncio.Event()
 
     class ChatQueueCfg:
-        long_poll_wait_seconds = 0.01
-        worker_error_retry_delay_seconds = 0.01
-        max_messages_per_poll = 1
+        wait_time = 0.01
+        polling_interval = 0.01
+        batch_size = 1
 
     class MockConfig:
         chat_queue = ChatQueueCfg()

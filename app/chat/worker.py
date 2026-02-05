@@ -222,8 +222,8 @@ async def run_worker():
             try:
                 messages = await asyncio.to_thread(
                     sqs_client.receive_messages,
-                    max_messages=config.config.chat_queue.max_messages_per_poll,
-                    wait_time=config.config.chat_queue.long_poll_wait_seconds,
+                    max_messages=config.config.chat_queue.batch_size,
+                    wait_time=config.config.chat_queue.wait_time,
                 )
 
                 _last_heartbeat = datetime.now(UTC)
@@ -234,9 +234,7 @@ async def run_worker():
                     )
             except Exception:
                 logger.exception("Error in worker loop")
-                await asyncio.sleep(
-                    config.config.chat_queue.worker_error_retry_delay_seconds
-                )
+                await asyncio.sleep(config.config.chat_queue.polling_interval)
 
 
 def main():

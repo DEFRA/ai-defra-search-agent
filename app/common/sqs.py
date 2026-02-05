@@ -22,7 +22,7 @@ class SQSClient:
     """Synchronous boto3 SQS client wrapper."""
 
     def __init__(self):
-        self.queue_url = config.config.chat_queue.queue_url
+        self.queue_url = config.config.chat_queue.url
         self.region_name = config.config.sqs.region
         self.endpoint_url = config.config.sqs.endpoint_url
         self.use_credentials = config.config.sqs.use_credentials

@@ -124,15 +124,11 @@ class SQSConfig(pydantic_settings.BaseSettings):
 
 class ChatQueueConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
-    queue_url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
-    max_messages_per_poll: int = pydantic.Field(
-        default=1, alias="SQS_MAX_MESSAGES_PER_POLL"
-    )
-    long_poll_wait_seconds: int = pydantic.Field(
-        default=20, alias="SQS_LONG_POLL_WAIT_SECONDS"
-    )
-    worker_error_retry_delay_seconds: int = pydantic.Field(
-        default=5, alias="WORKER_ERROR_RETRY_DELAY_SECONDS"
+    url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
+    batch_size: int = pydantic.Field(default=10, alias="SQS_CHAT_QUEUE_BATCH_SIZE")
+    wait_time: int = pydantic.Field(default=20, alias="SQS_CHAT_QUEUE_WAIT_TIME")
+    polling_interval: int = pydantic.Field(
+        default=5, alias="SQS_CHAT_QUEUE_POLLING_INTERVAL"
     )
 
 

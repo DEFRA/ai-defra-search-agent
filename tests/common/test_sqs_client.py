@@ -31,7 +31,7 @@ def test_sqs_client_send_receive_delete(monkeypatch):
     monkeypatch.setattr(boto3, "client", _fake_boto_client)
 
     class ChatQueueCfg:
-        queue_url = "http://example"
+        url = "http://example"
 
     class SQSCfg:
         region = "eu-west-2"
