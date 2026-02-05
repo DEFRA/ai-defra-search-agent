@@ -1,10 +1,11 @@
 import logging
 import uuid
+from typing import Annotated
 
 import fastapi
 from fastapi import status
 
-from app.chat import api_schemas, dependencies, models
+from app.chat import api_schemas, dependencies, models, service
 from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,9 @@ router = fastapi.APIRouter(tags=["chat"])
 )
 async def chat(
     request: api_schemas.ChatRequest,
-    chat_service=fastapi.Depends(dependencies.get_chat_service),
+    chat_service: Annotated[
+        service.ChatService, fastapi.Depends(dependencies.get_chat_service)
+    ],
 ):
     """Queue a chat request and return message/conversation IDs for streaming."""
     try:
@@ -59,7 +62,9 @@ async def chat(
 )
 async def get_conversation(
     conversation_id: uuid.UUID,
-    chat_service=fastapi.Depends(dependencies.get_chat_service),
+    chat_service: Annotated[
+        service.ChatService, fastapi.Depends(dependencies.get_chat_service)
+    ],
 ):
     """Retrieve a conversation with all its messages."""
     try:

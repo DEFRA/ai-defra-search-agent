@@ -1,5 +1,3 @@
-from datetime import UTC, datetime, timedelta
-
 from fastapi.testclient import TestClient
 
 from app.entrypoints.api import app
@@ -30,46 +28,9 @@ def test_health(mocker):
     mock_task.done.return_value = False
     mocker.patch.object(app.state, "worker_task", mock_task)
 
-    # Mock recent heartbeat
-    mocker.patch(
-        "app.chat.worker.get_last_heartbeat",
-        return_value=datetime.now(UTC),
-    )
-
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
-
-
-def test_health_worker_starting(mocker):
-    # Mock worker_task in app state
-    mock_task = mocker.MagicMock()
-    mock_task.done.return_value = False
-    mocker.patch.object(app.state, "worker_task", mock_task)
-
-    # Mock no heartbeat yet (worker just started)
-    mocker.patch("app.chat.worker.get_last_heartbeat", return_value=None)
-
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok", "worker": "starting"}
-
-
-def test_health_worker_heartbeat_timeout(mocker):
-    # Mock worker_task in app state
-    mock_task = mocker.MagicMock()
-    mock_task.done.return_value = False
-    mocker.patch.object(app.state, "worker_task", mock_task)
-
-    # Mock stale heartbeat (worker stuck)
-    mocker.patch(
-        "app.chat.worker.get_last_heartbeat",
-        return_value=datetime.now(UTC) - timedelta(seconds=120),
-    )
-
-    response = client.get("/health")
-    assert response.status_code == 503
-    assert "Worker heartbeat timeout" in response.json()["detail"]
 
 
 def test_health_worker_not_running(mocker):

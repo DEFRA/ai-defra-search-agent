@@ -1,13 +1,10 @@
 import asyncio
-from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import fastapi
 from fastapi import status
 
 router = fastapi.APIRouter(tags=["health"])
-
-# Health check configuration
-WORKER_HEARTBEAT_TIMEOUT_SECONDS = 90
 
 
 def get_worker_task(request: fastapi.Request) -> asyncio.Task | None:
@@ -22,10 +19,8 @@ def get_worker_task(request: fastapi.Request) -> asyncio.Task | None:
     description="Returns the operational status of the service.",
 )
 async def health(
-    worker_task: asyncio.Task | None = fastapi.Depends(get_worker_task),
+    worker_task: Annotated[asyncio.Task | None, fastapi.Depends(get_worker_task)],
 ):
-    from app.chat.worker import get_last_heartbeat
-
     # Check if worker task is running
     if worker_task is None or worker_task.done():
         if worker_task and worker_task.done():
@@ -40,19 +35,6 @@ async def health(
         raise fastapi.HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Worker task not running",
-        )
-
-    # Check worker heartbeat
-    last_heartbeat = get_last_heartbeat()
-    if last_heartbeat is None:
-        # Worker just started, hasn't polled yet
-        return {"status": "ok", "worker": "starting"}
-
-    time_since_heartbeat = datetime.now(UTC) - last_heartbeat
-    if time_since_heartbeat > timedelta(seconds=WORKER_HEARTBEAT_TIMEOUT_SECONDS):
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Worker heartbeat timeout: last seen {time_since_heartbeat.total_seconds():.0f}s ago",
         )
 
     return {"status": "ok"}

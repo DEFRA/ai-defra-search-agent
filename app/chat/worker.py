@@ -2,15 +2,13 @@
 
 This module implements the long-running worker loop that polls SQS for
 queued chat messages, dispatches them to the `ChatService` for processing,
-and updates message status in the conversation repository. It also
-exposes a small health helper to report the worker's last heartbeat time.
+and updates message status in the conversation repository.
 """
 
 import asyncio
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
 
 from botocore.exceptions import ClientError
 from fastapi import status
@@ -19,19 +17,6 @@ from app import config
 from app.chat import dependencies, models
 
 logger = logging.getLogger(__name__)
-
-_last_heartbeat: datetime | None = None
-
-
-def get_last_heartbeat() -> datetime | None:
-    """Return the timestamp of the last successful SQS poll.
-
-    Returns:
-        datetime | None: UTC timestamp of the last worker heartbeat, or
-        ``None`` if the worker has not yet completed a poll.
-    """
-
-    return _last_heartbeat
 
 
 async def _update_message_failed(
@@ -208,7 +193,6 @@ async def process_job_message(
 
 
 async def run_worker():
-    global _last_heartbeat
     logger.info("Starting chat worker")
 
     (
@@ -225,8 +209,6 @@ async def run_worker():
                     max_messages=config.config.chat_queue.batch_size,
                     wait_time=config.config.chat_queue.wait_time,
                 )
-
-                _last_heartbeat = datetime.now(UTC)
 
                 for message in messages:
                     await process_job_message(

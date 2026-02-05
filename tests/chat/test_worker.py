@@ -178,7 +178,6 @@ async def test_run_worker_polls_and_processes(monkeypatch):
 
     assert proc.await_count >= 1
     assert dummy.receive_calls >= 1
-    assert worker_mod.get_last_heartbeat() is not None
 
 
 def test_update_message_failed_no_conversation():
@@ -194,17 +193,6 @@ def test_update_message_failed_no_conversation():
     asyncio.run(worker_mod._update_message_failed(repo, None, uuid.uuid4(), "err"))
     # repo.update_message_status should not have been called
     assert not repo.update_message_status.called
-
-
-def test_get_last_heartbeat_roundtrip():
-    # setting private variable and reading it back
-    import datetime
-
-    from app.chat import worker as worker_mod
-
-    now = datetime.datetime.now(datetime.UTC)
-    worker_mod._last_heartbeat = now
-    assert worker_mod.get_last_heartbeat() == now
 
 
 @pytest.mark.asyncio
