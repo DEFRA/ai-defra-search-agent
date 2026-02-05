@@ -59,6 +59,6 @@ async def test_mongo_conversation_repository_save_get_update():
 
     # Test update_message_status calls update_one
     await repo.update_message_status(
-        cid, uuid.uuid4(), models.MessageStatus.COMPLETED, "err", 500
+        cid, uuid.uuid4(), models.MessageStatus.COMPLETED, "err"
     )
     assert coll.last_update is not None

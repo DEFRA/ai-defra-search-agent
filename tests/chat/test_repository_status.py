@@ -105,7 +105,6 @@ async def test_update_message_status_sets_error_fields_when_provided():
         message_id=message_id,
         status=models.MessageStatus.FAILED,
         error_message="boom",
-        error_code=500,
     )
 
     # verify update_one called with $set containing the optional fields
@@ -113,7 +112,6 @@ async def test_update_message_status_sets_error_fields_when_provided():
     set_payload = called.get("$set", {})
     assert set_payload["messages.$.status"] == models.MessageStatus.FAILED.value
     assert set_payload["messages.$.error_message"] == "boom"
-    assert set_payload["messages.$.error_code"] == 500
 
 
 @pytest.mark.asyncio
@@ -135,11 +133,9 @@ async def test_update_message_status_omits_optional_fields_when_none():
         message_id=message_id,
         status=models.MessageStatus.COMPLETED,
         error_message=None,
-        error_code=None,
     )
 
     called = dummy.conversations.update_one.call_args_list[0][0][1]
     set_payload = called.get("$set", {})
     assert set_payload["messages.$.status"] == models.MessageStatus.COMPLETED.value
     assert "messages.$.error_message" not in set_payload
-    assert "messages.$.error_code" not in set_payload

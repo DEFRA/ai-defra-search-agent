@@ -26,7 +26,6 @@ class AbstractConversationRepository(abc.ABC):
         message_id: uuid.UUID,
         status: models.MessageStatus,
         error_message: str | None = None,
-        error_code: int | None = None,
     ) -> None:
         """Update the status of a specific message."""
 
@@ -69,9 +68,12 @@ class MongoConversationRepository(AbstractConversationRepository):
                             "content": msg.content,
                             "model": msg.model_id,
                             "model_name": msg.model_name,
-                            "status": msg.status.value,
-                            "error_message": msg.error_message,
-                            "error_code": msg.error_code,
+                            "status": msg.status.value
+                            if isinstance(msg, models.UserMessage)
+                            else models.MessageStatus.COMPLETED.value,
+                            "error_message": msg.error_message
+                            if isinstance(msg, models.UserMessage)
+                            else None,
                             "timestamp": msg.timestamp,
                             "usage": dataclasses.asdict(msg.usage)
                             if isinstance(msg, models.AssistantMessage)
@@ -100,26 +102,27 @@ class MongoConversationRepository(AbstractConversationRepository):
             model_name = msg["model_name"]
             timestamp = msg["timestamp"]
             message_id = msg.get("message_id")
-            status_str = msg.get("status", models.MessageStatus.COMPLETED.value)
-            error_message = msg.get("error_message")
-            error_code = msg.get("error_code")
-
             common_args = {
                 "role": role,
                 "content": content,
                 "model_id": model_id,
                 "model_name": model_name,
                 "timestamp": timestamp,
-                "status": models.MessageStatus(status_str),
-                "error_message": error_message,
-                "error_code": error_code,
             }
 
             if message_id:
                 common_args["message_id"] = message_id
 
             if role == "user":
-                messages.append(models.UserMessage(**common_args))
+                status_str = msg.get("status", models.MessageStatus.COMPLETED.value)
+                error_message = msg.get("error_message")
+                messages.append(
+                    models.UserMessage(
+                        status=models.MessageStatus(status_str),
+                        error_message=error_message,
+                        **common_args,
+                    )
+                )
             elif role == "assistant":
                 usage = models.TokenUsage(**msg["usage"])
                 messages.append(
@@ -143,7 +146,6 @@ class MongoConversationRepository(AbstractConversationRepository):
         message_id: uuid.UUID,
         status: models.MessageStatus,
         error_message: str | None = None,
-        error_code: int | None = None,
     ) -> None:
         """Update the status of a specific message in a conversation."""
         update_data = {
@@ -151,8 +153,6 @@ class MongoConversationRepository(AbstractConversationRepository):
         }
         if error_message is not None:
             update_data["messages.$.error_message"] = error_message
-        if error_code is not None:
-            update_data["messages.$.error_code"] = error_code
 
         await self.conversations.update_one(
             {"conversation_id": conversation_id, MESSAGES_MESSAGE_ID: message_id},

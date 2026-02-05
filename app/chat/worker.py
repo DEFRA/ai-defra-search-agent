@@ -39,7 +39,6 @@ async def _update_message_failed(
     conversation_id: uuid.UUID | None,
     message_id: uuid.UUID,
     error_message: str,
-    error_code: int,
 ) -> None:
     """Mark a message as failed in the conversation repository.
 
@@ -51,7 +50,6 @@ async def _update_message_failed(
         conversation_id: Optional UUID of the conversation to update.
         message_id: UUID of the failed message.
         error_message: Human readable error message to store.
-        error_code: HTTP-like error code to record.
     """
 
     if conversation_id:
@@ -60,7 +58,6 @@ async def _update_message_failed(
             message_id=message_id,
             status=models.MessageStatus.FAILED,
             error_message=error_message,
-            error_code=error_code,
         )
 
 
@@ -169,10 +166,9 @@ async def process_job_message(
             conversation_id,
             message_id,
             f"Conversation not found: {e}",
-            status.HTTP_404_NOT_FOUND,
         )
     except ClientError as e:
-        # Map AWS ClientError to appropriate HTTP status codes
+        # Map AWS ClientError to appropriate HTTP status codes for logging
         error_code = e.response.get("ResponseMetadata", {}).get(
             "HTTPStatusCode", status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -187,12 +183,17 @@ async def process_job_message(
         elif error_type in ["InternalServerException", "InternalFailure"]:
             error_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+        logger.error(
+            "AWS ClientError processing message %s: %s (HTTP %d)",
+            message_id,
+            error_type,
+            error_code,
+        )
         await _update_message_failed(
             conversation_repository,
             conversation_id,
             message_id,
             f"{error_type}: {error_msg}",
-            error_code,
         )
     except Exception as e:
         logger.exception("Failed to process message %s", message_id)
@@ -201,7 +202,6 @@ async def process_job_message(
             conversation_id,
             message_id,
             str(e),
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     finally:
         await asyncio.to_thread(sqs_client.delete_message, receipt_handle)

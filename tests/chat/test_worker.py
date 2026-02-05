@@ -191,7 +191,7 @@ def test_update_message_failed_no_conversation():
     # call the internal helper with no conversation id
     import asyncio
 
-    asyncio.run(worker_mod._update_message_failed(repo, None, uuid.uuid4(), "err", 500))
+    asyncio.run(worker_mod._update_message_failed(repo, None, uuid.uuid4(), "err"))
     # repo.update_message_status should not have been called
     assert not repo.update_message_status.called
 
@@ -233,7 +233,6 @@ async def test_process_job_conversation_not_found(mock_services, sample_message)
         assert failed_call[1]["message_id"] == message_id
         assert failed_call[1]["status"] == models.MessageStatus.FAILED
         assert "Conversation not found" in failed_call[1]["error_message"]
-        assert failed_call[1]["error_code"] == 404
 
         mock_to_thread.assert_called_once()
 
@@ -258,7 +257,6 @@ async def test_process_job_throttling_exception(mock_services, sample_message):
 
         failed_call = conversation_repository.update_message_status.call_args_list[1]
         assert failed_call[1]["status"] == models.MessageStatus.FAILED
-        assert failed_call[1]["error_code"] == 429
 
         mock_to_thread.assert_called_once()
 
@@ -286,7 +284,6 @@ async def test_process_job_service_unavailable_exception(mock_services, sample_m
 
         failed_call = conversation_repository.update_message_status.call_args_list[1]
         assert failed_call[1]["status"] == models.MessageStatus.FAILED
-        assert failed_call[1]["error_code"] == 503
 
         mock_to_thread.assert_called_once()
 
@@ -311,7 +308,6 @@ async def test_process_job_internal_server_exception(mock_services, sample_messa
 
         failed_call = conversation_repository.update_message_status.call_args_list[1]
         assert failed_call[1]["status"] == models.MessageStatus.FAILED
-        assert failed_call[1]["error_code"] == 500
 
         mock_to_thread.assert_called_once()
 
@@ -358,7 +354,6 @@ async def test_process_job_generic_exception(mock_services, sample_message):
         failed_call = conversation_repository.update_message_status.call_args_list[1]
         assert failed_call[1]["status"] == models.MessageStatus.FAILED
         assert failed_call[1]["error_message"] == "Test error"
-        assert failed_call[1]["error_code"] == 500
 
         mock_to_thread.assert_called_once()
 

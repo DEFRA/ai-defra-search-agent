@@ -112,11 +112,10 @@ async def test_process_job_message_client_error_mapping_detailed():
             msg, chat_service, conversation_repository, sqs_client
         )
 
+        # Verify that update_message_status was called with FAILED status
         found = False
         for call in conversation_repository.update_message_status.await_args_list:
-            if call.kwargs.get("error_code") == 429:
-                found = True
-            if len(call.args) > 4 and call.args[4] == 429:
+            if call.kwargs.get("status") == models.MessageStatus.FAILED:
                 found = True
         assert found
 

@@ -47,9 +47,6 @@ class Message:
     model_id: str
     model_name: str
     message_id: uuid.UUID = dataclasses.field(default_factory=uuid.uuid4)
-    status: MessageStatus = MessageStatus.COMPLETED
-    error_message: str | None = None
-    error_code: int | None = None
     timestamp: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
@@ -61,6 +58,8 @@ class Message:
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class UserMessage(Message):
     role: Literal["user"] = "user"
+    status: MessageStatus = MessageStatus.COMPLETED
+    error_message: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)

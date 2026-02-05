@@ -78,9 +78,12 @@ async def get_conversation(
                 "content": msg.content,
                 "model_id": msg.model_id,
                 "model_name": msg.model_name,
-                "status": msg.status.value,
-                "error_message": msg.error_message,
-                "error_code": msg.error_code,
+                "status": msg.status.value
+                if isinstance(msg, models.UserMessage)
+                else models.MessageStatus.COMPLETED.value,
+                "error_message": msg.error_message
+                if isinstance(msg, models.UserMessage)
+                else None,
                 "timestamp": msg.timestamp.isoformat(),
             }
             for msg in conversation.messages

@@ -231,7 +231,6 @@ def test_get_conversation_with_failed_message(client, mock_chat_service):
                 message_id=message_id,
                 status=models.MessageStatus.FAILED,
                 error_message="ThrottlingException: Rate limit exceeded",
-                error_code=429,
             ),
         ],
     )
@@ -244,7 +243,6 @@ def test_get_conversation_with_failed_message(client, mock_chat_service):
     message = response_json["messages"][0]
     assert message["status"] == "failed"
     assert message["error_message"] == "ThrottlingException: Rate limit exceeded"
-    assert message["error_code"] == 429
 
 
 def test_get_conversation_with_completed_messages(client, mock_chat_service):
