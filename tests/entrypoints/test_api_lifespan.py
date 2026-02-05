@@ -42,9 +42,9 @@ async def test_lifespan_starts_and_stops_worker(monkeypatch):
 async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch):
     """Ensure the mongo client is closed even if the worker task is cancelled.
 
-    The lifecycle manager cancels the background worker and awaits it; when
-    awaiting a cancelled task a `CancelledError` is raised by the task. The
-    shutdown process catches this error and still closes the mongo client.
+    The lifecycle manager cancels the background worker and awaits it with
+    CancelledError suppressed. The mongo client close is shielded from
+    cancellation to ensure it completes.
     """
 
     from unittest.mock import AsyncMock
@@ -66,19 +66,9 @@ async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch):
 
     client = TestClient(api.app)
 
-    # entering/exiting may raise a CancelledError when the worker task is
-    # cancelled during shutdown. Accept that but ensure the mongo client's
-    # close method was still awaited during shutdown.
-    from concurrent.futures import CancelledError
-
-    try:
-        with client:
-            assert hasattr(api.app.state, "worker_task")
-    except CancelledError:
-        # Some event-loop/thread combinations surface a CancelledError
-        # from the background task cancellation; that's acceptable for
-        # this test as long as the client.close() was awaited.
-        pass
+    with client:
+        assert hasattr(api.app.state, "worker_task")
 
     # The dummy client's close() should have been awaited once during shutdown
+    # (shielded from cancellation)
     dummy_client.close.assert_awaited_once()

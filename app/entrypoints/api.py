@@ -31,17 +31,17 @@ async def lifespan(app: fastapi.FastAPI):
 
     yield
 
-    # Shutdown
+    # Shutdown - clean up all resources and ensure worker stops gracefully
     worker_task = app.state.worker_task
     if worker_task and not worker_task.done():
         worker_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await worker_task
-        except asyncio.CancelledError:
-            logger.info("Worker task cancelled")
+        logger.info("Worker task stopped")
 
     if client:
-        await client.close()
+        # Shield from cancellation to ensure cleanup completes
+        await asyncio.shield(client.close())
         logger.info("MongoDB client closed")
 
 
