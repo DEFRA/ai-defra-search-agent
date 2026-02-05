@@ -62,11 +62,13 @@ async def get_conversation(
     chat_service=fastapi.Depends(dependencies.get_chat_service),
 ):
     """Retrieve a conversation with all its messages."""
-    conversation = await chat_service.get_conversation(conversation_id)
-    if conversation is None:
+    try:
+        conversation = await chat_service.get_conversation(conversation_id)
+    except models.ConversationNotFoundError as e:
         raise fastapi.HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
-        )
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from None
+
     return {
         "conversation_id": str(conversation.id),
         "messages": [

@@ -139,8 +139,10 @@ class ChatService:
 
         return user_message.message_id, conversation.id, user_message.status
 
-    async def get_conversation(
-        self, conversation_id: uuid.UUID
-    ) -> models.Conversation | None:
+    async def get_conversation(self, conversation_id: uuid.UUID) -> models.Conversation:
         """Retrieve a conversation by ID."""
-        return await self.conversation_repository.get(conversation_id)
+        conversation = await self.conversation_repository.get(conversation_id)
+        if not conversation:
+            msg = f"Conversation with id {conversation_id} not found"
+            raise models.ConversationNotFoundError(msg)
+        return conversation
