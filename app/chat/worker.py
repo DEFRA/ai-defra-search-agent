@@ -1,8 +1,6 @@
 """Background worker for processing chat messages from SQS.
 
-This module implements the long-running worker loop that polls SQS for
-queued chat messages, dispatches them to the `ChatService` for processing,
-and updates message status in the conversation repository.
+Polls SQS for queued messages, dispatches to ChatService, and updates message status.
 """
 
 import asyncio
@@ -19,22 +17,28 @@ from app.chat import dependencies, models
 logger = logging.getLogger(__name__)
 
 
+def _map_aws_error_to_status_code(error_type: str) -> int:
+    """Map AWS error type to HTTP status code for logging."""
+    match error_type:
+        case "ThrottlingException":
+            return status.HTTP_429_TOO_MANY_REQUESTS
+        case "ServiceUnavailableException":
+            return status.HTTP_503_SERVICE_UNAVAILABLE
+        case "InternalServerException" | "InternalFailure":
+            return status.HTTP_500_INTERNAL_SERVER_ERROR
+        case _:
+            return status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
 async def _update_message_failed(
     conversation_repository,
     conversation_id: uuid.UUID | None,
     message_id: uuid.UUID,
     error_message: str,
 ) -> None:
-    """Mark a message as failed in the conversation repository.
+    """Mark a message as failed in the repository.
 
-    The helper only updates the repository when a `conversation_id` is
-    available (some SQS jobs may not carry a conversation reference).
-
-    Args:
-        conversation_repository: Repository implementing `update_message_status`.
-        conversation_id: Optional UUID of the conversation to update.
-        message_id: UUID of the failed message.
-        error_message: Human readable error message to store.
+    Only updates when conversation_id is available.
     """
 
     if conversation_id:
@@ -51,17 +55,9 @@ async def _claim_or_skip(
     conversation_id: uuid.UUID,
     message_id: uuid.UUID,
 ) -> bool:
-    """Attempt to reserve a queued message (set to PROCESSING) or acknowledge & skip it.
+    """Atomically claim a queued message by setting status to PROCESSING.
 
-    This performs a single repository update that checks the current
-    status and sets it to `processing`. If the reservation fails, the helper inspects the
-    current message status and acknowledges the SQS message when it's
-    already completed, missing, or otherwise being handled by another
-    worker.
-
-    Returns True when processing should be skipped (message acknowledged or
-    another worker is handling it). Returns False when the caller should
-    proceed to process the message.
+    Returns True if processing should be skipped (already completed or being handled).
     """
 
     claimed = await conversation_repository.claim_message(
@@ -80,10 +76,8 @@ async def _claim_or_skip(
         return True
 
     if current_status == models.MessageStatus.COMPLETED:
-        # Already processed successfully
         return True
 
-    # Not queued and not completed; skip processing to avoid duplicate work.
     logger.info("Skipping message %s with status %s", message_id, current_status)
     return True
 
@@ -91,22 +85,10 @@ async def _claim_or_skip(
 async def process_job_message(
     message: dict, chat_service, conversation_repository, sqs_client
 ) -> None:
-    """Process a single SQS job message.
+    """Process a single SQS message from queue to completion.
 
-    This function is responsible for:
-    - Decoding the SQS message body
-    - Transitioning the message status to PROCESSING
-    - Calling the `chat_service.execute_chat` to produce a conversation
-      result
-    - Updating the message status to COMPLETED or FAILED depending on
-      errors
-    - Ensuring the message is deleted from SQS after processing
-
-    Args:
-        message: Raw SQS message dictionary as returned by boto3.
-        chat_service: Service implementing `execute_chat`.
-        conversation_repository: Repository managing conversations/messages.
-        sqs_client: SQS client wrapper with `delete_message`.
+    Decodes message, claims it, executes chat, updates status, and deletes from SQS.
+    Handles errors by marking message as FAILED with appropriate error details.
     """
 
     body = json.loads(message["Body"])
@@ -119,11 +101,6 @@ async def process_job_message(
     receipt_handle = message["ReceiptHandle"]
 
     try:
-        # Attempt to reserve the queued message for processing by checking
-        # the current status and setting it to `processing` in a single
-        # repository update. If the reservation fails, the helper will
-        # acknowledge the message and indicate that processing should be
-        # skipped.
         if conversation_id:
             should_skip = await _claim_or_skip(
                 conversation_repository, conversation_id, message_id
@@ -131,7 +108,6 @@ async def process_job_message(
             if should_skip:
                 return
 
-        # Execute chat
         conversation = await chat_service.execute_chat(
             question=question,
             model_id=model_id,
@@ -153,20 +129,9 @@ async def process_job_message(
             f"Conversation not found: {e}",
         )
     except ClientError as e:
-        # Map AWS ClientError to appropriate HTTP status codes for logging
-        error_code = e.response.get("ResponseMetadata", {}).get(
-            "HTTPStatusCode", status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
         error_type = e.response.get("Error", {}).get("Code", "Unknown")
         error_msg = e.response.get("Error", {}).get("Message", str(e))
-
-        # Map specific AWS error types to HTTP codes
-        if error_type == "ThrottlingException":
-            error_code = status.HTTP_429_TOO_MANY_REQUESTS
-        elif error_type == "ServiceUnavailableException":
-            error_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        elif error_type in ["InternalServerException", "InternalFailure"]:
-            error_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_code = _map_aws_error_to_status_code(error_type)
 
         logger.error(
             "AWS ClientError processing message %s: %s (HTTP %d)",
@@ -193,6 +158,10 @@ async def process_job_message(
 
 
 async def run_worker():
+    """Main worker loop that polls SQS and processes chat messages.
+
+    Runs indefinitely until application shutdown.
+    """
     logger.info("Starting chat worker")
 
     (

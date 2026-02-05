@@ -14,9 +14,6 @@ from app import config
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MAX_MESSAGES = 1
-DEFAULT_LONG_POLL_WAIT_SECONDS = 20
-
 
 class SQSClient:
     """Synchronous boto3 SQS client wrapper."""
@@ -72,8 +69,8 @@ class SQSClient:
 
     def receive_messages(
         self,
-        max_messages: int = DEFAULT_MAX_MESSAGES,
-        wait_time: int = DEFAULT_LONG_POLL_WAIT_SECONDS,
+        max_messages: int | None = None,
+        wait_time: int | None = None,
     ) -> list:
         """Long-poll the configured SQS queue and return any messages.
 
@@ -84,6 +81,11 @@ class SQSClient:
         Returns:
             list: Sequence of message dicts, or an empty list.
         """
+        if max_messages is None:
+            max_messages = config.config.chat_queue.batch_size
+        if wait_time is None:
+            wait_time = config.config.chat_queue.wait_time
+
         response = self._client.receive_message(
             QueueUrl=self._resolved_queue_url,
             MaxNumberOfMessages=max_messages,

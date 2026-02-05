@@ -124,11 +124,9 @@ async def initialize_worker_services():
     """Initialize services for worker without FastAPI dependency injection context."""
     app_config = config.get_config()
 
-    # Initialize MongoDB connection
     mongo_client = await mongo.get_mongo_client(app_config)
     db = mongo_client[app_config.mongo.database]
 
-    # Initialize Bedrock clients
     if app_config.bedrock.use_credentials:
         bedrock_runtime = boto3.client(
             "bedrock-runtime",
@@ -148,13 +146,11 @@ async def initialize_worker_services():
         )
         bedrock_client = boto3.client("bedrock", region_name=app_config.sqs.region)
 
-    # Initialize knowledge retriever
     knowledge_retriever = knowledge.KnowledgeRetriever(
         base_url=app_config.knowledge.base_url,
         similarity_threshold=app_config.knowledge.similarity_threshold,
     )
 
-    # Initialize bedrock inference service
     inference_service = bedrock_service.BedrockInferenceService(
         api_client=bedrock_client,
         runtime_client=bedrock_runtime,
@@ -162,20 +158,16 @@ async def initialize_worker_services():
         knowledge_retriever=knowledge_retriever,
     )
 
-    # Initialize prompt repository
     prompt_repo = FileSystemPromptRepository()
 
-    # Initialize chat agent
     chat_agent = agent.BedrockChatAgent(
         inference_service=inference_service,
         app_config=app_config,
         prompt_repository=prompt_repo,
     )
 
-    # Initialize repositories
     conversation_repo = repository.MongoConversationRepository(db=db)
 
-    # Initialize model resolution service
     model_resolution = model_service.ConfigModelResolutionService(app_config)
 
     # Initialize chat service

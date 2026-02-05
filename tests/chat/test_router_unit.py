@@ -57,7 +57,6 @@ def test_post_chat_queues_message_and_saves(client_override):
     resp_json = resp.json()
     assert "message_id" in resp_json
     assert "conversation_id" in resp_json
-    assert resp_json["status"] == "queued"
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
         question="Hello", model_id="mid", conversation_id=None

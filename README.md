@@ -292,7 +292,7 @@ curl -X POST http://localhost:8086/chat \
 curl http://localhost:8086/conversations/<conversation_id>
 ```
 
-The POST returns `conversation_id` and `message_id` which you can use to poll the GET endpoint or open an SSE stream if configured.
+The POST returns `conversation_id` and `message_id` which you can use to poll the GET endpoint.
 
 ## Security Scanning
 

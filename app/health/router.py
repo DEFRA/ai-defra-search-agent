@@ -21,10 +21,8 @@ def get_worker_task(request: fastapi.Request) -> asyncio.Task | None:
 async def health(
     worker_task: Annotated[asyncio.Task | None, fastapi.Depends(get_worker_task)],
 ):
-    # Check if worker task is running
     if worker_task is None or worker_task.done():
         if worker_task and worker_task.done():
-            # Worker crashed - get the exception if any
             try:
                 worker_task.result()
             except Exception as e:

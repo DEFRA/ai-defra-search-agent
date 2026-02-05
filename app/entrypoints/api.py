@@ -20,18 +20,15 @@ logger = logging.getLogger(__name__)
 
 @contextlib.asynccontextmanager
 async def lifespan(app: fastapi.FastAPI):
-    # Startup
     app_config = config.get_config()
     client = await mongo.get_mongo_client(app_config)
     logger.info("MongoDB client connected")
 
-    # Start worker as background task and store in app state
     app.state.worker_task = asyncio.create_task(run_worker())
     logger.info("Worker task started")
 
     yield
 
-    # Shutdown - clean up all resources and ensure worker stops gracefully
     worker_task = app.state.worker_task
     if worker_task and not worker_task.done():
         worker_task.cancel()
@@ -40,7 +37,6 @@ async def lifespan(app: fastapi.FastAPI):
         logger.info("Worker task stopped")
 
     if client:
-        # Shield from cancellation to ensure cleanup completes
         await asyncio.shield(client.close())
         logger.info("MongoDB client closed")
 

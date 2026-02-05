@@ -32,9 +32,13 @@ async def chat(
         service.ChatService, fastapi.Depends(dependencies.get_chat_service)
     ],
 ):
-    """Queue a chat request and return message/conversation IDs for streaming."""
+    """Queue a chat request for background processing.
+
+    Returns message and conversation IDs that can be used to poll for results.
+    Raises 400 for unsupported models, 404 if conversation not found.
+    """
     try:
-        message_id, conversation_id, status_value = await chat_service.queue_chat(
+        message_id, conversation_id, _ = await chat_service.queue_chat(
             question=request.question,
             model_id=request.model_id,
             conversation_id=request.conversation_id,
@@ -51,7 +55,6 @@ async def chat(
     return {
         "message_id": str(message_id),
         "conversation_id": str(conversation_id),
-        "status": status_value.value,
     }
 
 
@@ -66,7 +69,11 @@ async def get_conversation(
         service.ChatService, fastapi.Depends(dependencies.get_chat_service)
     ],
 ):
-    """Retrieve a conversation with all its messages."""
+    """Retrieve a conversation with all messages.
+
+    Returns complete conversation history including status, timestamps, and model info.
+    Raises 404 if conversation not found.
+    """
     try:
         conversation = await chat_service.get_conversation(conversation_id)
     except models.ConversationNotFoundError as e:

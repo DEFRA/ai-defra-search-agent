@@ -64,7 +64,6 @@ def test_post_chat_valid_question_returns_202(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     response_json = response.json()
-    assert response_json["status"] == "queued"
     assert response_json["message_id"] == str(msg_id)
     assert response_json["conversation_id"] == str(conv_id)
 
