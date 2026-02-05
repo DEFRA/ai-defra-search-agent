@@ -47,3 +47,5 @@ jobs:
       - uses: DEFRA/ai-defra-search-journey-tests/run-journey-tests@AICE-290-JOURNEY-TESTS
         with:
           ai-defra-search-agent: ${{github.sha}}
+          branch: AICE-290-JOURNEY-TESTS
+
