@@ -1,10 +1,10 @@
 import uuid
-from unittest.mock import AsyncMock, MagicMock
 
 import fastapi.testclient
 import pymongo
 import pytest
 from fastapi import status
+from pytest_mock import MockerFixture
 
 from app import config
 from app.chat import models
@@ -13,13 +13,13 @@ from app.entrypoints.api import app
 
 
 @pytest.fixture
-def mock_chat_service():
+def mock_chat_service(mocker: MockerFixture):
     """Create a mock chat service."""
-    return AsyncMock()
+    return mocker.AsyncMock()
 
 
 @pytest.fixture
-def client(monkeypatch, mongo_uri, mock_chat_service):
+def client(monkeypatch, mongo_uri, mock_chat_service, mocker: MockerFixture):
     monkeypatch.setenv("MONGO_URI", mongo_uri)
 
     def get_fresh_mongo_client():
@@ -37,7 +37,7 @@ def client(monkeypatch, mongo_uri, mock_chat_service):
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
     app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
 
-    mock_task = MagicMock()
+    mock_task = mocker.MagicMock()
     mock_task.done.return_value = False
     app.state.worker_task = mock_task
 

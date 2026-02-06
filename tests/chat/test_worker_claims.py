@@ -1,15 +1,17 @@
 import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pytest_mock import MockerFixture
 
 from app.chat import models, worker
 from app.chat.models import Conversation
 
 
 @pytest.mark.asyncio
-async def test_claim_success_calls_execute_and_updates_and_deletes():
+async def test_claim_success_calls_execute_and_updates_and_deletes(
+    mocker: MockerFixture,
+):
     conversation_id = uuid.uuid4()
     message_id = uuid.uuid4()
     body = {
@@ -20,32 +22,34 @@ async def test_claim_success_calls_execute_and_updates_and_deletes():
     }
     message = {"Body": json.dumps(body), "ReceiptHandle": "rh-1"}
 
-    chat_service = AsyncMock()
+    chat_service = mocker.AsyncMock()
     conv = Conversation(id=conversation_id)
-    chat_service.execute_chat = AsyncMock(return_value=conv)
+    chat_service.execute_chat = mocker.AsyncMock(return_value=conv)
 
-    conv_repo = AsyncMock()
-    conv_repo.claim_message = AsyncMock(return_value=True)
-    conv_repo.update_message_status = AsyncMock()
+    conv_repo = mocker.AsyncMock()
+    conv_repo.claim_message = mocker.AsyncMock(return_value=True)
+    conv_repo.update_message_status = mocker.AsyncMock()
 
-    sqs_client = MagicMock()
+    sqs_client = mocker.MagicMock()
 
-    with patch("asyncio.to_thread") as mock_to_thread:
-        mock_to_thread.return_value = None
+    mock_to_thread = mocker.patch("asyncio.to_thread")
+    mock_to_thread.return_value = None
 
-        await worker.process_job_message(message, chat_service, conv_repo, sqs_client)
+    await worker.process_job_message(message, chat_service, conv_repo, sqs_client)
 
-        chat_service.execute_chat.assert_awaited_once()
-        conv_repo.update_message_status.assert_awaited_once_with(
-            conversation_id=conv.id,
-            message_id=message_id,
-            status=models.MessageStatus.COMPLETED,
-        )
-        mock_to_thread.assert_called_once_with(sqs_client.delete_message, "rh-1")
+    chat_service.execute_chat.assert_awaited_once()
+    conv_repo.update_message_status.assert_awaited_once_with(
+        conversation_id=conv.id,
+        message_id=message_id,
+        status=models.MessageStatus.COMPLETED,
+    )
+    mock_to_thread.assert_called_once_with(sqs_client.delete_message, "rh-1")
 
 
 @pytest.mark.asyncio
-async def test_claim_failed_and_completed_status_acknowledges_and_skips():
+async def test_claim_failed_and_completed_status_acknowledges_and_skips(
+    mocker: MockerFixture,
+):
     conversation_id = uuid.uuid4()
     message_id = uuid.uuid4()
     body = {
@@ -56,17 +60,17 @@ async def test_claim_failed_and_completed_status_acknowledges_and_skips():
     }
     message = {"Body": json.dumps(body), "ReceiptHandle": "rh-2"}
 
-    chat_service = AsyncMock()
-    chat_service.execute_chat = AsyncMock()
+    chat_service = mocker.AsyncMock()
+    chat_service.execute_chat = mocker.AsyncMock()
 
-    conv_repo = AsyncMock()
-    conv_repo.claim_message = AsyncMock(return_value=False)
-    conv_repo.get_message_status = AsyncMock(
+    conv_repo = mocker.AsyncMock()
+    conv_repo.claim_message = mocker.AsyncMock(return_value=False)
+    conv_repo.get_message_status = mocker.AsyncMock(
         return_value=models.MessageStatus.COMPLETED
     )
-    conv_repo.update_message_status = AsyncMock()
+    conv_repo.update_message_status = mocker.AsyncMock()
 
-    sqs_client = MagicMock()
+    sqs_client = mocker.MagicMock()
 
     await worker.process_job_message(message, chat_service, conv_repo, sqs_client)
 
@@ -75,7 +79,9 @@ async def test_claim_failed_and_completed_status_acknowledges_and_skips():
 
 
 @pytest.mark.asyncio
-async def test_claim_failed_and_processing_status_acknowledges_and_skips():
+async def test_claim_failed_and_processing_status_acknowledges_and_skips(
+    mocker: MockerFixture,
+):
     conversation_id = uuid.uuid4()
     message_id = uuid.uuid4()
     body = {
@@ -86,17 +92,17 @@ async def test_claim_failed_and_processing_status_acknowledges_and_skips():
     }
     message = {"Body": json.dumps(body), "ReceiptHandle": "rh-3"}
 
-    chat_service = AsyncMock()
-    chat_service.execute_chat = AsyncMock()
+    chat_service = mocker.AsyncMock()
+    chat_service.execute_chat = mocker.AsyncMock()
 
-    conv_repo = AsyncMock()
-    conv_repo.claim_message = AsyncMock(return_value=False)
-    conv_repo.get_message_status = AsyncMock(
+    conv_repo = mocker.AsyncMock()
+    conv_repo.claim_message = mocker.AsyncMock(return_value=False)
+    conv_repo.get_message_status = mocker.AsyncMock(
         return_value=models.MessageStatus.PROCESSING
     )
-    conv_repo.update_message_status = AsyncMock()
+    conv_repo.update_message_status = mocker.AsyncMock()
 
-    sqs_client = MagicMock()
+    sqs_client = mocker.MagicMock()
 
     await worker.process_job_message(message, chat_service, conv_repo, sqs_client)
 
@@ -105,7 +111,9 @@ async def test_claim_failed_and_processing_status_acknowledges_and_skips():
 
 
 @pytest.mark.asyncio
-async def test_claim_failed_and_missing_record_acknowledges_and_skips():
+async def test_claim_failed_and_missing_record_acknowledges_and_skips(
+    mocker: MockerFixture,
+):
     conversation_id = uuid.uuid4()
     message_id = uuid.uuid4()
     body = {
@@ -116,15 +124,15 @@ async def test_claim_failed_and_missing_record_acknowledges_and_skips():
     }
     message = {"Body": json.dumps(body), "ReceiptHandle": "rh-4"}
 
-    chat_service = AsyncMock()
-    chat_service.execute_chat = AsyncMock()
+    chat_service = mocker.AsyncMock()
+    chat_service.execute_chat = mocker.AsyncMock()
 
-    conv_repo = AsyncMock()
-    conv_repo.claim_message = AsyncMock(return_value=False)
-    conv_repo.get_message_status = AsyncMock(return_value=None)
-    conv_repo.update_message_status = AsyncMock()
+    conv_repo = mocker.AsyncMock()
+    conv_repo.claim_message = mocker.AsyncMock(return_value=False)
+    conv_repo.get_message_status = mocker.AsyncMock(return_value=None)
+    conv_repo.update_message_status = mocker.AsyncMock()
 
-    sqs_client = MagicMock()
+    sqs_client = mocker.MagicMock()
 
     await worker.process_job_message(message, chat_service, conv_repo, sqs_client)
 

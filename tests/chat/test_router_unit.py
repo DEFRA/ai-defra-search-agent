@@ -1,5 +1,4 @@
 import uuid
-from unittest.mock import AsyncMock
 
 import fastapi.testclient
 import pytest
@@ -35,10 +34,10 @@ def client_override():
     app.dependency_overrides.clear()
 
 
-def test_post_chat_queues_message_and_saves(client_override):
+def test_post_chat_queues_message_and_saves(client_override, mocker):
     test_client = client_override
 
-    mock_chat_service = AsyncMock()
+    mock_chat_service = mocker.AsyncMock()
     mock_chat_service.queue_chat.return_value = (
         uuid.uuid4(),
         uuid.uuid4(),
@@ -63,10 +62,9 @@ def test_post_chat_queues_message_and_saves(client_override):
     )
 
 
-def test_post_chat_with_nonexistent_conversation_returns_404(client_override):
+def test_post_chat_with_nonexistent_conversation_returns_404(client_override, mocker):
     test_client = client_override
-
-    mock_chat_service = AsyncMock()
+    mock_chat_service = mocker.AsyncMock()
     mock_chat_service.queue_chat.side_effect = models.ConversationNotFoundError(
         "Conversation not found"
     )
@@ -85,10 +83,9 @@ def test_post_chat_with_nonexistent_conversation_returns_404(client_override):
     assert resp.status_code == 404
 
 
-def test_get_conversation_not_found(client_override):
+def test_get_conversation_not_found(client_override, mocker):
     test_client = client_override
-
-    mock_chat_service = AsyncMock()
+    mock_chat_service = mocker.AsyncMock()
     mock_chat_service.get_conversation.side_effect = models.ConversationNotFoundError(
         "Conversation not found"
     )
@@ -101,7 +98,7 @@ def test_get_conversation_not_found(client_override):
     assert resp.status_code == 404
 
 
-def test_get_conversation_returns_data(client_override):
+def test_get_conversation_returns_data(client_override, mocker):
     test_client = client_override
 
     conversation = models.Conversation()
@@ -115,7 +112,7 @@ def test_get_conversation_returns_data(client_override):
     conversation.add_message(user_msg)
     conversation.add_message(assistant_msg)
 
-    mock_chat_service = AsyncMock()
+    mock_chat_service = mocker.AsyncMock()
     mock_chat_service.get_conversation.return_value = conversation
 
     from app.chat import dependencies
@@ -129,10 +126,9 @@ def test_get_conversation_returns_data(client_override):
     assert len(data["messages"]) == 2
 
 
-def test_post_chat_with_unsupported_model_returns_400(client_override):
+def test_post_chat_with_unsupported_model_returns_400(client_override, mocker):
     test_client = client_override
-
-    mock_chat_service = AsyncMock()
+    mock_chat_service = mocker.AsyncMock()
     from app.models import UnsupportedModelError
 
     mock_chat_service.queue_chat.side_effect = UnsupportedModelError("bad model")
@@ -148,12 +144,12 @@ def test_post_chat_with_unsupported_model_returns_400(client_override):
     assert "bad model" in resp.text
 
 
-def test_post_chat_with_existing_conversation(client_override):
+def test_post_chat_with_existing_conversation(client_override, mocker):
     test_client = client_override
 
     conv_id = uuid.uuid4()
     msg_id = uuid.uuid4()
-    mock_chat_service = AsyncMock()
+    mock_chat_service = mocker.AsyncMock()
     mock_chat_service.queue_chat.return_value = (
         msg_id,
         conv_id,

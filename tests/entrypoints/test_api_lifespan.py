@@ -39,7 +39,7 @@ async def test_lifespan_starts_and_stops_worker(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch):
+async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch, mocker):
     """Ensure the mongo client is closed even if the worker task is cancelled.
 
     The lifecycle manager cancels the background worker and awaits it with
@@ -47,10 +47,8 @@ async def test_lifespan_closes_client_when_worker_cancelled(monkeypatch):
     cancellation to ensure it completes.
     """
 
-    from unittest.mock import AsyncMock
-
     # Create a dummy client with an awaitable close method we can assert on
-    dummy_client = AsyncMock()
+    dummy_client = mocker.AsyncMock()
 
     async def fake_get_mongo_client(_cfg):
         return dummy_client

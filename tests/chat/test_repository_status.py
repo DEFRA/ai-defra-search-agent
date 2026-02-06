@@ -1,20 +1,20 @@
 import uuid
-from unittest.mock import AsyncMock
 
 import pytest
+from pytest_mock import MockerFixture
 
 from app.chat import models
 from app.chat.repository import MongoConversationRepository
 
 
 @pytest.mark.asyncio
-async def test_get_returns_none_when_conversation_missing():
+async def test_get_returns_none_when_conversation_missing(mocker: MockerFixture):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.find_one = AsyncMock(return_value=None)
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.find_one = mocker.AsyncMock(return_value=None)
 
     repo = MongoConversationRepository(dummy)
 
@@ -23,13 +23,13 @@ async def test_get_returns_none_when_conversation_missing():
 
 
 @pytest.mark.asyncio
-async def test_get_message_status_doc_not_found_returns_none():
+async def test_get_message_status_doc_not_found_returns_none(mocker: MockerFixture):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.find_one = AsyncMock(return_value=None)
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.find_one = mocker.AsyncMock(return_value=None)
 
     repo = MongoConversationRepository(dummy)
 
@@ -38,13 +38,13 @@ async def test_get_message_status_doc_not_found_returns_none():
 
 
 @pytest.mark.asyncio
-async def test_get_message_status_empty_messages_returns_none():
+async def test_get_message_status_empty_messages_returns_none(mocker: MockerFixture):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.find_one = AsyncMock(return_value={"messages": []})
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.find_one = mocker.AsyncMock(return_value={"messages": []})
 
     repo = MongoConversationRepository(dummy)
 
@@ -53,13 +53,15 @@ async def test_get_message_status_empty_messages_returns_none():
 
 
 @pytest.mark.asyncio
-async def test_get_message_status_defaults_to_completed_when_missing_status():
+async def test_get_message_status_defaults_to_completed_when_missing_status(
+    mocker: MockerFixture,
+):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.find_one = AsyncMock(
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.find_one = mocker.AsyncMock(
         return_value={"messages": [{"message_id": uuid.uuid4()}]}
     )
 
@@ -70,13 +72,13 @@ async def test_get_message_status_defaults_to_completed_when_missing_status():
 
 
 @pytest.mark.asyncio
-async def test_get_message_status_returns_explicit_status():
+async def test_get_message_status_returns_explicit_status(mocker: MockerFixture):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.find_one = AsyncMock(
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.find_one = mocker.AsyncMock(
         return_value={"messages": [{"status": models.MessageStatus.PROCESSING.value}]}
     )
 
@@ -87,13 +89,15 @@ async def test_get_message_status_returns_explicit_status():
 
 
 @pytest.mark.asyncio
-async def test_update_message_status_sets_error_fields_when_provided():
+async def test_update_message_status_sets_error_fields_when_provided(
+    mocker: MockerFixture,
+):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.update_one = AsyncMock()
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.update_one = mocker.AsyncMock()
 
     repo = MongoConversationRepository(dummy)
 
@@ -115,13 +119,15 @@ async def test_update_message_status_sets_error_fields_when_provided():
 
 
 @pytest.mark.asyncio
-async def test_update_message_status_omits_optional_fields_when_none():
+async def test_update_message_status_omits_optional_fields_when_none(
+    mocker: MockerFixture,
+):
     class DummyDB:
         pass
 
     dummy = DummyDB()
-    dummy.conversations = AsyncMock()
-    dummy.conversations.update_one = AsyncMock()
+    dummy.conversations = mocker.AsyncMock()
+    dummy.conversations.update_one = mocker.AsyncMock()
 
     repo = MongoConversationRepository(dummy)
 
