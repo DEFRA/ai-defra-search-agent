@@ -1,5 +1,6 @@
 import abc
 import dataclasses
+import datetime
 import uuid
 
 import pymongo.asynchronous.database
@@ -7,6 +8,82 @@ import pymongo.asynchronous.database
 from app.chat import models
 
 MESSAGES_MESSAGE_ID = "messages.message_id"
+
+
+@dataclasses.dataclass
+class MessageDTO:
+    role: str
+    content: str
+    model: str
+    model_name: str
+    timestamp: datetime.datetime
+    message_id: uuid.UUID | None = None
+    status: str | None = None
+    error_message: str | None = None
+    usage: dict[str, int] | None = None
+
+    @classmethod
+    def from_domain(cls, domain_message: models.Message) -> "MessageDTO":
+        if isinstance(domain_message, models.UserMessage):
+            return cls(
+                message_id=domain_message.message_id,
+                role=domain_message.role,
+                content=domain_message.content,
+                model=domain_message.model_id,
+                model_name=domain_message.model_name,
+                timestamp=domain_message.timestamp,
+                status=domain_message.status.value,
+                error_message=domain_message.error_message,
+            )
+
+        return cls(
+            message_id=domain_message.message_id,
+            role=domain_message.role,
+            content=domain_message.content,
+            model=domain_message.model_id,
+            model_name=domain_message.model_name,
+            timestamp=domain_message.timestamp,
+            status=models.MessageStatus.COMPLETED.value,
+            usage=dataclasses.asdict(domain_message.usage)
+            if isinstance(domain_message, models.AssistantMessage)
+            else None,
+        )
+
+    def to_dict(self) -> dict:
+        return dataclasses.asdict(self)
+
+    def to_domain(self) -> models.Message:
+        common_args = {
+            "role": self.role,
+            "content": self.content,
+            "model_id": self.model,
+            "model_name": self.model_name,
+            "timestamp": self.timestamp,
+        }
+
+        if self.message_id:
+            common_args["message_id"] = self.message_id
+
+        if self.role == "user":
+            status = (
+                models.MessageStatus(self.status)
+                if self.status
+                else models.MessageStatus.COMPLETED
+            )
+            return models.UserMessage(
+                status=status,
+                error_message=self.error_message,
+                **common_args,
+            )
+
+        if self.role == "assistant":
+            return models.AssistantMessage(
+                usage=models.TokenUsage(**self.usage) if self.usage else None,
+                **common_args,
+            )
+
+        error_msg = f"Unknown role: {self.role}"
+        raise ValueError(error_msg)
 
 
 class AbstractConversationRepository(abc.ABC):
@@ -61,24 +138,8 @@ class MongoConversationRepository(AbstractConversationRepository):
                 "$set": {
                     "conversation_id": conversation.id,
                     "messages": [
-                        {
-                            "message_id": msg.message_id,
-                            "role": msg.role,
-                            "content": msg.content,
-                            "model": msg.model_id,
-                            "model_name": msg.model_name,
-                            "status": msg.status.value
-                            if isinstance(msg, models.UserMessage)
-                            else models.MessageStatus.COMPLETED.value,
-                            "error_message": msg.error_message
-                            if isinstance(msg, models.UserMessage)
-                            else None,
-                            "timestamp": msg.timestamp,
-                            "usage": dataclasses.asdict(msg.usage)
-                            if isinstance(msg, models.AssistantMessage)
-                            else None,
-                        }
-                        for msg in conversation.messages
+                        MessageDTO.from_domain(domain_message).to_dict()
+                        for domain_message in conversation.messages
                     ],
                 }
             },
@@ -86,57 +147,21 @@ class MongoConversationRepository(AbstractConversationRepository):
         )
 
     async def get(self, conversation_id: uuid.UUID) -> models.Conversation | None:
-        conversation = await self.conversations.find_one(
+        conversation_doc = await self.conversations.find_one(
             {"conversation_id": conversation_id}
         )
 
-        if not conversation:
+        if not conversation_doc:
             return None
 
-        messages: list[models.Message] = []
-        for msg in conversation["messages"]:
-            role = msg["role"]
-            content = msg["content"]
-            model_id = msg["model"]
-            model_name = msg["model_name"]
-            timestamp = msg["timestamp"]
-            message_id = msg.get("message_id")
-            common_args = {
-                "role": role,
-                "content": content,
-                "model_id": model_id,
-                "model_name": model_name,
-                "timestamp": timestamp,
-            }
-
-            if message_id:
-                common_args["message_id"] = message_id
-
-            if role == "user":
-                status_str = msg.get("status", models.MessageStatus.COMPLETED.value)
-                error_message = msg.get("error_message")
-                messages.append(
-                    models.UserMessage(
-                        status=models.MessageStatus(status_str),
-                        error_message=error_message,
-                        **common_args,
-                    )
-                )
-            elif role == "assistant":
-                usage = models.TokenUsage(**msg["usage"])
-                messages.append(
-                    models.AssistantMessage(
-                        usage=usage,
-                        **common_args,
-                    )
-                )
-            else:
-                msg = f"Unknown role: {role}"
-                raise ValueError(msg)
+        domain_messages = [
+            MessageDTO(**message_data).to_domain()
+            for message_data in conversation_doc["messages"]
+        ]
 
         return models.Conversation(
-            id=conversation["conversation_id"],
-            messages=messages,
+            id=conversation_doc["conversation_id"],
+            messages=domain_messages,
         )
 
     async def update_message_status(
@@ -146,7 +171,6 @@ class MongoConversationRepository(AbstractConversationRepository):
         status: models.MessageStatus,
         error_message: str | None = None,
     ) -> None:
-        """Update the status of a specific message in a conversation."""
         update_data = {
             "messages.$.status": status.value,
         }
@@ -189,16 +213,16 @@ class MongoConversationRepository(AbstractConversationRepository):
         Returns a `MessageStatus` or ``None`` when the message or
         conversation could not be found.
         """
-        doc = await self.conversations.find_one(
+        conversation_doc = await self.conversations.find_one(
             {"conversation_id": conversation_id, MESSAGES_MESSAGE_ID: message_id},
             {"messages.$": 1},
         )
-        if not doc:
+        if not conversation_doc:
             return None
-        msgs = doc.get("messages") or []
-        if not msgs:
+        matched_messages = conversation_doc.get("messages") or []
+        if not matched_messages:
             return None
-        status_str = msgs[0].get("status")
-        if not status_str:
+        status_value = matched_messages[0].get("status")
+        if not status_value:
             return models.MessageStatus.COMPLETED
-        return models.MessageStatus(status_str)
+        return models.MessageStatus(status_value)

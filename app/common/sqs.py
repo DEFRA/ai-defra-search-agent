@@ -44,7 +44,6 @@ class SQSClient:
             )
 
         self._resolved_queue_url = self.queue_url
-        logger.debug("Using queue URL: %s", self._resolved_queue_url)
 
         return self
 

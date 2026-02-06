@@ -64,8 +64,8 @@ def test_post_chat_valid_question_returns_202(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     response_json = response.json()
-    assert response_json["message_id"] == str(msg_id)
-    assert response_json["conversation_id"] == str(conv_id)
+    assert response_json["messageId"] == str(msg_id)
+    assert response_json["conversationId"] == str(conv_id)
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
         question="Hello, how are you?",
@@ -131,8 +131,8 @@ def test_post_chat_with_conversation_id(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_202_ACCEPTED
     response_json = response.json()
-    assert response_json["conversation_id"] == str(conversation_id)
-    assert response_json["message_id"] == str(msg_id)
+    assert response_json["conversationId"] == str(conversation_id)
+    assert response_json["messageId"] == str(msg_id)
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
         question="Follow-up question",
@@ -170,7 +170,7 @@ def test_get_conversation_by_id_returns_conversation(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert response_json["conversation_id"] == str(conversation_id)
+    assert response_json["conversationId"] == str(conversation_id)
     assert len(response_json["messages"]) == 2
 
     mock_chat_service.get_conversation.assert_awaited_once_with(conversation_id)
@@ -203,6 +203,14 @@ def test_get_conversation_with_message_statuses(client, mock_chat_service):
                 message_id=message_id,
                 status=models.MessageStatus.PROCESSING,
             ),
+            models.AssistantMessage(
+                content="AI is...",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                usage=models.TokenUsage(
+                    input_tokens=10, output_tokens=20, total_tokens=30
+                ),
+            ),
         ],
     )
     mock_chat_service.get_conversation.return_value = mock_conversation
@@ -211,9 +219,9 @@ def test_get_conversation_with_message_statuses(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert len(response_json["messages"]) == 1
+    assert len(response_json["messages"]) == 2
     assert response_json["messages"][0]["status"] == "processing"
-    assert response_json["messages"][0]["message_id"] == str(message_id)
+    assert response_json["messages"][0]["messageId"] == str(message_id)
 
 
 def test_get_conversation_with_failed_message(client, mock_chat_service):
@@ -231,6 +239,14 @@ def test_get_conversation_with_failed_message(client, mock_chat_service):
                 status=models.MessageStatus.FAILED,
                 error_message="ThrottlingException: Rate limit exceeded",
             ),
+            models.AssistantMessage(
+                content="",
+                model_id="anthropic.claude-3-haiku",
+                model_name="Claude 3 Haiku",
+                usage=models.TokenUsage(
+                    input_tokens=0, output_tokens=0, total_tokens=0
+                ),
+            ),
         ],
     )
     mock_chat_service.get_conversation.return_value = mock_conversation
@@ -241,7 +257,7 @@ def test_get_conversation_with_failed_message(client, mock_chat_service):
     response_json = response.json()
     message = response_json["messages"][0]
     assert message["status"] == "failed"
-    assert message["error_message"] == "ThrottlingException: Rate limit exceeded"
+    assert message["errorMessage"] == "ThrottlingException: Rate limit exceeded"
 
 
 def test_get_conversation_with_completed_messages(client, mock_chat_service):
@@ -273,7 +289,7 @@ def test_get_conversation_with_completed_messages(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
-    assert response_json["conversation_id"] == str(conversation_id)
+    assert response_json["conversationId"] == str(conversation_id)
     assert len(response_json["messages"]) == 2
     assert response_json["messages"][0]["role"] == "user"
     assert response_json["messages"][0]["status"] == "completed"

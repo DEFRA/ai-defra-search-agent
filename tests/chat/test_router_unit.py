@@ -54,8 +54,8 @@ def test_post_chat_queues_message_and_saves(client_override, mocker):
 
     assert resp.status_code == 202
     resp_json = resp.json()
-    assert "message_id" in resp_json
-    assert "conversation_id" in resp_json
+    assert "messageId" in resp_json
+    assert "conversationId" in resp_json
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
         question="Hello", model_id="mid", conversation_id=None
@@ -122,7 +122,7 @@ def test_get_conversation_returns_data(client_override, mocker):
     resp = test_client.get(f"/conversations/{conversation.id}")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["conversation_id"] == str(conversation.id)
+    assert data["conversationId"] == str(conversation.id)
     assert len(data["messages"]) == 2
 
 
@@ -169,8 +169,8 @@ def test_post_chat_with_existing_conversation(client_override, mocker):
     resp = test_client.post("/chat", json=body)
     assert resp.status_code == 202
     resp_json = resp.json()
-    assert resp_json["conversation_id"] == str(conv_id)
-    assert resp_json["message_id"] == str(msg_id)
+    assert resp_json["conversationId"] == str(conv_id)
+    assert resp_json["messageId"] == str(msg_id)
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
         question="Follow up", model_id="mid", conversation_id=conv_id

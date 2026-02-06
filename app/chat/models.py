@@ -18,8 +18,6 @@ __all__ = [
 
 
 class MessageStatus(str, enum.Enum):
-    """Status of a message processing job."""
-
     QUEUED = "queued"
     PROCESSING = "processing"
     COMPLETED = "completed"

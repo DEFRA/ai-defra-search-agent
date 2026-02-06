@@ -31,6 +31,10 @@ class ChatRequest(BaseRequestSchema):
 
 
 class MessageResponse(pydantic.BaseModel):
+    message_id: uuid.UUID = pydantic.Field(
+        description="The unique identifier for the message",
+        serialization_alias="messageId",
+    )
     role: str = pydantic.Field(
         description="The role of the message sender, e.g., 'user' or 'assistant'"
     )
@@ -47,8 +51,28 @@ class MessageResponse(pydantic.BaseModel):
         exclude_if=lambda v: v is None,
         serialization_alias="modelId",
     )
+    status: str = pydantic.Field(description="The status of the message processing")
+    error_message: str | None = pydantic.Field(
+        default=None,
+        description="Error message if the message processing failed",
+        exclude_if=lambda v: v is None,
+        serialization_alias="errorMessage",
+    )
     timestamp: datetime.datetime = pydantic.Field(
         description="The timestamp of when the message was created"
+    )
+
+
+class QueueChatResponse(pydantic.BaseModel):
+    message_id: uuid.UUID = pydantic.Field(
+        description="The unique identifier for the queued message",
+        serialization_alias="messageId",
+    )
+    conversation_id: uuid.UUID = pydantic.Field(
+        description="The ID of the conversation", serialization_alias="conversationId"
+    )
+    status: str = pydantic.Field(
+        description="The current status of the message processing"
     )
 
 

@@ -18,6 +18,7 @@ router = fastapi.APIRouter(tags=["chat"])
     status_code=status.HTTP_202_ACCEPTED,
     summary="Send a message to the chatbot",
     description="Queues a user question for asynchronous processing. Poll GET /conversations/{conversation_id} to retrieve responses.",
+    response_model=api_schemas.QueueChatResponse,
     responses={
         202: {"description": "Message queued successfully"},
         400: {
@@ -48,17 +49,18 @@ async def chat(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
         ) from None
 
-    return {
-        "message_id": str(message_id),
-        "conversation_id": str(conversation_id),
-        "status": str(status_value),
-    }
+    return api_schemas.QueueChatResponse(
+        message_id=message_id,
+        conversation_id=conversation_id,
+        status=status_value,
+    )
 
 
 @router.get(
     "/conversations/{conversation_id}",
     summary="Get conversation by ID",
     description="Retrieve a conversation with all its messages.",
+    response_model=api_schemas.ChatResponse,
 )
 async def get_conversation(
     conversation_id: uuid.UUID,
@@ -74,23 +76,25 @@ async def get_conversation(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
         ) from None
 
-    return {
-        "conversation_id": str(conversation.id),
-        "messages": [
-            {
-                "message_id": str(msg.message_id),
-                "role": msg.role,
-                "content": msg.content,
-                "model_id": msg.model_id,
-                "model_name": msg.model_name,
-                "status": msg.status.value
-                if isinstance(msg, models.UserMessage)
-                else models.MessageStatus.COMPLETED.value,
-                "error_message": msg.error_message
-                if isinstance(msg, models.UserMessage)
-                else None,
-                "timestamp": msg.timestamp.isoformat(),
-            }
-            for msg in conversation.messages
-        ],
-    }
+    messages = [
+        api_schemas.MessageResponse(
+            message_id=msg.message_id,
+            role=msg.role,
+            content=msg.content,
+            model_id=msg.model_id,
+            model_name=msg.model_name,
+            status=msg.status.value
+            if isinstance(msg, models.UserMessage)
+            else models.MessageStatus.COMPLETED.value,
+            error_message=msg.error_message
+            if isinstance(msg, models.UserMessage)
+            else None,
+            timestamp=msg.timestamp,
+        )
+        for msg in conversation.messages
+    ]
+
+    return api_schemas.ChatResponse(
+        conversation_id=conversation.id,
+        messages=messages,
+    )
