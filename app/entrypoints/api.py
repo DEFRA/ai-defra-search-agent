@@ -69,10 +69,8 @@ async def unsupported_model_exception_handler(
     )
 
 
-# Setup middleware
 app.add_middleware(tracing.TraceIdMiddleware)
 
-# Setup Routes
 app.include_router(health_router.router)
 app.include_router(models_router.router)
 app.include_router(chat_router.router)
