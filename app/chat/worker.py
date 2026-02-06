@@ -9,7 +9,6 @@ import logging
 import uuid
 
 from botocore.exceptions import ClientError
-from fastapi import status
 
 from app import config
 from app.chat import dependencies, models
@@ -17,24 +16,12 @@ from app.chat import dependencies, models
 logger = logging.getLogger(__name__)
 
 
-def _map_aws_error_to_status_code(error_type: str) -> int:
-    """Map AWS error type to HTTP status code for logging."""
-    match error_type:
-        case "ThrottlingException":
-            return status.HTTP_429_TOO_MANY_REQUESTS
-        case "ServiceUnavailableException":
-            return status.HTTP_503_SERVICE_UNAVAILABLE
-        case "InternalServerException" | "InternalFailure":
-            return status.HTTP_500_INTERNAL_SERVER_ERROR
-        case _:
-            return status.HTTP_500_INTERNAL_SERVER_ERROR
-
-
 async def _update_message_failed(
     conversation_repository,
     conversation_id: uuid.UUID | None,
     message_id: uuid.UUID,
     error_message: str,
+    _error_code: int | None = None,
 ) -> None:
     """Mark a message as failed in the repository.
 
@@ -129,9 +116,9 @@ async def process_job_message(
             f"Conversation not found: {e}",
         )
     except ClientError as e:
-        error_type = e.response.get("Error", {}).get("Code", "Unknown")
-        error_msg = e.response.get("Error", {}).get("Message", str(e))
-        error_code = _map_aws_error_to_status_code(error_type)
+        error_code = e.response["ResponseMetadata"]["HTTPStatusCode"]
+        error_type = e.response["Error"]["Code"]
+        error_message = e.response["Error"]["Message"]
 
         logger.error(
             "AWS ClientError processing message %s: %s (HTTP %d)",
@@ -143,7 +130,8 @@ async def process_job_message(
             conversation_repository,
             conversation_id,
             message_id,
-            f"{error_type}: {error_msg}",
+            f"{error_type}: {error_message}",
+            error_code,
         )
     except Exception as e:
         logger.exception("Failed to process message %s", message_id)
