@@ -44,8 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t defradigital/ai-defra-search-agent:${{github.sha}} .
-      - uses: DEFRA/ai-defra-search-journey-tests/run-journey-tests@AICE-290-JOURNEY-TESTS
+      - uses: DEFRA/ai-defra-search-journey-tests/run-journey-tests@main
         with:
           ai-defra-search-agent: ${{github.sha}}
-          branch: AICE-290-JOURNEY-TESTS
 
