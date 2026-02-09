@@ -40,6 +40,7 @@ async def test_execute_chat_adds_messages_and_saves(mocker: MockerFixture):
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
+        sqs_client=mocker.MagicMock(),
     )
 
     conv = await svc.execute_chat("q", "mid", uuid.uuid4())
@@ -81,6 +82,7 @@ async def test_build_knowledge_reference_str_and_execute_chat_happy_path(
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution,
+        sqs_client=mocker.MagicMock(),
     )
 
     result = await svc.execute_chat(
@@ -92,7 +94,7 @@ async def test_build_knowledge_reference_str_and_execute_chat_happy_path(
 
 
 def test_build_knowledge_reference_str_formatting():
-    svc = service.ChatService(None, None, None)
+    svc = service.ChatService(None, None, None, None)
     src1 = models.Source(name="A", location="http://a", snippet="s1\ns2", score=0.5)
     src2 = models.Source(name="B", location="http://b", snippet="s3", score=0.8)
     out = svc._build_knowledge_reference_str([src1, src2])
@@ -173,6 +175,7 @@ async def test_queue_chat_raises_when_conversation_not_found(mocker: MockerFixtu
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
+        sqs_client=mocker.MagicMock(),
     )
 
     with pytest.raises(models.ConversationNotFoundError):
@@ -194,6 +197,7 @@ async def test_queue_chat_raises_when_model_unsupported(mocker: MockerFixture):
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
+        sqs_client=mocker.MagicMock(),
     )
 
     with pytest.raises(UnsupportedModelError):
@@ -228,30 +232,6 @@ async def test_queue_chat_sends_correct_sqs_message(mocker: MockerFixture):
     assert message_data["conversation_id"] == str(conversation_id)
     assert message_data["question"] == "Test question"
     assert message_data["model_id"] == "m1"
-
-
-@pytest.mark.asyncio
-async def test_queue_chat_without_sqs_client(mocker: MockerFixture):
-    chat_agent = mocker.AsyncMock()
-    conversation_repository = mocker.AsyncMock()
-    model_resolution_service = mocker.MagicMock()
-    model_resolution_service.resolve_model.return_value = DummyModelInfo()
-
-    svc = service.ChatService(
-        chat_agent=chat_agent,
-        conversation_repository=conversation_repository,
-        model_resolution_service=model_resolution_service,
-        sqs_client=None,
-    )
-
-    message_id, conversation_id, status = await svc.queue_chat(
-        question="Hi", model_id="mid"
-    )
-
-    assert message_id is not None
-    assert conversation_id is not None
-    assert status == models.MessageStatus.QUEUED
-    conversation_repository.save.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -290,6 +270,7 @@ async def test_get_conversation_returns_conversation(mocker: MockerFixture):
         chat_agent=None,
         conversation_repository=conversation_repository,
         model_resolution_service=None,
+        sqs_client=None,
     )
 
     conv_id = uuid.uuid4()
@@ -308,6 +289,7 @@ async def test_get_conversation_raises_error_when_not_found(mocker: MockerFixtur
         chat_agent=None,
         conversation_repository=conversation_repository,
         model_resolution_service=None,
+        sqs_client=None,
     )
 
     with pytest.raises(models.ConversationNotFoundError):

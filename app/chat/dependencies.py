@@ -170,12 +170,13 @@ async def initialize_worker_services():
 
     model_resolution = model_service.ConfigModelResolutionService(app_config)
 
+    sqs_client = sqs.SQSClient()
+
     chat_svc = service.ChatService(
         chat_agent=chat_agent,
         conversation_repository=conversation_repo,
         model_resolution_service=model_resolution,
+        sqs_client=sqs_client,
     )
-
-    sqs_client = sqs.SQSClient()
 
     return chat_svc, conversation_repo, sqs_client

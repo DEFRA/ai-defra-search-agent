@@ -46,12 +46,13 @@ def mock_model_resolution_service(mocker):
 
 
 @pytest.fixture
-def chat_service(mock_agent, mock_repository, mock_model_resolution_service):
+def chat_service(mock_agent, mock_repository, mock_model_resolution_service, mocker):
     """ChatService instance with mocked dependencies"""
     return service.ChatService(
         chat_agent=mock_agent,
         conversation_repository=mock_repository,
         model_resolution_service=mock_model_resolution_service,
+        sqs_client=mocker.MagicMock(),
     )
 
 

@@ -16,7 +16,7 @@ class ChatService:
         chat_agent: agent.AbstractChatAgent,
         conversation_repository: repository.AbstractConversationRepository,
         model_resolution_service: model_service.AbstractModelResolutionService,
-        sqs_client: sqs.SQSClient | None = None,
+        sqs_client: sqs.SQSClient,
     ):
         self.chat_agent = chat_agent
         self.conversation_repository = conversation_repository
@@ -116,26 +116,25 @@ class ChatService:
 
         await self.conversation_repository.save(conversation)
 
-        if self.sqs_client:
-            try:
-                with self.sqs_client:
-                    self.sqs_client.send_message(
-                        json.dumps(
-                            {
-                                "message_id": str(user_message.message_id),
-                                "conversation_id": str(conversation.id),
-                                "question": question,
-                                "model_id": model_id,
-                            }
-                        )
+        try:
+            with self.sqs_client:
+                self.sqs_client.send_message(
+                    json.dumps(
+                        {
+                            "message_id": str(user_message.message_id),
+                            "conversation_id": str(conversation.id),
+                            "question": question,
+                            "model_id": model_id,
+                        }
                     )
-                logger.info(
-                    "Successfully queued message %s to SQS", user_message.message_id
                 )
-            except Exception as e:
-                logger.error(
-                    "Failed to queue message %s to SQS: %s", user_message.message_id, e
-                )
+            logger.info(
+                "Successfully queued message %s to SQS", user_message.message_id
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to queue message %s to SQS: %s", user_message.message_id, e
+            )
 
         return user_message.message_id, conversation.id, user_message.status
 
