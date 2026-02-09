@@ -83,6 +83,13 @@ class Conversation:
     def add_message(self, message: Message) -> None:
         self.messages.append(message)
 
+    def add_message_if_new(self, message: Message) -> bool:
+        """Add message if not already present. Returns True if added."""
+        if any(m.message_id == message.message_id for m in self.messages):
+            return False
+        self.add_message(message)
+        return True
+
 
 class ConversationNotFoundError(Exception):
     pass

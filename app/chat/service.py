@@ -41,15 +41,13 @@ class ChatService:
             msg = f"Conversation with id {conversation_id} not found"
             raise models.ConversationNotFoundError(msg)
 
-        message_exists = any(m.message_id == message_id for m in conversation.messages)
-        if not message_exists:
-            user_message = models.UserMessage(
-                message_id=message_id,
-                content=question,
-                model_id=model_id,
-                model_name=model_info.name,
-            )
-            conversation.add_message(user_message)
+        user_message = models.UserMessage(
+            message_id=message_id,
+            content=question,
+            model_id=model_id,
+            model_name=model_info.name,
+        )
+        conversation.add_message_if_new(user_message)
 
         agent_request = models.AgentRequest(
             question=question,
