@@ -54,6 +54,18 @@ def test_health_worker_crashed(mocker):
     assert "Worker task failed" in response.json()["detail"]
 
 
+def test_health_worker_stopped(mocker):
+    # Mock worker_task as done (stopped gracefully without exception)
+    mock_task = mocker.MagicMock()
+    mock_task.done.return_value = True
+    mock_task.result.return_value = None
+    mocker.patch.object(app.state, "worker_task", mock_task)
+
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert "Worker task stopped" in response.json()["detail"]
+
+
 def test_root():
     response = client.get("/")
     assert response.status_code == 404
