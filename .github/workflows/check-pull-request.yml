@@ -32,3 +32,19 @@ jobs:
           set +e
           docker build --no-cache --tag cdp-python-backend-template .
           exit $?
+
+  test:
+    name: Run Journey Tests
+    needs: security-scan
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t defradigital/ai-defra-search-agent:${{github.sha}} .
+      - uses: DEFRA/ai-defra-search-journey-tests/run-journey-tests@main
+        with:
+          ai-defra-search-agent: ${{github.sha}}
+
