@@ -118,7 +118,7 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
         chat_queue = ChatQueueCfg()
         worker = WorkerCfg()
 
-    class DummySQS:
+    class MockSQSClient:
         def __init__(self):
             self.receive_calls = 0
             self.deleted = []
@@ -154,7 +154,7 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
         def delete_message(self, receipt_handle):
             self.deleted.append(receipt_handle)
 
-    dummy = DummySQS()
+    mock_sqs = MockSQSClient()
     chat_service = mocker.AsyncMock()
     conv_repo = mocker.AsyncMock()
 
@@ -162,7 +162,7 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
     monkeypatch.setattr(
         deps_mod,
         "initialize_worker_services",
-        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, mock_sqs)),
     )
 
     async def mock_process(*_args, **_kwargs):
@@ -182,7 +182,7 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
         await task
 
     assert proc.await_count >= 1
-    assert dummy.receive_calls >= 1
+    assert mock_sqs.receive_calls >= 1
 
 
 @pytest.mark.asyncio
@@ -207,7 +207,7 @@ async def test_run_worker_handles_cancellation(monkeypatch, mocker):
         chat_queue = ChatQueueCfg()
         worker = WorkerCfg()
 
-    class DummySQS:
+    class MockSQSClient:
         def __enter__(self):
             return self
 
@@ -217,7 +217,7 @@ async def test_run_worker_handles_cancellation(monkeypatch, mocker):
         def receive_messages(self, max_messages=None, wait_time=None):  # noqa: ARG002
             return []
 
-    dummy = DummySQS()
+    mock_sqs = MockSQSClient()
     chat_service = mocker.AsyncMock()
     conv_repo = mocker.AsyncMock()
 
@@ -225,7 +225,7 @@ async def test_run_worker_handles_cancellation(monkeypatch, mocker):
     monkeypatch.setattr(
         deps_mod,
         "initialize_worker_services",
-        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, mock_sqs)),
     )
 
     task = _asyncio.create_task(worker_mod.run_worker())
@@ -256,7 +256,7 @@ async def test_run_worker_stops_after_max_failures(monkeypatch, mocker):
         chat_queue = ChatQueueCfg()
         worker = WorkerCfg()
 
-    class DummySQS:
+    class MockSQSClient:
         def __enter__(self):
             return self
 
@@ -267,7 +267,7 @@ async def test_run_worker_stops_after_max_failures(monkeypatch, mocker):
             msg = "Persistent error"
             raise Exception(msg)
 
-    dummy = DummySQS()
+    mock_sqs = MockSQSClient()
     chat_service = mocker.AsyncMock()
     conv_repo = mocker.AsyncMock()
 
@@ -275,7 +275,7 @@ async def test_run_worker_stops_after_max_failures(monkeypatch, mocker):
     monkeypatch.setattr(
         deps_mod,
         "initialize_worker_services",
-        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, mock_sqs)),
     )
 
     with pytest.raises(Exception, match="Persistent error"):
@@ -305,7 +305,7 @@ async def test_run_worker_resets_failures_on_success(monkeypatch, mocker):
         chat_queue = ChatQueueCfg()
         worker = WorkerCfg()
 
-    class DummySQS:
+    class MockSQSClient:
         def __init__(self):
             self.call_count = 0
 
@@ -336,7 +336,7 @@ async def test_run_worker_resets_failures_on_success(monkeypatch, mocker):
                 ]
             return []
 
-    dummy = DummySQS()
+    mock_sqs = MockSQSClient()
     chat_service = mocker.AsyncMock()
     conv_repo = mocker.AsyncMock()
 
@@ -344,7 +344,7 @@ async def test_run_worker_resets_failures_on_success(monkeypatch, mocker):
     monkeypatch.setattr(
         deps_mod,
         "initialize_worker_services",
-        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, mock_sqs)),
     )
 
     proc = mocker.AsyncMock()
@@ -357,7 +357,7 @@ async def test_run_worker_resets_failures_on_success(monkeypatch, mocker):
     with pytest.raises(_asyncio.CancelledError):
         await task
 
-    assert dummy.call_count >= 2
+    assert mock_sqs.call_count >= 2
     assert proc.await_count >= 1
 
 

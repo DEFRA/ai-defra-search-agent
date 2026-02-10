@@ -5,7 +5,7 @@ import pytest
 from app.chat import models, repository
 
 
-class DummyCollection:
+class MockMongoCollection:
     def __init__(self):
         self.storage = {}
 
@@ -38,11 +38,11 @@ class DummyCollection:
 
 @pytest.mark.asyncio
 async def test_mongo_conversation_repository_save_get_update():
-    dummy_db = type("M", (), {})()
-    coll = DummyCollection()
-    dummy_db.conversations = coll
+    mock_db = type("M", (), {})()
+    mock_collection = MockMongoCollection()
+    mock_db.conversations = mock_collection
 
-    repo = repository.MongoConversationRepository(db=dummy_db)
+    repo = repository.MongoConversationRepository(db=mock_db)
 
     # Test save (should call update_one)
     conv = models.Conversation()
@@ -50,7 +50,7 @@ async def test_mongo_conversation_repository_save_get_update():
         models.UserMessage(content="hello", model_id="mid", model_name="mname")
     )
     await repo.save(conv)
-    assert coll.last_upsert is True
+    assert mock_collection.last_upsert is True
 
     # Test get returns Conversation
     cid = uuid.uuid4()
@@ -61,4 +61,4 @@ async def test_mongo_conversation_repository_save_get_update():
     await repo.update_message_status(
         cid, uuid.uuid4(), models.MessageStatus.COMPLETED, "err"
     )
-    assert coll.last_update is not None
+    assert mock_collection.last_update is not None
