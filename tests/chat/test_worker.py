@@ -110,8 +110,13 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
         polling_interval = 0.01
         batch_size = 1
 
+    class WorkerCfg:
+        max_consecutive_failures = 3
+        max_backoff_seconds = 60
+
     class MockConfig:
         chat_queue = ChatQueueCfg()
+        worker = WorkerCfg()
 
     class DummySQS:
         def __init__(self):
@@ -178,6 +183,182 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
 
     assert proc.await_count >= 1
     assert dummy.receive_calls >= 1
+
+
+@pytest.mark.asyncio
+async def test_run_worker_handles_cancellation(monkeypatch, mocker):
+    """Test that worker raises CancelledError when cancelled."""
+    import asyncio as _asyncio
+
+    from app import config as config_mod
+    from app.chat import dependencies as deps_mod
+    from app.chat import worker as worker_mod
+
+    class ChatQueueCfg:
+        wait_time = 0.01
+        polling_interval = 0.01
+        batch_size = 1
+
+    class WorkerCfg:
+        max_consecutive_failures = 3
+        max_backoff_seconds = 60
+
+    class MockConfig:
+        chat_queue = ChatQueueCfg()
+        worker = WorkerCfg()
+
+    class DummySQS:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def receive_messages(self, max_messages=None, wait_time=None):  # noqa: ARG002
+            return []
+
+    dummy = DummySQS()
+    chat_service = mocker.AsyncMock()
+    conv_repo = mocker.AsyncMock()
+
+    monkeypatch.setattr(config_mod, "config", MockConfig())
+    monkeypatch.setattr(
+        deps_mod,
+        "initialize_worker_services",
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+    )
+
+    task = _asyncio.create_task(worker_mod.run_worker())
+    await _asyncio.sleep(0.1)
+    task.cancel()
+
+    with pytest.raises(_asyncio.CancelledError):
+        await task
+
+
+@pytest.mark.asyncio
+async def test_run_worker_stops_after_max_failures(monkeypatch, mocker):
+    """Test that worker stops after reaching max consecutive failures."""
+    from app import config as config_mod
+    from app.chat import dependencies as deps_mod
+    from app.chat import worker as worker_mod
+
+    class ChatQueueCfg:
+        wait_time = 0.01
+        polling_interval = 0.01
+        batch_size = 1
+
+    class WorkerCfg:
+        max_consecutive_failures = 3
+        max_backoff_seconds = 60
+
+    class MockConfig:
+        chat_queue = ChatQueueCfg()
+        worker = WorkerCfg()
+
+    class DummySQS:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def receive_messages(self, max_messages=None, wait_time=None):  # noqa: ARG002
+            msg = "Persistent error"
+            raise Exception(msg)
+
+    dummy = DummySQS()
+    chat_service = mocker.AsyncMock()
+    conv_repo = mocker.AsyncMock()
+
+    monkeypatch.setattr(config_mod, "config", MockConfig())
+    monkeypatch.setattr(
+        deps_mod,
+        "initialize_worker_services",
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+    )
+
+    with pytest.raises(Exception, match="Persistent error"):
+        await worker_mod.run_worker()
+
+
+@pytest.mark.asyncio
+async def test_run_worker_resets_failures_on_success(monkeypatch, mocker):
+    """Test that worker resets failure count and backoff on successful processing."""
+    import asyncio as _asyncio
+    import json as _json
+
+    from app import config as config_mod
+    from app.chat import dependencies as deps_mod
+    from app.chat import worker as worker_mod
+
+    class ChatQueueCfg:
+        wait_time = 0.01
+        polling_interval = 0.01
+        batch_size = 1
+
+    class WorkerCfg:
+        max_consecutive_failures = 3
+        max_backoff_seconds = 60
+
+    class MockConfig:
+        chat_queue = ChatQueueCfg()
+        worker = WorkerCfg()
+
+    class DummySQS:
+        def __init__(self):
+            self.call_count = 0
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def receive_messages(self, max_messages=None, wait_time=None):  # noqa: ARG002
+            self.call_count += 1
+            if self.call_count == 1:
+                msg = "First failure"
+                raise Exception(msg)
+            if self.call_count == 2:
+                return [
+                    {
+                        "Body": _json.dumps(
+                            {
+                                "message_id": str(uuid.uuid4()),
+                                "conversation_id": str(uuid.uuid4()),
+                                "question": "q",
+                                "model_id": "m1",
+                            }
+                        ),
+                        "ReceiptHandle": "rh",
+                    }
+                ]
+            return []
+
+    dummy = DummySQS()
+    chat_service = mocker.AsyncMock()
+    conv_repo = mocker.AsyncMock()
+
+    monkeypatch.setattr(config_mod, "config", MockConfig())
+    monkeypatch.setattr(
+        deps_mod,
+        "initialize_worker_services",
+        mocker.AsyncMock(return_value=(chat_service, conv_repo, dummy)),
+    )
+
+    proc = mocker.AsyncMock()
+    monkeypatch.setattr(worker_mod, "process_job_message", proc)
+
+    task = _asyncio.create_task(worker_mod.run_worker())
+    await _asyncio.sleep(0.3)
+    task.cancel()
+
+    with pytest.raises(_asyncio.CancelledError):
+        await task
+
+    assert dummy.call_count >= 2
+    assert proc.await_count >= 1
 
 
 def test_update_message_failed_no_conversation(mocker):

@@ -135,6 +135,16 @@ class ChatQueueConfig(pydantic_settings.BaseSettings):
     )
 
 
+class WorkerConfig(pydantic_settings.BaseSettings):
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
+    max_consecutive_failures: int = pydantic.Field(
+        default=3, alias="WORKER_MAX_CONSECUTIVE_FAILURES"
+    )
+    max_backoff_seconds: int = pydantic.Field(
+        default=60, alias="WORKER_MAX_BACKOFF_SECONDS"
+    )
+
+
 class AppConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
@@ -150,6 +160,7 @@ class AppConfig(pydantic_settings.BaseSettings):
     knowledge: KnowledgeConfig = pydantic.Field(default_factory=KnowledgeConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
     chat_queue: ChatQueueConfig = pydantic.Field(default_factory=ChatQueueConfig)
+    worker: WorkerConfig = pydantic.Field(default_factory=WorkerConfig)
 
 
 config: AppConfig | None = None

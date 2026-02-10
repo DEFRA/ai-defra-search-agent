@@ -148,7 +148,8 @@ async def process_job_message(
 async def run_worker():
     """Main worker loop that polls SQS and processes chat messages.
 
-    Runs indefinitely until application shutdown.
+    Runs indefinitely until cancellation or unrecoverable failure.
+    Implements exponential backoff on errors with maximum failure threshold.
     """
     logger.info("Starting chat worker")
 
@@ -157,6 +158,10 @@ async def run_worker():
         conversation_repository,
         sqs_client,
     ) = await dependencies.initialize_worker_services()
+
+    consecutive_failures = 0
+    max_consecutive_failures = config.config.worker.max_consecutive_failures
+    backoff_time = config.config.chat_queue.polling_interval
 
     with sqs_client:
         while True:
@@ -171,9 +176,29 @@ async def run_worker():
                     await process_job_message(
                         message, chat_service, conversation_repository, sqs_client
                     )
+
+                consecutive_failures = 0
+                backoff_time = config.config.chat_queue.polling_interval
+
+            except asyncio.CancelledError:
+                logger.info("Worker cancellation requested, shutting down")
+                raise
             except Exception:
-                logger.exception("Error in worker loop")
-                await asyncio.sleep(config.config.chat_queue.polling_interval)
+                consecutive_failures += 1
+                logger.exception(
+                    "Error in worker loop (failure %d/%d)",
+                    consecutive_failures,
+                    max_consecutive_failures,
+                )
+
+                if consecutive_failures >= max_consecutive_failures:
+                    logger.critical("Max consecutive failures reached, stopping worker")
+                    raise
+
+                await asyncio.sleep(backoff_time)
+                backoff_time = min(
+                    backoff_time * 2, config.config.worker.max_backoff_seconds
+                )
 
 
 def main():
