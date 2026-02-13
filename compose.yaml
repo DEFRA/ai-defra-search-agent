@@ -1,20 +1,19 @@
 services:
   localstack:
-    image: localstack/localstack:4
+    image: localstack/localstack:4.9.2
     ports:
-      - "4566:4566" # LocalStack Gateway
-      - "4510-4559:4510-4559" # external services port range
+      - "4567:4566" # LocalStack Gateway (avoiding conflict with ai-defra-search-data on 4566)
+      - "4570-4619:4510-4559" # external services port range
     env_file:
       - "compose/aws.env"
-    profiles:
-      - use-localstack
     environment:
-      DEBUG: ${DEBUG:-1}
+      DEBUG: ${DEBUG:-0}
       LS_LOG: WARN # Localstack DEBUG Level
-      SERVICES: s3,sqs,sns,firehose
+      SERVICES: sqs
       LOCALSTACK_HOST: 127.0.0.1
+      PORT: 4566
     volumes:
-      - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
+      - "${TMPDIR:-/tmp}/localstack-agent:/var/lib/localstack"
       - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
     healthcheck:
       test: ["CMD", "curl", "localhost:4566"]
@@ -42,9 +41,12 @@ services:
       - 5679:5679
     links:
       - "mongodb:mongodb"
+      - "localstack:localstack"
     depends_on:
       mongodb:
         condition: service_started
+      localstack:
+        condition: service_healthy
     profiles:
       - service
     env_file:
@@ -53,7 +55,7 @@ services:
       PORT: ${PORT:-8086}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
-      LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
+
     volumes:
       - ./app:/home/nonroot/app
     develop:

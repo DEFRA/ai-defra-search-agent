@@ -1,4 +1,5 @@
 import logging
+from typing import Annotated
 
 import fastapi
 
@@ -17,9 +18,10 @@ router = fastapi.APIRouter(tags=["models"])
     responses={204: {"description": "No available models found"}},
 )
 async def list_models(
-    model_resolution_service: service.AbstractModelResolutionService = fastapi.Depends(
-        dependencies.get_model_resolution_service
-    ),
+    model_resolution_service: Annotated[
+        service.AbstractModelResolutionService,
+        fastapi.Depends(dependencies.get_model_resolution_service),
+    ],
 ):
     models = model_resolution_service.get_available_models()
 

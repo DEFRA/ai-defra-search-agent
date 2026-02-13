@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import logging
 
@@ -7,6 +8,7 @@ import uvicorn
 
 from app import config
 from app.chat import router as chat_router
+from app.chat.worker import run_worker
 from app.common import mongo, tracing
 from app.feedback import router as feedback_router
 from app.health import router as health_router
@@ -17,15 +19,25 @@ logger = logging.getLogger(__name__)
 
 
 @contextlib.asynccontextmanager
-async def lifespan(_: fastapi.FastAPI):
-    # Startup
+async def lifespan(app: fastapi.FastAPI):
     app_config = config.get_config()
     client = await mongo.get_mongo_client(app_config)
     logger.info("MongoDB client connected")
+
+    app.state.worker_task = asyncio.create_task(run_worker())
+    logger.info("Worker task started")
+
     yield
-    # Shutdown
+
+    worker_task = app.state.worker_task
+    if worker_task and not worker_task.done():
+        worker_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await worker_task
+        logger.info("Worker task stopped")
+
     if client:
-        await client.close()
+        await asyncio.shield(client.close())
         logger.info("MongoDB client closed")
 
 
@@ -57,10 +69,8 @@ async def unsupported_model_exception_handler(
     )
 
 
-# Setup middleware
 app.add_middleware(tracing.TraceIdMiddleware)
 
-# Setup Routes
 app.include_router(health_router.router)
 app.include_router(models_router.router)
 app.include_router(chat_router.router)

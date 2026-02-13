@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 import uuid
 from typing import Any, Literal
 
@@ -9,10 +10,18 @@ __all__ = [
     "Conversation",
     "ConversationNotFoundError",
     "Message",
+    "MessageStatus",
     "Source",
     "TokenUsage",
     "UserMessage",
 ]
+
+
+class MessageStatus(str, enum.Enum):
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -35,6 +44,7 @@ class Message:
     content: str
     model_id: str
     model_name: str
+    message_id: uuid.UUID = dataclasses.field(default_factory=uuid.uuid4)
     timestamp: datetime.datetime = dataclasses.field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
@@ -46,6 +56,8 @@ class Message:
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class UserMessage(Message):
     role: Literal["user"] = "user"
+    status: MessageStatus = MessageStatus.COMPLETED
+    error_message: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -70,6 +82,13 @@ class Conversation:
 
     def add_message(self, message: Message) -> None:
         self.messages.append(message)
+
+    def add_message_if_new(self, message: Message) -> bool:
+        """Add message if not already present. Returns True if added."""
+        if any(m.message_id == message.message_id for m in self.messages):
+            return False
+        self.add_message(message)
+        return True
 
 
 class ConversationNotFoundError(Exception):
