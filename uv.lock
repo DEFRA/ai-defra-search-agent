@@ -48,7 +48,7 @@ requires-dist = [
     { name = "aws-embedded-metrics", specifier = "==3.3.0" },
     { name = "beautifulsoup4", specifier = "==4.13.5" },
     { name = "boto3", specifier = "==1.42.30" },
-    { name = "cryptography", specifier = ">=46.0.5" },
+    { name = "cryptography", specifier = "==46.0.5" },
     { name = "dnspython", specifier = "==2.7.0" },
     { name = "ecs-logging", specifier = "==2.2.0" },
     { name = "fastapi", specifier = "==0.121.2" },
