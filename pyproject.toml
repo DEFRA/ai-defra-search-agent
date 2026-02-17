@@ -5,19 +5,22 @@ description = "ai-defra-search-agent"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
+    "boto3==1.42.30",
     "aiohttp==3.13.3",
     "anthropic==0.64.0",
     "asgi-logger==0.1.0",
     "aws-embedded-metrics==3.3.0",
     "beautifulsoup4==4.13.5",
-    "boto3==1.40.31",
+    "cryptography==46.0.5",
     "dnspython==2.7.0",
     "ecs-logging==2.2.0",
     "fastapi==0.121.2",
     "httpx==0.28.1",
+    "motor==3.7.1",
     "pydantic==2.12.4",
     "pydantic-settings==2.12.0",
     "pymongo[aws,encryption,snappy,zstd]==4.13.1",
+    "sse-starlette==2.2.1",
     "starlette==0.49.1",
     "tiktoken==0.11.0",
     "uvicorn==0.34.3",

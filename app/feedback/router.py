@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import fastapi
 
 from app.feedback import api_schemas, dependencies, service
@@ -14,9 +16,9 @@ router = fastapi.APIRouter(tags=["feedback"])
 )
 async def submit_feedback(
     request: api_schemas.FeedbackRequest,
-    feedback_service: service.FeedbackService = fastapi.Depends(
-        dependencies.get_feedback_service
-    ),
+    feedback_service: Annotated[
+        service.FeedbackService, fastapi.Depends(dependencies.get_feedback_service)
+    ],
 ):
     feedback = await feedback_service.submit_feedback(
         was_helpful=request.was_helpful,

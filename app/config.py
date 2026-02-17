@@ -105,21 +105,62 @@ class MongoConfig(pydantic_settings.BaseSettings):
     )
 
 
+class SQSConfig(pydantic_settings.BaseSettings):
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
+    region: str = pydantic.Field(..., alias="AWS_REGION")
+    use_credentials: bool = pydantic.Field(
+        default=False, alias="AWS_SQS_USE_CREDENTIALS"
+    )
+    endpoint_url: str | None = pydantic.Field(
+        default=None, alias="AWS_SQS_ENDPOINT_URL"
+    )
+    access_key_id: str | None = pydantic.Field(
+        default=None, alias="AWS_SQS_ACCESS_KEY_ID"
+    )
+    secret_access_key: str | None = pydantic.Field(
+        default=None, alias="AWS_SQS_SECRET_ACCESS_KEY"
+    )
+
+
+class ChatQueueConfig(pydantic_settings.BaseSettings):
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
+    url: str = pydantic.Field(..., alias="SQS_CHAT_QUEUE_URL")
+    batch_size: int = pydantic.Field(default=10, alias="SQS_CHAT_QUEUE_BATCH_SIZE")
+    wait_time: int = pydantic.Field(default=20, alias="SQS_CHAT_QUEUE_WAIT_TIME")
+    visibility_timeout: int = pydantic.Field(
+        default=120, alias="SQS_CHAT_QUEUE_VISIBILITY_TIMEOUT"
+    )
+    polling_interval: int = pydantic.Field(
+        default=5, alias="SQS_CHAT_QUEUE_POLLING_INTERVAL"
+    )
+
+
+class WorkerConfig(pydantic_settings.BaseSettings):
+    model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
+    max_consecutive_failures: int = pydantic.Field(
+        default=3, alias="WORKER_MAX_CONSECUTIVE_FAILURES"
+    )
+    max_backoff_seconds: int = pydantic.Field(
+        default=60, alias="WORKER_MAX_BACKOFF_SECONDS"
+    )
+
+
 class AppConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     python_env: str = "production"
     host: str = "127.0.0.1"
     port: int = 8086
     log_config: str = pydantic.Field(...)
-    aws_region: str = pydantic.Field(...)
-    localstack_url: str | None = None
     http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
 
+    sqs: SQSConfig = pydantic.Field(default_factory=SQSConfig)
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)
     knowledge: KnowledgeConfig = pydantic.Field(default_factory=KnowledgeConfig)
     bedrock: BedrockConfig = pydantic.Field(default_factory=BedrockConfig)
+    chat_queue: ChatQueueConfig = pydantic.Field(default_factory=ChatQueueConfig)
+    worker: WorkerConfig = pydantic.Field(default_factory=WorkerConfig)
 
 
 config: AppConfig | None = None

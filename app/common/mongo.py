@@ -49,7 +49,6 @@ async def get_db(
 ) -> pymongo.asynchronous.database.AsyncDatabase:
     global db
     if db is None:
-        # TODO: remove "Any" type by defining custom types for the databases collections.
         codec_options: bson.codec_options.CodecOptions[dict[str, Any]] = (
             bson.codec_options.CodecOptions(
                 uuid_representation=bson.binary.UuidRepresentation.STANDARD

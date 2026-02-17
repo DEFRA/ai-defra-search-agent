@@ -7,7 +7,7 @@ import pymongo.asynchronous.database
 from app import config, dependencies
 from app.bedrock import service as bedrock_service
 from app.chat import agent, repository, service
-from app.common import knowledge, mongo
+from app.common import knowledge, mongo, sqs
 from app.models import dependencies as model_dependencies
 from app.models import service as model_service
 from app.prompts.repository import FileSystemPromptRepository
@@ -36,10 +36,10 @@ def get_bedrock_runtime_client(
             "bedrock-runtime",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region,
+            region_name=app_config.sqs.region,
         )
 
-    return boto3.client("bedrock-runtime", region_name=app_config.aws_region)
+    return boto3.client("bedrock-runtime", region_name=app_config.sqs.region)
 
 
 def get_bedrock_client(
@@ -50,10 +50,10 @@ def get_bedrock_client(
             "bedrock",
             aws_access_key_id=app_config.bedrock.access_key_id,
             aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.aws_region,
+            region_name=app_config.sqs.region,
         )
 
-    return boto3.client("bedrock", region_name=app_config.aws_region)
+    return boto3.client("bedrock", region_name=app_config.sqs.region)
 
 
 def get_bedrock_inference_service(
@@ -94,6 +94,10 @@ def get_conversation_repository(
     return repository.MongoConversationRepository(db=db)
 
 
+def get_sqs_client() -> sqs.SQSClient:
+    return sqs.SQSClient()
+
+
 def get_chat_service(
     chat_agent: agent.AbstractChatAgent = fastapi.Depends(get_chat_agent),
     conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
@@ -102,9 +106,77 @@ def get_chat_service(
     model_resolution_service: model_service.AbstractModelResolutionService = fastapi.Depends(
         model_dependencies.get_model_resolution_service
     ),
+    sqs_client: sqs.SQSClient = fastapi.Depends(get_sqs_client),
 ) -> service.ChatService:
     return service.ChatService(
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
+        sqs_client=sqs_client,
     )
+
+
+def get_model_resolution_service() -> model_service.AbstractModelResolutionService:
+    return model_service.ConfigModelResolutionService(config.config)
+
+
+async def initialize_worker_services():
+    """Initialize services for worker without FastAPI dependency injection context."""
+    app_config = config.get_config()
+
+    mongo_client = await mongo.get_mongo_client(app_config)
+    db = mongo_client[app_config.mongo.database]
+
+    if app_config.bedrock.use_credentials:
+        bedrock_runtime = boto3.client(
+            "bedrock-runtime",
+            aws_access_key_id=app_config.bedrock.access_key_id,
+            aws_secret_access_key=app_config.bedrock.secret_access_key,
+            region_name=app_config.sqs.region,
+        )
+        bedrock_client = boto3.client(
+            "bedrock",
+            aws_access_key_id=app_config.bedrock.access_key_id,
+            aws_secret_access_key=app_config.bedrock.secret_access_key,
+            region_name=app_config.sqs.region,
+        )
+    else:
+        bedrock_runtime = boto3.client(
+            "bedrock-runtime", region_name=app_config.sqs.region
+        )
+        bedrock_client = boto3.client("bedrock", region_name=app_config.sqs.region)
+
+    knowledge_retriever = knowledge.KnowledgeRetriever(
+        base_url=app_config.knowledge.base_url,
+        similarity_threshold=app_config.knowledge.similarity_threshold,
+    )
+
+    inference_service = bedrock_service.BedrockInferenceService(
+        api_client=bedrock_client,
+        runtime_client=bedrock_runtime,
+        app_config=app_config,
+        knowledge_retriever=knowledge_retriever,
+    )
+
+    prompt_repo = FileSystemPromptRepository()
+
+    chat_agent = agent.BedrockChatAgent(
+        inference_service=inference_service,
+        app_config=app_config,
+        prompt_repository=prompt_repo,
+    )
+
+    conversation_repo = repository.MongoConversationRepository(db=db)
+
+    model_resolution = model_service.ConfigModelResolutionService(app_config)
+
+    sqs_client = sqs.SQSClient()
+
+    chat_svc = service.ChatService(
+        chat_agent=chat_agent,
+        conversation_repository=conversation_repo,
+        model_resolution_service=model_resolution,
+        sqs_client=sqs_client,
+    )
+
+    return chat_svc, conversation_repo, sqs_client
