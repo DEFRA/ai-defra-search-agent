@@ -129,11 +129,27 @@ def test_get_conversation_repository(mocker: MockerFixture):
 def test_get_chat_service(mocker: MockerFixture):
     mock_agent = mocker.Mock()
     mock_repo = mocker.Mock()
+    mock_model = mocker.Mock()
+    mock_sqs = mocker.Mock()
 
-    chat_service = dependencies.get_chat_service(mock_agent, mock_repo)
+    chat_service = dependencies.get_chat_service(
+        mock_agent, mock_repo, mock_model, mock_sqs
+    )
 
     assert isinstance(chat_service, service.ChatService)
     assert chat_service.chat_agent == mock_agent
+    assert chat_service.conversation_repository == mock_repo
+
+
+def test_get_queue_chat_service(mocker: MockerFixture):
+    mock_repo = mocker.Mock()
+    mock_model = mocker.Mock()
+    mock_sqs = mocker.Mock()
+
+    chat_service = dependencies.get_queue_chat_service(mock_repo, mock_model, mock_sqs)
+
+    assert isinstance(chat_service, service.ChatService)
+    assert chat_service.chat_agent is None
     assert chat_service.conversation_repository == mock_repo
 
 

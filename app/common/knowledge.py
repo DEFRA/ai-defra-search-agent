@@ -23,8 +23,14 @@ class KnowledgeRetriever:
         self.base_url = base_url.rstrip("/")
         self.similarity_threshold = similarity_threshold
 
-    def search(self, group_id: str, query: str, max_results: int = 5) -> list[dict]:
-        """Returns raw list of document dicts from the API."""
+    RAG_ERROR_MESSAGE = (
+        "RAG lookup failed. Knowledge base sources could not be retrieved."
+    )
+
+    def search(
+        self, group_id: str, query: str, max_results: int = 5
+    ) -> tuple[list[dict], str | None]:
+        """Returns (docs, error_message). error_message is non-None when RAG lookup failed."""
         try:
             with httpx.Client(timeout=5.0) as client:
                 response = client.post(
@@ -37,10 +43,22 @@ class KnowledgeRetriever:
                 )
                 response.raise_for_status()
                 raw_docs = _convert_keys(response.json())
-                return self._filter_relevant_docs(raw_docs)
+                return self._filter_relevant_docs(raw_docs), None
+        except httpx.HTTPStatusError as e:
+            try:
+                body = e.response.json()
+            except Exception:
+                body = e.response.text
+            logger.error(
+                "RAG Lookup failed: %s %s - %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+                body,
+            )
+            return [], self.RAG_ERROR_MESSAGE
         except Exception as e:
             logger.error("RAG Lookup failed: %s", e)
-            return []
+            return [], self.RAG_ERROR_MESSAGE
 
     def _filter_relevant_docs(self, docs: list[dict]) -> list[dict]:
         similar_docs = [

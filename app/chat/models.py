@@ -72,6 +72,7 @@ class Source:
 class AssistantMessage(Message):
     usage: TokenUsage
     sources: list[Source] = dataclasses.field(default_factory=list)
+    rag_error: str | None = None
     role: Literal["assistant"] = "assistant"
 
 

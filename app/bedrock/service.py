@@ -35,8 +35,9 @@ class BedrockInferenceService:
         sources_found: list[models.RagSource] = []
         model_id = model_config.id
 
+        rag_error: str | None = None
         if self.knowledge_retriever and knowledge_group_id and len(messages) == 1:
-            rag_docs = self._retrieve_knowledge(messages, knowledge_group_id)
+            rag_docs, rag_error = self._retrieve_knowledge(messages, knowledge_group_id)
             if rag_docs:
                 system_prompt += self._build_context_string(rag_docs)
                 sources_found = self._map_docs_to_sources(rag_docs)
@@ -84,6 +85,7 @@ class BedrockInferenceService:
                 "output_tokens": usage_info["outputTokens"],
             },
             sources=sources_found,
+            rag_error=rag_error,
         )
 
     def get_inference_profile_details(
@@ -109,9 +111,9 @@ class BedrockInferenceService:
 
     def _retrieve_knowledge(
         self, messages: list[dict[str, Any]], knowledge_group_id: str
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], str | None]:
         if not self.knowledge_retriever:
-            return []
+            return [], None
 
         query = messages[-1]["content"][0]["text"]
         return self.knowledge_retriever.search(group_id=knowledge_group_id, query=query)

@@ -109,7 +109,24 @@ def get_chat_service(
     sqs_client: sqs.SQSClient = fastapi.Depends(get_sqs_client),
 ) -> service.ChatService:
     return service.ChatService(
+        conversation_repository=conversation_repository,
+        model_resolution_service=model_resolution_service,
+        sqs_client=sqs_client,
         chat_agent=chat_agent,
+    )
+
+
+def get_queue_chat_service(
+    conversation_repository: repository.AbstractConversationRepository = fastapi.Depends(
+        get_conversation_repository
+    ),
+    model_resolution_service: model_service.AbstractModelResolutionService = fastapi.Depends(
+        model_dependencies.get_model_resolution_service
+    ),
+    sqs_client: sqs.SQSClient = fastapi.Depends(get_sqs_client),
+) -> service.ChatService:
+    """Lightweight ChatService for queue-only operations. Skips Bedrock/agent deps for fast response."""
+    return service.ChatService(
         conversation_repository=conversation_repository,
         model_resolution_service=model_resolution_service,
         sqs_client=sqs_client,
@@ -173,10 +190,10 @@ async def initialize_worker_services():
     sqs_client = sqs.SQSClient()
 
     chat_svc = service.ChatService(
-        chat_agent=chat_agent,
         conversation_repository=conversation_repo,
         model_resolution_service=model_resolution,
         sqs_client=sqs_client,
+        chat_agent=chat_agent,
     )
 
     return chat_svc, conversation_repo, sqs_client
