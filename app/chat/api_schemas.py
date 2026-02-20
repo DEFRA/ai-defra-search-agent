@@ -82,5 +82,4 @@ class ChatResponse(pydantic.BaseModel):
     )
     messages: list[MessageResponse] = pydantic.Field(
         description="The list of messages in the conversation",
-        min_length=2,
     )

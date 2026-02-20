@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 
@@ -130,6 +131,7 @@ async def test_queue_chat_creates_new_conversation(mocker: MockerFixture):
     assert conversation_id is not None
     assert status == models.MessageStatus.QUEUED
     conversation_repository.save.assert_awaited_once()
+    await asyncio.sleep(0.05)  # allow background SQS send to complete
     sqs_client.send_message.assert_called_once()
 
 
@@ -225,6 +227,7 @@ async def test_queue_chat_sends_correct_sqs_message(mocker: MockerFixture):
         question="Test question", model_id="m1"
     )
 
+    await asyncio.sleep(0.05)  # allow background SQS send to complete
     sqs_client.send_message.assert_called_once()
     call_args = sqs_client.send_message.call_args[0][0]
     message_data = json.loads(call_args)
@@ -235,7 +238,8 @@ async def test_queue_chat_sends_correct_sqs_message(mocker: MockerFixture):
 
 
 @pytest.mark.asyncio
-async def test_queue_chat_handles_sqs_error_gracefully(mocker: MockerFixture):
+async def test_queue_chat_propagates_sqs_error(mocker: MockerFixture):
+    """SQS failures propagate so the client gets an error instead of a false 202."""
     chat_agent = mocker.AsyncMock()
     conversation_repository = mocker.AsyncMock()
     model_resolution_service = mocker.MagicMock()
@@ -245,8 +249,6 @@ async def test_queue_chat_handles_sqs_error_gracefully(mocker: MockerFixture):
     sqs_client.__exit__.return_value = None
     sqs_client.send_message.side_effect = Exception("SQS error")
 
-    mock_logger = mocker.patch("app.chat.service.logger")
-
     svc = service.ChatService(
         chat_agent=chat_agent,
         conversation_repository=conversation_repository,
@@ -254,10 +256,8 @@ async def test_queue_chat_handles_sqs_error_gracefully(mocker: MockerFixture):
         sqs_client=sqs_client,
     )
 
-    message_id, _, _ = await svc.queue_chat(question="Hi", model_id="mid")
-
-    mock_logger.error.assert_called_once()
-    assert "Failed to queue message" in str(mock_logger.error.call_args)
+    with pytest.raises(Exception, match="SQS error"):
+        await svc.queue_chat(question="Hi", model_id="mid")
 
 
 @pytest.mark.asyncio

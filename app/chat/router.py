@@ -30,7 +30,7 @@ router = fastapi.APIRouter(tags=["chat"])
 async def chat(
     request: api_schemas.ChatRequest,
     chat_service: Annotated[
-        service.ChatService, fastapi.Depends(dependencies.get_chat_service)
+        service.ChatService, fastapi.Depends(dependencies.get_queue_chat_service)
     ],
 ):
     """Queue a chat request and return message/conversation IDs."""
@@ -65,7 +65,7 @@ async def chat(
 async def get_conversation(
     conversation_id: uuid.UUID,
     chat_service: Annotated[
-        service.ChatService, fastapi.Depends(dependencies.get_chat_service)
+        service.ChatService, fastapi.Depends(dependencies.get_queue_chat_service)
     ],
 ):
     """Retrieve a conversation with all its messages."""

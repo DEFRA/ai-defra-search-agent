@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import json
 import logging
@@ -13,10 +14,10 @@ logger = logging.getLogger(__name__)
 class ChatService:
     def __init__(
         self,
-        chat_agent: agent.AbstractChatAgent,
         conversation_repository: repository.AbstractConversationRepository,
         model_resolution_service: model_service.AbstractModelResolutionService,
         sqs_client: sqs.SQSClient,
+        chat_agent: agent.AbstractChatAgent | None = None,
     ):
         self.chat_agent = chat_agent
         self.conversation_repository = conversation_repository
@@ -30,6 +31,9 @@ class ChatService:
         message_id: uuid.UUID,
         conversation_id: uuid.UUID | None = None,
     ) -> models.Conversation:
+        if self.chat_agent is None:
+            msg = "ChatService.execute_chat requires chat_agent"
+            raise RuntimeError(msg)
         model_info = self.model_resolution_service.resolve_model(model_id)
 
         if conversation_id:
@@ -57,13 +61,17 @@ class ChatService:
         agent_responses = await self.chat_agent.execute_flow(agent_request)
 
         for response_message in agent_responses:
+            content_parts = [response_message.content]
             if response_message.sources:
-                knowledge_reference_str = self._build_knowledge_reference_str(
-                    response_message.sources
+                content_parts.append(
+                    self._build_knowledge_reference_str(response_message.sources)
                 )
+            if response_message.rag_error:
+                content_parts.append(f"*{response_message.rag_error}*")
+            if len(content_parts) > 1:
                 response_message = dataclasses.replace(
                     response_message,
-                    content=f"{response_message.content}\n\n{knowledge_reference_str}",
+                    content="\n\n".join(content_parts),
                 )
 
             message_with_model_name = dataclasses.replace(
@@ -114,7 +122,7 @@ class ChatService:
 
         await self.conversation_repository.save(conversation)
 
-        try:
+        def _send_to_sqs() -> None:
             with self.sqs_client:
                 self.sqs_client.send_message(
                     json.dumps(
@@ -129,10 +137,8 @@ class ChatService:
             logger.info(
                 "Successfully queued message %s to SQS", user_message.message_id
             )
-        except Exception as e:
-            logger.error(
-                "Failed to queue message %s to SQS: %s", user_message.message_id, e
-            )
+
+        await asyncio.to_thread(_send_to_sqs)
 
         return user_message.message_id, conversation.id, user_message.status
 

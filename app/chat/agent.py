@@ -84,6 +84,7 @@ class BedrockChatAgent(AbstractChatAgent):
                     )
                     for s in response.sources
                 ],
+                rag_error=response.rag_error,
             )
             for content_block in response.content
         ]

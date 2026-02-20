@@ -354,6 +354,89 @@ async def test_execute_chat_with_multi_turn_conversation_includes_full_history(
     assert len(saved_conversation.messages) == 6
 
 
+@pytest.mark.asyncio
+async def test_execute_chat_appends_rag_error_to_content(
+    chat_service, mock_agent, mock_repository
+):
+    rag_error_msg = "RAG lookup failed. Knowledge base sources could not be retrieved."
+    mock_agent.execute_flow.return_value = [
+        models.AssistantMessage(
+            content="Here is my response.",
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
+            rag_error=rag_error_msg,
+        )
+    ]
+
+    await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4())
+
+    saved_conversation = mock_repository.save.call_args[0][0]
+    assistant_msg = saved_conversation.messages[-1]
+    assert assistant_msg.content == f"Here is my response.\n\n*{rag_error_msg}*"
+
+
+@pytest.mark.asyncio
+async def test_execute_chat_appends_sources_to_content(
+    chat_service, mock_agent, mock_repository
+):
+    sources = [
+        models.Source(
+            name="Doc 1", location="http://doc1.com", snippet="Snippet 1", score=0.95
+        ),
+    ]
+    mock_agent.execute_flow.return_value = [
+        models.AssistantMessage(
+            content="Answer with sources.",
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
+            sources=sources,
+        )
+    ]
+
+    await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4())
+
+    saved_conversation = mock_repository.save.call_args[0][0]
+    assistant_msg = saved_conversation.messages[-1]
+    assert "Answer with sources." in assistant_msg.content
+    assert "### Sources" in assistant_msg.content
+    assert "Doc 1" in assistant_msg.content
+    assert "http://doc1.com" in assistant_msg.content
+    assert "Snippet 1" in assistant_msg.content
+
+
+@pytest.mark.asyncio
+async def test_execute_chat_appends_sources_and_rag_error_to_content(
+    chat_service, mock_agent, mock_repository
+):
+    sources = [
+        models.Source(
+            name="Doc 1", location="http://doc1.com", snippet="Snippet 1", score=0.95
+        ),
+    ]
+    rag_error_msg = "RAG lookup failed. Knowledge base sources could not be retrieved."
+    mock_agent.execute_flow.return_value = [
+        models.AssistantMessage(
+            content="Partial answer.",
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
+            sources=sources,
+            rag_error=rag_error_msg,
+        )
+    ]
+
+    await chat_service.execute_chat(MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4())
+
+    saved_conversation = mock_repository.save.call_args[0][0]
+    assistant_msg = saved_conversation.messages[-1]
+    assert "Partial answer." in assistant_msg.content
+    assert "### Sources" in assistant_msg.content
+    assert "Doc 1" in assistant_msg.content
+    assert f"*{rag_error_msg}*" in assistant_msg.content
+
+
 def test_build_knowledge_reference_str_formats_correctly(chat_service):
     sources = [
         models.Source(

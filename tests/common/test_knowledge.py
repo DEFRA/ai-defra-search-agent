@@ -43,7 +43,7 @@ class TestKnowledgeRetriever:
         mock_client_instance.__enter__.return_value = mock_client_instance
         mock_client_instance.post.return_value = mock_response
 
-        results = retriever.search("group1", "query")
+        docs, error = retriever.search("group1", "query")
 
         mock_client_instance.post.assert_called_once_with(
             f"{base_url}/snapshots/query",
@@ -54,9 +54,10 @@ class TestKnowledgeRetriever:
             },
         )
 
-        assert len(results) == 1
-        assert results[0]["similarity_score"] == 0.9
-        assert results[0]["content"] == "foo"
+        assert error is None
+        assert len(docs) == 1
+        assert docs[0]["similarity_score"] == 0.9
+        assert docs[0]["content"] == "foo"
 
     def test_search_api_error(self, caplog, mocker):
         retriever = KnowledgeRetriever(base_url="http://test")
@@ -71,10 +72,77 @@ class TestKnowledgeRetriever:
         mock_client_instance.__enter__.return_value = mock_client_instance
         mock_client_instance.post.return_value = mock_response
 
-        results = retriever.search("group1", "query")
+        docs, error = retriever.search("group1", "query")
 
-        assert results == []
+        assert docs == []
+        assert error == KnowledgeRetriever.RAG_ERROR_MESSAGE
         assert "RAG Lookup failed" in caplog.text
+
+    def test_search_api_error_logs_json_body_when_available(self, caplog, mocker):
+        retriever = KnowledgeRetriever(base_url="http://test")
+        mock_http_response = mocker.Mock()
+        mock_http_response.status_code = 500
+        mock_http_response.reason_phrase = "Internal Server Error"
+        mock_http_response.json.return_value = {"error": "Something went wrong"}
+        mock_http_response.text = "fallback"
+
+        mock_response = mocker.Mock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Error", request=mocker.Mock(), response=mock_http_response
+        )
+
+        mock_client = mocker.patch("httpx.Client")
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.__enter__.return_value = mock_client_instance
+        mock_client_instance.post.return_value = mock_response
+
+        docs, error = retriever.search("group1", "query")
+
+        assert docs == []
+        assert error == KnowledgeRetriever.RAG_ERROR_MESSAGE
+        assert "Something went wrong" in caplog.text
+
+    def test_search_api_error_falls_back_to_text_when_json_fails(self, caplog, mocker):
+        retriever = KnowledgeRetriever(base_url="http://test")
+        mock_http_response = mocker.Mock()
+        mock_http_response.status_code = 500
+        mock_http_response.reason_phrase = "Internal Server Error"
+        mock_http_response.json.side_effect = ValueError("Invalid JSON")
+        mock_http_response.text = "HTML error page"
+
+        mock_response = mocker.Mock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Error", request=mocker.Mock(), response=mock_http_response
+        )
+
+        mock_client = mocker.patch("httpx.Client")
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.__enter__.return_value = mock_client_instance
+        mock_client_instance.post.return_value = mock_response
+
+        docs, error = retriever.search("group1", "query")
+
+        assert docs == []
+        assert error == KnowledgeRetriever.RAG_ERROR_MESSAGE
+        assert "HTML error page" in caplog.text
+
+    def test_search_passes_max_results(self, mocker):
+        retriever = KnowledgeRetriever(base_url="http://test")
+        mock_response = mocker.Mock()
+        mock_response.json.return_value = []
+        mock_response.raise_for_status.return_value = None
+
+        mock_client = mocker.patch("httpx.Client")
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.__enter__.return_value = mock_client_instance
+        mock_client_instance.post.return_value = mock_response
+
+        retriever.search("group1", "query", max_results=10)
+
+        mock_client_instance.post.assert_called_once_with(
+            f"{retriever.base_url}/snapshots/query",
+            json={"groupId": "group1", "query": "query", "maxResults": 10},
+        )
 
     def test_search_connection_error(self, caplog, mocker):
         retriever = KnowledgeRetriever(base_url="http://test")
@@ -84,9 +152,10 @@ class TestKnowledgeRetriever:
         mock_client_instance.__enter__.return_value = mock_client_instance
         mock_client_instance.post.side_effect = httpx.ConnectError("Connection failed")
 
-        results = retriever.search("group1", "query")
+        docs, error = retriever.search("group1", "query")
 
-        assert results == []
+        assert docs == []
+        assert error == KnowledgeRetriever.RAG_ERROR_MESSAGE
         assert "RAG Lookup failed" in caplog.text
 
     def test_filter_relevant_docs_filters_below_threshold(self):

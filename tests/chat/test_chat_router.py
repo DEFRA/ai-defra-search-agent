@@ -35,7 +35,9 @@ def client(monkeypatch, mongo_uri, mock_chat_service, mocker: MockerFixture):
 
     app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     mock_task = mocker.MagicMock()
     mock_task.done.return_value = False

@@ -187,14 +187,17 @@ def test_invoke_with_rag_should_augment_prompt_and_return_sources(
     mocker: MockerFixture,
 ):
     mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
-    mock_retriever.search.return_value = [
-        {
-            "name": "doc1",
-            "location": "http://doc1",
-            "content": "This is content of doc1",
-            "similarity_score": 0.9,
-        }
-    ]
+    mock_retriever.search.return_value = (
+        [
+            {
+                "name": "doc1",
+                "location": "http://doc1",
+                "content": "This is content of doc1",
+                "similarity_score": 0.9,
+            }
+        ],
+        None,
+    )
 
     # Mock runtime client converse to check prompt
     mock_converse = mocker.patch.object(
@@ -239,9 +242,9 @@ def test_invoke_with_rag_but_no_docs_found(
     bedrock_inference_service: service.BedrockInferenceService,
     mocker: MockerFixture,
 ):
-    # Mock retrieval to return empty list
+    # Mock retrieval to return empty list (no error)
     mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
-    mock_retriever.search.return_value = []
+    mock_retriever.search.return_value = ([], None)
 
     mock_converse = mocker.patch.object(
         bedrock_inference_service.runtime_client,
@@ -266,6 +269,40 @@ def test_invoke_with_rag_but_no_docs_found(
     full_prompt = system_prompts[0]["text"]
     assert full_prompt == "System prompt."  # Unchanged
     assert response.sources == []
+    assert response.rag_error is None
+
+
+def test_invoke_with_rag_error_returns_rag_error_in_response(
+    bedrock_inference_service: service.BedrockInferenceService,
+    mocker: MockerFixture,
+):
+    mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
+    mock_retriever.search.return_value = (
+        [],
+        "RAG lookup failed. Knowledge base sources could not be retrieved.",
+    )
+
+    mocker.patch.object(
+        bedrock_inference_service.runtime_client,
+        "converse",
+        return_value={
+            "output": {"message": {"content": [{"text": "Response"}]}},
+            "usage": {"inputTokens": 10, "outputTokens": 20},
+        },
+    )
+
+    response = bedrock_inference_service.invoke_anthropic(
+        model_config=models.ModelConfig(id="geni-ai-3.5"),
+        system_prompt="System prompt.",
+        messages=[{"role": "user", "content": [{"text": "Query"}]}],
+        knowledge_group_id="group1",
+    )
+
+    assert response.sources == []
+    assert (
+        response.rag_error
+        == "RAG lookup failed. Knowledge base sources could not be retrieved."
+    )
 
 
 def test_retrieve_knowledge_returns_empty_when_no_retriever(
@@ -287,7 +324,7 @@ def test_retrieve_knowledge_returns_empty_when_no_retriever(
         knowledge_group_id="group1",
     )
 
-    assert result == []
+    assert result == ([], None)
 
 
 def test_invoke_with_inference_profile_arn_should_resolve_backing_model(
@@ -335,7 +372,7 @@ def test_invoke_should_only_call_rag_for_first_message(
     mocker: MockerFixture,
 ):
     mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
-    mock_retriever.search.return_value = []
+    mock_retriever.search.return_value = ([], None)
 
     # Mock runtime client converse
     mocker.patch.object(

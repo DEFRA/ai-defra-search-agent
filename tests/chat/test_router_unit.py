@@ -46,7 +46,9 @@ def test_post_chat_queues_message_and_saves(client_override, mocker):
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     body = {"question": "Hello", "modelId": "mid"}
 
@@ -71,7 +73,9 @@ def test_post_chat_with_nonexistent_conversation_returns_404(client_override, mo
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     body = {
         "question": "Hi",
@@ -92,7 +96,9 @@ def test_get_conversation_not_found(client_override, mocker):
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     resp = test_client.get(f"/conversations/{uuid.uuid4()}")
     assert resp.status_code == 404
@@ -117,7 +123,9 @@ def test_get_conversation_returns_data(client_override, mocker):
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     resp = test_client.get(f"/conversations/{conversation.id}")
     assert resp.status_code == 200
@@ -135,7 +143,9 @@ def test_post_chat_with_unsupported_model_returns_400(client_override, mocker):
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     body = {"question": "Hi", "modelId": "invalid"}
 
@@ -158,7 +168,9 @@ def test_post_chat_with_existing_conversation(client_override, mocker):
 
     from app.chat import dependencies
 
-    app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat_service
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
 
     body = {
         "question": "Follow up",

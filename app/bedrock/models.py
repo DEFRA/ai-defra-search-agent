@@ -37,3 +37,4 @@ class EnhancedModelResponse:
     content: list[dict[str, Any]]
     usage: dict[str, int]
     sources: list[RagSource] = dataclasses.field(default_factory=list)
+    rag_error: str | None = None
