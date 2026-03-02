@@ -28,32 +28,26 @@ def get_prompt_repository() -> FileSystemPromptRepository:
     return FileSystemPromptRepository()
 
 
+def _bedrock_client_kwargs(app_config: config.AppConfig) -> dict:
+    kwargs: dict = {"region_name": app_config.sqs.region}
+    if app_config.bedrock.use_credentials:
+        kwargs["aws_access_key_id"] = app_config.bedrock.access_key_id
+        kwargs["aws_secret_access_key"] = app_config.bedrock.secret_access_key
+    if app_config.bedrock.endpoint_url:
+        kwargs["endpoint_url"] = app_config.bedrock.endpoint_url
+    return kwargs
+
+
 def get_bedrock_runtime_client(
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> boto3.client:
-    if app_config.bedrock.use_credentials:
-        return boto3.client(
-            "bedrock-runtime",
-            aws_access_key_id=app_config.bedrock.access_key_id,
-            aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.sqs.region,
-        )
-
-    return boto3.client("bedrock-runtime", region_name=app_config.sqs.region)
+    return boto3.client("bedrock-runtime", **_bedrock_client_kwargs(app_config))
 
 
 def get_bedrock_client(
     app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> boto3.client:
-    if app_config.bedrock.use_credentials:
-        return boto3.client(
-            "bedrock",
-            aws_access_key_id=app_config.bedrock.access_key_id,
-            aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.sqs.region,
-        )
-
-    return boto3.client("bedrock", region_name=app_config.sqs.region)
+    return boto3.client("bedrock", **_bedrock_client_kwargs(app_config))
 
 
 def get_bedrock_inference_service(
@@ -144,24 +138,10 @@ async def initialize_worker_services():
     mongo_client = await mongo.get_mongo_client(app_config)
     db = mongo_client[app_config.mongo.database]
 
-    if app_config.bedrock.use_credentials:
-        bedrock_runtime = boto3.client(
-            "bedrock-runtime",
-            aws_access_key_id=app_config.bedrock.access_key_id,
-            aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.sqs.region,
-        )
-        bedrock_client = boto3.client(
-            "bedrock",
-            aws_access_key_id=app_config.bedrock.access_key_id,
-            aws_secret_access_key=app_config.bedrock.secret_access_key,
-            region_name=app_config.sqs.region,
-        )
-    else:
-        bedrock_runtime = boto3.client(
-            "bedrock-runtime", region_name=app_config.sqs.region
-        )
-        bedrock_client = boto3.client("bedrock", region_name=app_config.sqs.region)
+    runtime_kwargs = _bedrock_client_kwargs(app_config)
+    api_kwargs = _bedrock_client_kwargs(app_config)
+    bedrock_runtime = boto3.client("bedrock-runtime", **runtime_kwargs)
+    bedrock_client = boto3.client("bedrock", **api_kwargs)
 
     knowledge_retriever = knowledge.KnowledgeRetriever(
         base_url=app_config.knowledge.base_url,
