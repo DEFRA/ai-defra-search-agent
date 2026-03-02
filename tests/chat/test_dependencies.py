@@ -21,6 +21,7 @@ def test_get_knowledge_retriever(mocker: MockerFixture):
 def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
+    mock_config.bedrock.endpoint_url = None
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
@@ -36,6 +37,7 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.use_credentials = True
     mock_config.bedrock.access_key_id = "test-key"
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
+    mock_config.bedrock.endpoint_url = None
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
@@ -54,6 +56,7 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
 def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
+    mock_config.bedrock.endpoint_url = None
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
@@ -69,6 +72,7 @@ def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.use_credentials = True
     mock_config.bedrock.access_key_id = "test-key"
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
+    mock_config.bedrock.endpoint_url = None
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
