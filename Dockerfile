@@ -19,10 +19,7 @@ COPY --chown=nonroot:nonroot pyproject.toml .
 COPY --chown=nonroot:nonroot README.md .
 COPY --chown=nonroot:nonroot uv.lock .
 COPY --chown=nonroot:nonroot app/ ./app/
-COPY --chown=nonroot:nonroot entrypoint.sh .
 COPY --chown=nonroot:nonroot perf-tests/ ./perf-tests/
-
-RUN chmod +x entrypoint.sh
 
 RUN --mount=type=cache,target=/home/nonroot/.cache/uv,uid=1000,gid=1000 \
     uv sync --locked --link-mode=copy
@@ -50,7 +47,6 @@ COPY --chown=nonroot:nonroot README.md .
 COPY --from=development /home/nonroot/uv.lock .
 COPY --from=development /home/nonroot/app ./app
 COPY --from=development /home/nonroot/perf-tests ./perf-tests
-COPY --from=development /home/nonroot/entrypoint.sh .
 
 RUN --mount=type=cache,target=/home/nonroot/.cache/uv,uid=1000,gid=1000 \
     --mount=from=development,source=/home/nonroot/.local/bin/uv,target=/home/nonroot/.local/bin/uv \
@@ -62,4 +58,4 @@ ARG PORT
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-ENTRYPOINT [ "./entrypoint.sh" ]
+ENTRYPOINT [ "/home/nonroot/.venv/bin/ai-defra-search-agent" ]

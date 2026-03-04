@@ -36,7 +36,6 @@ services:
     build:
       context: .
       target: development
-    entrypoint: ["./entrypoint.sh"]
     ports:
       - 8086:8086
       - 5679:5679
@@ -56,6 +55,7 @@ services:
 
     volumes:
       - ./app:/home/nonroot/app
+      - ./perf-tests:/home/nonroot/perf-tests
     develop:
       watch:
         - action: rebuild

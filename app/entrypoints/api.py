@@ -1,6 +1,8 @@
 import asyncio
 import contextlib
+import importlib.util
 import logging
+from pathlib import Path
 
 import fastapi
 import fastapi.exceptions
@@ -15,6 +17,8 @@ from app.health import router as health_router
 from app.models import UnsupportedModelError
 from app.models import router as models_router
 
+_SEED_SCRIPT = Path(__file__).parents[2] / "perf-tests" / "scripts" / "seed-mongodb.py"
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,6 +27,14 @@ async def lifespan(app: fastapi.FastAPI):
     app_config = config.get_config()
     client = await mongo.get_mongo_client(app_config)
     logger.info("MongoDB client connected")
+    db = await mongo.get_db(client, app_config)
+
+    if _SEED_SCRIPT.exists():
+        spec = importlib.util.spec_from_file_location("seed_mongodb", _SEED_SCRIPT)
+        seed_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(seed_module)
+        await seed_module.seed(db)
+        logger.info("MongoDB seeding complete")
 
     app.state.worker_task = asyncio.create_task(run_worker())
     logger.info("Worker task started")
