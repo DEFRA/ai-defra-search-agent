@@ -4,9 +4,6 @@ set -e
 MONGO_URI="${MONGO_URI:-mongodb://localhost:27017/}"
 DB_NAME="ai-defra-search-agent"
 
-MONGO_HOST=$(echo "$MONGO_URI" | sed 's|mongodb://||' | sed 's|/.*||' | cut -d: -f1)
-MONGO_PORT=$(echo "$MONGO_URI" | sed 's|mongodb://||' | sed 's|/.*||' | cut -d: -f2)
-MONGO_PORT=${MONGO_PORT:-27017}
 
 if [ -d "/docker-entrypoint-initdb.d/data" ]; then
   DATA_DIR="/docker-entrypoint-initdb.d/data"
@@ -25,5 +22,5 @@ if [ ! -f "${DATA_DIR}/knowledgeSnapshots.json" ]; then
   exit 1
 fi
 
-echo "db.knowledgeGroups.drop(); db.knowledgeGroups.insertOne(EJSON.parse(cat('${DATA_DIR}/knowledgeGroups.json')));" | mongosh --host="${MONGO_HOST}" --port="${MONGO_PORT}" "${DB_NAME}"
-echo "db.knowledgeSnapshots.drop(); db.knowledgeSnapshots.insertOne(EJSON.parse(cat('${DATA_DIR}/knowledgeSnapshots.json')));" | mongosh --host="${MONGO_HOST}" --port="${MONGO_PORT}" "${DB_NAME}"
+echo "db.knowledgeGroups.drop(); db.knowledgeGroups.insertOne(EJSON.parse(cat('${DATA_DIR}/knowledgeGroups.json')));" | mongosh "${MONGO_URI%/}/${DB_NAME}"
+echo "db.knowledgeSnapshots.drop(); db.knowledgeSnapshots.insertOne(EJSON.parse(cat('${DATA_DIR}/knowledgeSnapshots.json')));" | mongosh "${MONGO_URI%/}/${DB_NAME}"
