@@ -31,14 +31,12 @@ services:
       - "27018:27017"
     volumes:
       - mongodb-data:/data
-      - ./perf-tests/scripts/init-mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
-      - ./perf-tests/data:/docker-entrypoint-initdb.d/data:ro
-    environment:
-      MONGO_INITDB_DATABASE: ai-defra-search-agent
+
   ai-defra-search-agent:
     build:
       context: .
       target: development
+    entrypoint: ["./entrypoint.sh"]
     ports:
       - 8086:8086
       - 5679:5679
