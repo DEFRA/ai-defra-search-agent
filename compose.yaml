@@ -2,13 +2,13 @@ services:
   localstack:
     image: localstack/localstack:4.9.2
     ports:
-      - "4567:4566" # LocalStack Gateway (avoiding conflict with ai-defra-search-data on 4566)
-      - "4570-4619:4510-4559" # external services port range
+      - "4567:4566"
+      - "4570-4619:4510-4559"
     env_file:
       - "compose/aws.env"
     environment:
       DEBUG: ${DEBUG:-0}
-      LS_LOG: WARN # Localstack DEBUG Level
+      LS_LOG: WARN
       SERVICES: sqs
       LOCALSTACK_HOST: 127.0.0.1
       PORT: 4566
@@ -31,7 +31,10 @@ services:
       - "27018:27017"
     volumes:
       - mongodb-data:/data
-
+      - ./perf-tests/scripts/init-mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
+      - ./perf-tests/data:/docker-entrypoint-initdb.d/data:ro
+    environment:
+      MONGO_INITDB_DATABASE: ai-defra-search-agent
   ai-defra-search-agent:
     build:
       context: .
@@ -39,9 +42,6 @@ services:
     ports:
       - 8086:8086
       - 5679:5679
-    links:
-      - "mongodb:mongodb"
-      - "localstack:localstack"
     depends_on:
       mongodb:
         condition: service_started

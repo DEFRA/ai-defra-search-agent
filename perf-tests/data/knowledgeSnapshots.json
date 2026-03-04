@@ -1,0 +1,38 @@
+{
+  "snapshotId": "kg_34vf0wr3e06l",
+  "groupId": "kg_34vf0wr3e06l",
+  "version": 1,
+  "createdAt": "2026-02-27T00:00:00.000Z",
+  "sources": [
+    {
+      "sourceId": "doc_001",
+      "name": "What is UCD",
+      "location": "test-data",
+      "sourceType": "BLOB"
+    },
+    {
+      "sourceId": "doc_002",
+      "name": "UCD Good Practice",
+      "location": "test-data",
+      "sourceType": "BLOB"
+    },
+    {
+      "sourceId": "doc_003",
+      "name": "Defra and UCD",
+      "location": "test-data",
+      "sourceType": "BLOB"
+    },
+    {
+      "sourceId": "doc_004",
+      "name": "Accessibility in UCD",
+      "location": "test-data",
+      "sourceType": "BLOB"
+    },
+    {
+      "sourceId": "doc_005",
+      "name": "Defra Service Standards",
+      "location": "test-data",
+      "sourceType": "BLOB"
+    }
+  ]
+}
