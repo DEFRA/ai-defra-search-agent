@@ -106,6 +106,19 @@ class MongoConfig(pydantic_settings.BaseSettings):
     truststore: str = pydantic.Field(
         default="TRUSTSTORE_CDP_ROOT_CA", alias="MONGO_TRUSTSTORE"
     )
+    server_selection_timeout_ms: int = pydantic.Field(
+        default=5000, alias="MONGO_SERVER_SELECTION_TIMEOUT_MS"
+    )
+    connect_timeout_ms: int = pydantic.Field(
+        default=5000, alias="MONGO_CONNECT_TIMEOUT_MS"
+    )
+    socket_timeout_ms: int = pydantic.Field(
+        default=10000, alias="MONGO_SOCKET_TIMEOUT_MS"
+    )
+    retry_attempts: int = pydantic.Field(default=2, alias="MONGO_RETRY_ATTEMPTS")
+    retry_base_delay_seconds: float = pydantic.Field(
+        default=0.5, alias="MONGO_RETRY_BASE_DELAY_SECONDS"
+    )
 
 
 class SQSConfig(pydantic_settings.BaseSettings):

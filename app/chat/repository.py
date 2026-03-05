@@ -6,6 +6,7 @@ import uuid
 import pymongo.asynchronous.database
 
 from app.chat import models
+from app.common import mongo
 
 MESSAGES_MESSAGE_ID = "messages.message_id"
 
@@ -125,44 +126,62 @@ class AbstractConversationRepository(abc.ABC):
 
 
 class MongoConversationRepository(AbstractConversationRepository):
-    def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
+    def __init__(
+        self,
+        db: pymongo.asynchronous.database.AsyncDatabase,
+        retry_attempts: int = 2,
+        retry_base_delay_seconds: float = 0.5,
+    ):
         self.db = db
+        self.retry_attempts = retry_attempts
+        self.retry_base_delay_seconds = retry_base_delay_seconds
         self.conversations: pymongo.asynchronous.collection.AsyncCollection = (
             self.db.conversations
         )
 
-    async def save(self, conversation: models.Conversation) -> None:
-        await self.conversations.update_one(
-            {"conversation_id": conversation.id},
-            {
-                "$set": {
-                    "conversation_id": conversation.id,
-                    "messages": [
-                        MessageDTO.from_domain(domain_message).to_dict()
-                        for domain_message in conversation.messages
-                    ],
-                }
-            },
-            upsert=True,
+    def _retry(self, operation):
+        return mongo.retry_mongo_operation(
+            operation, self.retry_attempts, self.retry_base_delay_seconds
         )
+
+    async def save(self, conversation: models.Conversation) -> None:
+        async def _op():
+            await self.conversations.update_one(
+                {"conversation_id": conversation.id},
+                {
+                    "$set": {
+                        "conversation_id": conversation.id,
+                        "messages": [
+                            MessageDTO.from_domain(domain_message).to_dict()
+                            for domain_message in conversation.messages
+                        ],
+                    }
+                },
+                upsert=True,
+            )
+
+        await self._retry(_op)
 
     async def get(self, conversation_id: uuid.UUID) -> models.Conversation | None:
-        conversation_doc = await self.conversations.find_one(
-            {"conversation_id": conversation_id}
-        )
+        async def _op():
+            conversation_doc = await self.conversations.find_one(
+                {"conversation_id": conversation_id}
+            )
 
-        if not conversation_doc:
-            return None
+            if not conversation_doc:
+                return None
 
-        domain_messages = [
-            MessageDTO(**message_data).to_domain()
-            for message_data in conversation_doc["messages"]
-        ]
+            domain_messages = [
+                MessageDTO(**message_data).to_domain()
+                for message_data in conversation_doc["messages"]
+            ]
 
-        return models.Conversation(
-            id=conversation_doc["conversation_id"],
-            messages=domain_messages,
-        )
+            return models.Conversation(
+                id=conversation_doc["conversation_id"],
+                messages=domain_messages,
+            )
+
+        return await self._retry(_op)
 
     async def update_message_status(
         self,
@@ -171,58 +190,62 @@ class MongoConversationRepository(AbstractConversationRepository):
         status: models.MessageStatus,
         error_message: str | None = None,
     ) -> None:
-        update_data = {
-            "messages.$.status": status.value,
-        }
-        if error_message is not None:
-            update_data["messages.$.error_message"] = error_message
+        async def _op():
+            update_data = {
+                "messages.$.status": status.value,
+            }
+            if error_message is not None:
+                update_data["messages.$.error_message"] = error_message
 
-        await self.conversations.update_one(
-            {"conversation_id": conversation_id, MESSAGES_MESSAGE_ID: message_id},
-            {"$set": update_data},
-        )
+            await self.conversations.update_one(
+                {
+                    "conversation_id": conversation_id,
+                    MESSAGES_MESSAGE_ID: message_id,
+                },
+                {"$set": update_data},
+            )
+
+        await self._retry(_op)
 
     async def claim_message(
         self, conversation_id: uuid.UUID, message_id: uuid.UUID
     ) -> bool:
-        """Reserve the message by changing its status from `QUEUED` to `PROCESSING`
-        using a single update that checks the current status and sets it.
+        async def _op():
+            result = await self.conversations.update_one(
+                {
+                    "conversation_id": conversation_id,
+                    MESSAGES_MESSAGE_ID: message_id,
+                    "messages.status": models.MessageStatus.QUEUED.value,
+                },
+                {
+                    "$set": {
+                        "messages.$.status": models.MessageStatus.PROCESSING.value,
+                    }
+                },
+            )
+            return getattr(result, "matched_count", 0) == 1
 
-        Returns True when the update matched a document and modified the
-        status. Returns False when no matching queued message was found.
-        """
-        result = await self.conversations.update_one(
-            {
-                "conversation_id": conversation_id,
-                MESSAGES_MESSAGE_ID: message_id,
-                "messages.status": models.MessageStatus.QUEUED.value,
-            },
-            {
-                "$set": {
-                    "messages.$.status": models.MessageStatus.PROCESSING.value,
-                }
-            },
-        )
-        return getattr(result, "matched_count", 0) == 1
+        return await self._retry(_op)
 
     async def get_message_status(
         self, conversation_id: uuid.UUID, message_id: uuid.UUID
     ) -> models.MessageStatus | None:
-        """Retrieve the message status for a specific message.
+        async def _op():
+            conversation_doc = await self.conversations.find_one(
+                {
+                    "conversation_id": conversation_id,
+                    MESSAGES_MESSAGE_ID: message_id,
+                },
+                {"messages.$": 1},
+            )
+            if not conversation_doc:
+                return None
+            matched_messages = conversation_doc.get("messages") or []
+            if not matched_messages:
+                return None
+            status_value = matched_messages[0].get("status")
+            if not status_value:
+                return models.MessageStatus.COMPLETED
+            return models.MessageStatus(status_value)
 
-        Returns a `MessageStatus` or ``None`` when the message or
-        conversation could not be found.
-        """
-        conversation_doc = await self.conversations.find_one(
-            {"conversation_id": conversation_id, MESSAGES_MESSAGE_ID: message_id},
-            {"messages.$": 1},
-        )
-        if not conversation_doc:
-            return None
-        matched_messages = conversation_doc.get("messages") or []
-        if not matched_messages:
-            return None
-        status_value = matched_messages[0].get("status")
-        if not status_value:
-            return models.MessageStatus.COMPLETED
-        return models.MessageStatus(status_value)
+        return await self._retry(_op)

@@ -1,7 +1,9 @@
 from typing import Annotated
 
 import fastapi
+from fastapi import status
 
+from app.common.mongo import MongoUnavailableError
 from app.feedback import api_schemas, dependencies, service
 
 router = fastapi.APIRouter(tags=["feedback"])
@@ -20,11 +22,16 @@ async def submit_feedback(
         service.FeedbackService, fastapi.Depends(dependencies.get_feedback_service)
     ],
 ):
-    feedback = await feedback_service.submit_feedback(
-        was_helpful=request.was_helpful,
-        conversation_id=request.conversation_id,
-        comment=request.comment,
-    )
+    try:
+        feedback = await feedback_service.submit_feedback(
+            was_helpful=request.was_helpful,
+            conversation_id=request.conversation_id,
+            comment=request.comment,
+        )
+    except MongoUnavailableError as e:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        ) from None
 
     return api_schemas.FeedbackResponse(
         feedback_id=feedback.id,

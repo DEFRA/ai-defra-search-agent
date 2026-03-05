@@ -66,27 +66,32 @@ cp .env.example .env
 
 The following environment variables can be configured for the application:
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `AWS_REGION` | Yes | `eu-central-1` | The AWS region to use for AWS services |
-| `AWS_DEFAULT_REGION` | Yes | `eu-central-1` | The default AWS region (should match AWS_REGION) |
-| `AWS_ACCESS_KEY_ID` | Yes | `test` | AWS access key ID (use `test` for local development with Localstack) |
-| `AWS_SECRET_ACCESS_KEY` | Yes | `test` | AWS secret access key (use `test` for local development with Localstack) |
-| `AWS_EMF_ENVIRONMENT` | Yes | `local` | AWS Embedded Metrics environment setting |
-| `AWS_EMF_AGENT_ENDPOINT` | Yes | `tcp://127.0.0.1:25888` | CloudWatch agent endpoint for metrics |
-| `AWS_EMF_LOG_GROUP_NAME` | Yes | `log-group-name` | CloudWatch log group name |
-| `AWS_EMF_LOG_STREAM_NAME` | Yes | `log-stream-name` | CloudWatch log stream name |
-| `AWS_EMF_NAMESPACE` | Yes | `namespace` | CloudWatch metrics namespace |
-| `AWS_EMF_SERVICE_NAME` | Yes | `service-name` | Service name for CloudWatch metrics |
-| `AWS_EMF_SERVICE_TYPE` | Yes | `python-backend-service` | Service type identifier |
-| `AWS_BEARER_TOKEN_BEDROCK` | No | N/A | Bearer token for AWS Bedrock authentication |
-| `AWS_BEDROCK_DEFAULT_GENERATION_MODEL` | Yes | N/A | Default AI model to use for generation |
-| `AWS_BEDROCK_AVAILABLE_GENERATION_MODELS` | Yes | N/A | JSON array of available AI models for generation |
-| `KNOWLEDGE_BASE_URL` | No | N/A | URL of the knowledge base service used for RAG lookup |
-| `KNOWLEDGE_GROUP_ID` | No | N/A | Knowledge group identifier for retrieval queries |
-| `KNOWLEDGE_SIMILARITY_THRESHOLD` | No | `0.5` | Similarity threshold for knowledge retrieval matches (0-1) |
-| `LOCALSTACK_URL` | No | N/A | Base URL for LocalStack when running AWS services locally |
-| `SQS_CHAT_QUEUE_URL` | No | N/A | SQS queue URL used by the worker for chat job messages |
+| Variable | Required | Default                  | Description                                                             |
+|----------|----------|--------------------------|-------------------------------------------------------------------------|
+| `AWS_REGION` | Yes | `eu-central-1`           | The AWS region to use for AWS services                                  |
+| `AWS_DEFAULT_REGION` | Yes | `eu-central-1`           | The default AWS region (should match AWS_REGION)                        |
+| `AWS_ACCESS_KEY_ID` | Yes | `test`                   | AWS access key ID (use `test` for local development with Localstack)    |
+| `AWS_SECRET_ACCESS_KEY` | Yes | `test`                   | AWS secret access key (use `test` for local development with Localstack) |
+| `AWS_EMF_ENVIRONMENT` | Yes | `local`                  | AWS Embedded Metrics environment setting                                |
+| `AWS_EMF_AGENT_ENDPOINT` | Yes | `tcp://127.0.0.1:25888`  | CloudWatch agent endpoint for metrics                                   |
+| `AWS_EMF_LOG_GROUP_NAME` | Yes | `log-group-name`         | CloudWatch log group name                                               |
+| `AWS_EMF_LOG_STREAM_NAME` | Yes | `log-stream-name`        | CloudWatch log stream name                                              |
+| `AWS_EMF_NAMESPACE` | Yes | `namespace`              | CloudWatch metrics namespace                                            |
+| `AWS_EMF_SERVICE_NAME` | Yes | `service-name`           | Service name for CloudWatch metrics                                     |
+| `AWS_EMF_SERVICE_TYPE` | Yes | `python-backend-service` | Service type identifier                                                 |
+| `AWS_BEARER_TOKEN_BEDROCK` | No | N/A                      | Bearer token for AWS Bedrock authentication                             |
+| `AWS_BEDROCK_DEFAULT_GENERATION_MODEL` | Yes | N/A                      | Default AI model to use for generation                                  |
+| `AWS_BEDROCK_AVAILABLE_GENERATION_MODELS` | Yes | N/A                      | JSON array of available AI models for generation                        |
+| `KNOWLEDGE_BASE_URL` | No | N/A                      | URL of the knowledge base service used for RAG lookup                   |
+| `KNOWLEDGE_GROUP_ID` | No | N/A                      | Knowledge group identifier for retrieval queries                        |
+| `KNOWLEDGE_SIMILARITY_THRESHOLD` | No | `0.5`                    | Similarity threshold for knowledge retrieval matches (0-1)              |
+| `LOCALSTACK_URL` | No | N/A                      | Base URL for LocalStack when running AWS services locally               |
+| `SQS_CHAT_QUEUE_URL` | No | N/A                      | SQS queue URL used by the worker for chat job messages                  |
+| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | No | `5000ms`                 | Maximum time to wait when selecting a MongoDB server                   |
+| `MONGO_CONNECT_TIMEOUT_MS` | No | `5000ms`                 | Mongo connection connection timeout duration                            |
+| `MONGO_SOCKET_TIMEOUT_MS` | No | `10000ms`                | Mongo connection socket timeout duration                                |
+| `MONGO_RETRY_ATTEMPTS` | No | `2`                      | Maximum numbver of retry attempts                                       |
+| `MONGO_RETRY_BASE_DELAY_SECONDS` | No | `0.5s`                   | Duration to wait before attempting a retry                              |
 
 In CDP, environment variables and secrets need to be set using CDP conventions:
 - [CDP App Config](https://github.com/DEFRA/cdp-documentation/blob/main/how-to/config.md)

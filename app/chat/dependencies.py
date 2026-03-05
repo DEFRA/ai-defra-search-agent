@@ -84,8 +84,13 @@ def get_chat_agent(
 
 def get_conversation_repository(
     db: pymongo.asynchronous.database.AsyncDatabase = fastapi.Depends(mongo.get_db),
+    app_config: config.AppConfig = fastapi.Depends(dependencies.get_app_config),
 ) -> repository.AbstractConversationRepository:
-    return repository.MongoConversationRepository(db=db)
+    return repository.MongoConversationRepository(
+        db=db,
+        retry_attempts=app_config.mongo.retry_attempts,
+        retry_base_delay_seconds=app_config.mongo.retry_base_delay_seconds,
+    )
 
 
 def get_sqs_client() -> sqs.SQSClient:
@@ -163,7 +168,11 @@ async def initialize_worker_services():
         prompt_repository=prompt_repo,
     )
 
-    conversation_repo = repository.MongoConversationRepository(db=db)
+    conversation_repo = repository.MongoConversationRepository(
+        db=db,
+        retry_attempts=app_config.mongo.retry_attempts,
+        retry_base_delay_seconds=app_config.mongo.retry_base_delay_seconds,
+    )
 
     model_resolution = model_service.ConfigModelResolutionService(app_config)
 
