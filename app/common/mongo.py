@@ -32,12 +32,12 @@ async def retry_mongo_operation[T](
     for attempt in range(retry_attempts):
         try:
             return await operation()
-        except pymongo.errors.PyMongoError as exc:
+        except pymongo.errors.ConnectionFailure as exc:
             last_exc = exc
             if attempt < retry_attempts - 1:
                 delay = retry_base_delay_seconds * (2**attempt)
                 logger.warning(
-                    "MongoDB operation failed (attempt %d/%d), retrying in %.1fs: %s",
+                    "MongoDB transient error (attempt %d/%d), retrying in %.1fs: %s",
                     attempt + 1,
                     retry_attempts,
                     delay,
@@ -46,10 +46,12 @@ async def retry_mongo_operation[T](
                 await asyncio.sleep(delay)
             else:
                 logger.error(
-                    "MongoDB operation failed after %d attempts: %s",
+                    "MongoDB connection failed after %d attempts: %s",
                     retry_attempts,
                     exc,
                 )
+        except pymongo.errors.PyMongoError:
+            raise
     msg = "MongoDB unavailable"
     raise MongoUnavailableError(msg) from last_exc
 

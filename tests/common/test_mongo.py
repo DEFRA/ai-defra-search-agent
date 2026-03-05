@@ -152,10 +152,24 @@ async def test_check_connection_failure(mocker):
 
 
 @pytest.mark.asyncio
-async def test_retry_mongo_operation_retries_on_pymongo_error(mocker):
+async def test_retry_mongo_operation_retries_on_connection_failure(mocker):
     mocker.patch("asyncio.sleep", new_callable=mocker.AsyncMock)
     msg = "transient"
     op = mocker.AsyncMock(side_effect=[pymongo.errors.ConnectionFailure(msg), "ok"])
+
+    result = await mongo.retry_mongo_operation(
+        op, retry_attempts=3, retry_base_delay_seconds=0.1
+    )
+    assert result == "ok"
+    assert op.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_retry_mongo_operation_retries_on_auto_reconnect(mocker):
+    mocker.patch("asyncio.sleep", new_callable=mocker.AsyncMock)
+    op = mocker.AsyncMock(
+        side_effect=[pymongo.errors.AutoReconnect("replica failover"), "ok"]
+    )
 
     result = await mongo.retry_mongo_operation(
         op, retry_attempts=3, retry_base_delay_seconds=0.1
@@ -170,8 +184,8 @@ async def test_retry_mongo_operation_raises_mongo_unavailable_after_exhaustion(m
     msg = "timeout"
     op = mocker.AsyncMock(
         side_effect=[
-            pymongo.errors.ServerSelectionTimeoutError(msg),
-            pymongo.errors.ServerSelectionTimeoutError(msg),
+            pymongo.errors.ConnectionFailure(msg),
+            pymongo.errors.ConnectionFailure(msg),
         ]
     )
 
@@ -190,6 +204,34 @@ async def test_retry_mongo_operation_does_not_catch_non_pymongo_errors(mocker):
         await mongo.retry_mongo_operation(
             op, retry_attempts=3, retry_base_delay_seconds=0
         )
+
+
+@pytest.mark.asyncio
+async def test_retry_mongo_operation_does_not_retry_duplicate_key_error(mocker):
+    mocker.patch("asyncio.sleep", new_callable=mocker.AsyncMock)
+    op = mocker.AsyncMock(side_effect=pymongo.errors.DuplicateKeyError("E11000"))
+
+    with pytest.raises(pymongo.errors.DuplicateKeyError):
+        await mongo.retry_mongo_operation(
+            op, retry_attempts=3, retry_base_delay_seconds=0.1
+        )
+
+    assert op.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_retry_mongo_operation_does_not_retry_operation_failure(mocker):
+    mocker.patch("asyncio.sleep", new_callable=mocker.AsyncMock)
+    op = mocker.AsyncMock(
+        side_effect=pymongo.errors.OperationFailure("write concern error")
+    )
+
+    with pytest.raises(pymongo.errors.OperationFailure):
+        await mongo.retry_mongo_operation(
+            op, retry_attempts=3, retry_base_delay_seconds=0.1
+        )
+
+    assert op.call_count == 1
 
 
 @pytest.mark.asyncio
