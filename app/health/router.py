@@ -1,8 +1,14 @@
 import asyncio
+import logging
 from typing import Annotated
 
 import fastapi
+import pymongo
 from fastapi import status
+
+from app.common import mongo
+
+logger = logging.getLogger(__name__)
 
 router = fastapi.APIRouter(tags=["health"])
 
@@ -20,6 +26,9 @@ def get_worker_task(request: fastapi.Request) -> asyncio.Task | None:
 )
 async def health(
     worker_task: Annotated[asyncio.Task | None, fastapi.Depends(get_worker_task)],
+    mongo_client: Annotated[
+        pymongo.AsyncMongoClient, fastapi.Depends(mongo.get_mongo_client)
+    ],
 ):
     if worker_task is None:
         raise fastapi.HTTPException(
@@ -39,5 +48,13 @@ async def health(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Worker task stopped",
         )
+
+    try:
+        await mongo_client.admin.command("ping")
+    except Exception as e:
+        logger.warning("MongoDB ping failed during health check")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        ) from None
 
     return {"status": "ok"}

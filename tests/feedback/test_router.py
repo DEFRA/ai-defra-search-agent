@@ -7,6 +7,7 @@ import pytest
 from app import config
 from app.chat import dependencies
 from app.common import mongo
+from app.common.mongo import MongoUnavailableError
 from app.entrypoints.api import app
 
 
@@ -126,3 +127,30 @@ def test_post_feedback_with_empty_comment_returns_201(client):
 
     assert response.status_code == 201
     assert "feedbackId" in response.json()
+
+
+def test_post_feedback_mongo_unavailable_returns_503(mocker, monkeypatch, mongo_uri):
+    monkeypatch.setenv("MONGO_URI", mongo_uri)
+
+    mock_feedback_service = mocker.AsyncMock()
+    mock_feedback_service.submit_feedback.side_effect = MongoUnavailableError(
+        "Service unavailable"
+    )
+
+    from app.feedback import dependencies as feedback_deps
+
+    app.dependency_overrides[mongo.get_db] = lambda: None
+    app.dependency_overrides[mongo.get_mongo_client] = lambda: None
+    app.dependency_overrides[feedback_deps.get_feedback_service] = (
+        lambda: mock_feedback_service
+    )
+
+    test_client = fastapi.testclient.TestClient(app)
+    body = {"wasHelpful": "useful"}
+
+    response = test_client.post("/feedback", json=body)
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    assert "Service unavailable" in response.json()["detail"]

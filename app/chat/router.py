@@ -6,6 +6,7 @@ import fastapi
 from fastapi import status
 
 from app.chat import api_schemas, dependencies, models, service
+from app.common.mongo import MongoUnavailableError
 from app.models import UnsupportedModelError
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ router = fastapi.APIRouter(tags=["chat"])
             "description": "Bad request - unsupported model ID, invalid request data, or AWS Bedrock validation error"
         },
         404: {"description": "Conversation not found"},
+        503: {"description": "Service unavailable"},
     },
 )
 async def chat(
@@ -47,6 +49,10 @@ async def chat(
     except models.ConversationNotFoundError as e:
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from None
+    except MongoUnavailableError as e:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         ) from None
 
     return api_schemas.QueueChatResponse(
@@ -74,6 +80,10 @@ async def get_conversation(
     except models.ConversationNotFoundError as e:
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from None
+    except MongoUnavailableError as e:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         ) from None
 
     messages = [

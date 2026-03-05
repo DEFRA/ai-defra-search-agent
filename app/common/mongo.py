@@ -1,19 +1,68 @@
+import asyncio
 import logging
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 import bson.binary
 import bson.codec_options
 import fastapi
 import pymongo
 import pymongo.asynchronous.database
+import pymongo.errors
 
 from app import config, dependencies
 from app.common import tls
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T")
+
 client: pymongo.AsyncMongoClient | None = None
 db: pymongo.asynchronous.database.AsyncDatabase | None = None
+
+
+class MongoUnavailableError(Exception):
+    """Raised when MongoDB is unreachable after all retry attempts."""
+
+
+async def retry_mongo_operation(
+    operation: Callable[[], Awaitable[T]],
+    retry_attempts: int,
+    retry_base_delay_seconds: float,
+) -> T:
+    last_exc: Exception | None = None
+    for attempt in range(retry_attempts):
+        try:
+            return await operation()
+        except pymongo.errors.PyMongoError as exc:
+            last_exc = exc
+            if attempt < retry_attempts - 1:
+                delay = retry_base_delay_seconds * (2**attempt)
+                logger.warning(
+                    "MongoDB operation failed (attempt %d/%d), retrying in %.1fs: %s",
+                    attempt + 1,
+                    retry_attempts,
+                    delay,
+                    exc,
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.error(
+                    "MongoDB operation failed after %d attempts: %s",
+                    retry_attempts,
+                    exc,
+                )
+    msg = "MongoDB unavailable"
+    raise MongoUnavailableError(msg) from last_exc
+
+
+def _client_kwargs(app_config: config.AppConfig) -> dict[str, Any]:
+    return {
+        "uuidRepresentation": "standard",
+        "serverSelectionTimeoutMS": app_config.mongo.server_selection_timeout_ms,
+        "connectTimeoutMS": app_config.mongo.connect_timeout_ms,
+        "socketTimeoutMS": app_config.mongo.socket_timeout_ms,
+    }
 
 
 async def get_mongo_client(
@@ -21,8 +70,6 @@ async def get_mongo_client(
 ) -> pymongo.AsyncMongoClient:
     global client
     if client is None:
-        # Use the custom CA Certs from env vars if set.
-        # We can remove this once we migrate to mongo Atlas.
         cert = tls.custom_ca_certs.get(app_config.mongo.truststore)
         if cert:
             logger.info(
@@ -30,12 +77,12 @@ async def get_mongo_client(
                 app_config.mongo.truststore,
             )
             client = pymongo.AsyncMongoClient(
-                app_config.mongo.uri, tlsCAFile=cert, uuidRepresentation="standard"
+                app_config.mongo.uri, tlsCAFile=cert, **_client_kwargs(app_config)
             )
         else:
             logger.info("Creating MongoDB client")
             client = pymongo.AsyncMongoClient(
-                app_config.mongo.uri, uuidRepresentation="standard"
+                app_config.mongo.uri, **_client_kwargs(app_config)
             )
 
         logger.info("Testing MongoDB connection to %s", app_config.mongo.uri)

@@ -61,3 +61,27 @@ def test_get_config_raises_error_on_duplicate_model_ids(monkeypatch):
     assert "Duplicate model id found in configuration: duplicate-id" in str(
         excinfo.value
     )
+
+
+def test_mongo_config_defaults():
+    mongo_config = config.MongoConfig()
+    assert mongo_config.server_selection_timeout_ms == 5000
+    assert mongo_config.connect_timeout_ms == 5000
+    assert mongo_config.socket_timeout_ms == 10000
+    assert mongo_config.retry_attempts == 2
+    assert mongo_config.retry_base_delay_seconds == 0.5
+
+
+def test_mongo_config_env_var_overrides(monkeypatch):
+    monkeypatch.setenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "3000")
+    monkeypatch.setenv("MONGO_CONNECT_TIMEOUT_MS", "2000")
+    monkeypatch.setenv("MONGO_SOCKET_TIMEOUT_MS", "8000")
+    monkeypatch.setenv("MONGO_RETRY_ATTEMPTS", "4")
+    monkeypatch.setenv("MONGO_RETRY_BASE_DELAY_SECONDS", "1.5")
+
+    mongo_config = config.MongoConfig()
+    assert mongo_config.server_selection_timeout_ms == 3000
+    assert mongo_config.connect_timeout_ms == 2000
+    assert mongo_config.socket_timeout_ms == 8000
+    assert mongo_config.retry_attempts == 4
+    assert mongo_config.retry_base_delay_seconds == 1.5

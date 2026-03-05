@@ -187,3 +187,43 @@ def test_post_chat_with_existing_conversation(client_override, mocker):
     mock_chat_service.queue_chat.assert_awaited_once_with(
         question="Follow up", model_id="mid", conversation_id=conv_id
     )
+
+
+def test_post_chat_mongo_unavailable_returns_503(client_override, mocker):
+    test_client = client_override
+    mock_chat_service = mocker.AsyncMock()
+    from app.common.mongo import MongoUnavailableError
+
+    mock_chat_service.queue_chat.side_effect = MongoUnavailableError(
+        "Service unavailable"
+    )
+
+    from app.chat import dependencies
+
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
+
+    resp = test_client.post("/chat", json={"question": "Hi", "modelId": "mid"})
+    assert resp.status_code == 503
+    assert "Service unavailable" in resp.json()["detail"]
+
+
+def test_get_conversation_mongo_unavailable_returns_503(client_override, mocker):
+    test_client = client_override
+    mock_chat_service = mocker.AsyncMock()
+    from app.common.mongo import MongoUnavailableError
+
+    mock_chat_service.get_conversation.side_effect = MongoUnavailableError(
+        "Service unavailable"
+    )
+
+    from app.chat import dependencies
+
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
+
+    resp = test_client.get(f"/conversations/{uuid.uuid4()}")
+    assert resp.status_code == 503
+    assert "Service unavailable" in resp.json()["detail"]

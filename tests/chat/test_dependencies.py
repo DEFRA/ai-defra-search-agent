@@ -5,17 +5,21 @@ from app.bedrock import service as bedrock_service
 from app.chat import agent, dependencies, repository, service
 from app.common import knowledge
 
+_RETRY_ATTEMPTS = 2
+_RETRY_BASE_DELAY_SECONDS = 0.5
+_SIMILARITY_THRESHOLD = 0.5
+
 
 def test_get_knowledge_retriever(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.knowledge.base_url = "http://knowledge-base.com"
-    mock_config.knowledge.similarity_threshold = 0.5
+    mock_config.knowledge.similarity_threshold = _SIMILARITY_THRESHOLD
 
     retriever = dependencies.get_knowledge_retriever(app_config=mock_config)
 
     assert isinstance(retriever, knowledge.KnowledgeRetriever)
     assert retriever.base_url == "http://knowledge-base.com"
-    assert retriever.similarity_threshold == 0.5
+    assert retriever.similarity_threshold == _SIMILARITY_THRESHOLD
 
 
 def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
@@ -124,10 +128,15 @@ def test_get_chat_agent(mocker: MockerFixture):
 
 def test_get_conversation_repository(mocker: MockerFixture):
     mock_db = mocker.Mock()
+    mock_config = mocker.Mock()
+    mock_config.mongo.retry_attempts = _RETRY_ATTEMPTS
+    mock_config.mongo.retry_base_delay_seconds = _RETRY_BASE_DELAY_SECONDS
 
-    repo = dependencies.get_conversation_repository(mock_db)
+    repo = dependencies.get_conversation_repository(db=mock_db, app_config=mock_config)
 
     assert isinstance(repo, repository.MongoConversationRepository)
+    assert repo.retry_attempts == _RETRY_ATTEMPTS
+    assert repo.retry_base_delay_seconds == _RETRY_BASE_DELAY_SECONDS
 
 
 def test_get_chat_service(mocker: MockerFixture):
@@ -200,7 +209,7 @@ async def test_initialize_worker_services_monkeypatched_variation(mocker):
     cfg.bedrock.use_credentials = False
     cfg.sqs.region = "eu-1"
     cfg.knowledge.base_url = "http://k"
-    cfg.knowledge.similarity_threshold = 0.5
+    cfg.knowledge.similarity_threshold = _SIMILARITY_THRESHOLD
     mocker.patch("app.chat.dependencies.config.get_config", return_value=cfg)
 
     chat_svc, conv_repo, sqs_client = await deps.initialize_worker_services()
