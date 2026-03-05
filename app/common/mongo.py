@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any
 
 import bson.binary
 import bson.codec_options
@@ -15,8 +15,6 @@ from app.common import tls
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
-
 client: pymongo.AsyncMongoClient | None = None
 db: pymongo.asynchronous.database.AsyncDatabase | None = None
 
@@ -25,7 +23,7 @@ class MongoUnavailableError(Exception):
     """Raised when MongoDB is unreachable after all retry attempts."""
 
 
-async def retry_mongo_operation(
+async def retry_mongo_operation[T](
     operation: Callable[[], Awaitable[T]],
     retry_attempts: int,
     retry_base_delay_seconds: float,
