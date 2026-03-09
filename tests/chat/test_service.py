@@ -499,7 +499,7 @@ async def test_execute_chat_does_not_duplicate_user_message(
 
 @pytest.mark.asyncio
 async def test_execute_chat_includes_user_context_in_agent_request(
-    chat_service, mock_agent, mock_repository
+    chat_service, mock_agent
 ):
     mock_agent.execute_flow.return_value = [
         models.AssistantMessage(
@@ -526,7 +526,7 @@ async def test_execute_chat_includes_user_context_in_agent_request(
 
 @pytest.mark.asyncio
 async def test_execute_chat_defaults_knowledge_group_ids_to_empty_list(
-    chat_service, mock_agent, mock_repository
+    chat_service, mock_agent
 ):
     mock_agent.execute_flow.return_value = [
         models.AssistantMessage(
@@ -548,7 +548,7 @@ async def test_execute_chat_defaults_knowledge_group_ids_to_empty_list(
 
 @pytest.mark.asyncio
 async def test_queue_chat_includes_user_context_in_sqs_payload(
-    chat_service, mock_agent, mock_repository, mocker
+    chat_service, mocker
 ):
     import json as _json
 
@@ -576,7 +576,7 @@ async def test_queue_chat_includes_user_context_in_sqs_payload(
 
 @pytest.mark.asyncio
 async def test_queue_chat_defaults_knowledge_group_ids_to_empty_list(
-    chat_service, mock_agent, mock_repository, mocker
+    chat_service, mocker
 ):
     import json as _json
 

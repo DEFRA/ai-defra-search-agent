@@ -212,7 +212,7 @@ def test_invoke_with_rag_augments_system_prompt_with_document_content(
         bedrock_inference_service, "_get_backing_model", return_value="geni-ai-3.5"
     )
 
-    response = bedrock_inference_service.invoke_anthropic(
+    bedrock_inference_service.invoke_anthropic(
         model_config=models.ModelConfig(id="geni-ai-3.5"),
         system_prompt="System prompt.",
         messages=[{"role": "user", "content": [{"text": "Query"}]}],
@@ -465,7 +465,7 @@ def test_invoke_should_only_call_rag_for_first_message(
 
 
 @pytest.mark.parametrize(
-    "knowledge_group_ids,user_id",
+    ("knowledge_group_ids", "user_id"),
     [
         ([], "user-1"),
         (["g1"], None),
