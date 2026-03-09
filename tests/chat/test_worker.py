@@ -559,9 +559,7 @@ async def test_process_job_deletes_message_on_exception(
 
 
 @pytest.mark.asyncio
-async def test_process_job_forwards_user_context_to_execute_chat(
-    mock_services, mocker
-):
+async def test_process_job_forwards_user_context_to_execute_chat(mock_services, mocker):
     """Test that user_id and knowledge_group_ids from the SQS payload are passed to execute_chat."""
     chat_service, conversation_repository, sqs_client = mock_services
 
