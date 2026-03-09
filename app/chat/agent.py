@@ -56,7 +56,8 @@ class BedrockChatAgent(AbstractChatAgent):
             model_config=model_config,
             system_prompt=system_prompt,
             messages=messages,
-            knowledge_group_id=self.app_config.knowledge.knowledge_group_id,
+            knowledge_group_ids=request.knowledge_group_ids,
+            user_id=request.user_id,
         )
 
         input_tokens = response.usage["input_tokens"]
@@ -75,15 +76,7 @@ class BedrockChatAgent(AbstractChatAgent):
                     request.model_id
                 ].name,
                 usage=usage,
-                sources=[
-                    models.Source(
-                        name=s.name,
-                        location=s.location,
-                        snippet=s.snippet,
-                        score=s.score,
-                    )
-                    for s in response.sources
-                ],
+                sources=[],
                 rag_error=response.rag_error,
             )
             for content_block in response.content

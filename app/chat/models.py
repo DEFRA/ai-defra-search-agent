@@ -36,6 +36,8 @@ class AgentRequest:
     question: str
     model_id: str
     conversation: list["Message"] | None = None
+    user_id: str | None = None
+    knowledge_group_ids: list[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)

@@ -91,7 +91,6 @@ class BedrockConfig(pydantic_settings.BaseSettings):
 class KnowledgeConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     base_url: str = pydantic.Field(..., alias="KNOWLEDGE_BASE_URL")
-    knowledge_group_id: str = pydantic.Field(..., alias="KNOWLEDGE_GROUP_ID")
     similarity_threshold: float = pydantic.Field(
         default=0.5, alias="KNOWLEDGE_SIMILARITY_THRESHOLD"
     )

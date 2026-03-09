@@ -1,21 +1,8 @@
 import logging
-import re
 
 import httpx
 
 logger = logging.getLogger(__name__)
-
-
-def _to_snake_case(name: str) -> str:
-    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-
-
-def _convert_keys(data):
-    if isinstance(data, dict):
-        return {_to_snake_case(k): _convert_keys(v) for k, v in data.items()}
-    if isinstance(data, list):
-        return [_convert_keys(i) for i in data]
-    return data
 
 
 class KnowledgeRetriever:
@@ -28,21 +15,22 @@ class KnowledgeRetriever:
     )
 
     def search(
-        self, group_id: str, query: str, max_results: int = 5
+        self, group_ids: list[str], user_id: str, query: str, max_results: int = 5
     ) -> tuple[list[dict], str | None]:
         """Returns (docs, error_message). error_message is non-None when RAG lookup failed."""
         try:
             with httpx.Client(timeout=5.0) as client:
                 response = client.post(
-                    f"{self.base_url}/snapshots/query",
+                    f"{self.base_url}/rag/search",
                     json={
-                        "groupId": group_id,
+                        "knowledge_group_ids": group_ids,
                         "query": query,
-                        "maxResults": max_results,
+                        "max_results": max_results,
                     },
+                    headers={"user-id": user_id},
                 )
                 response.raise_for_status()
-                raw_docs = _convert_keys(response.json())
+                raw_docs = response.json()
                 return self._filter_relevant_docs(raw_docs), None
         except httpx.HTTPStatusError as e:
             try:

@@ -34,6 +34,7 @@ async def chat(
     chat_service: Annotated[
         service.ChatService, fastapi.Depends(dependencies.get_queue_chat_service)
     ],
+    user_id: Annotated[str | None, fastapi.Header(alias="user-id")] = None,
 ):
     """Queue a chat request and return message/conversation IDs."""
     try:
@@ -41,6 +42,8 @@ async def chat(
             question=request.question,
             model_id=request.model_id,
             conversation_id=request.conversation_id,
+            user_id=user_id,
+            knowledge_group_ids=request.knowledge_group_ids,
         )
     except UnsupportedModelError as e:
         raise fastapi.HTTPException(

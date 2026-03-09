@@ -30,6 +30,8 @@ class ChatService:
         model_id: str,
         message_id: uuid.UUID,
         conversation_id: uuid.UUID | None = None,
+        user_id: str | None = None,
+        knowledge_group_ids: list[str] | None = None,
     ) -> models.Conversation:
         if self.chat_agent is None:
             msg = "ChatService.execute_chat requires chat_agent"
@@ -57,6 +59,8 @@ class ChatService:
             question=question,
             model_id=model_id,
             conversation=conversation.messages[:-1],
+            user_id=user_id,
+            knowledge_group_ids=knowledge_group_ids or [],
         )
         agent_responses = await self.chat_agent.execute_flow(agent_request)
 
@@ -100,6 +104,8 @@ class ChatService:
         question: str,
         model_id: str,
         conversation_id: uuid.UUID | None = None,
+        user_id: str | None = None,
+        knowledge_group_ids: list[str] | None = None,
     ) -> tuple[uuid.UUID, uuid.UUID, models.MessageStatus]:
         """Queue a chat message for async processing via SQS."""
         resolved_model = self.model_resolution_service.resolve_model(model_id)
@@ -131,6 +137,8 @@ class ChatService:
                             "conversation_id": str(conversation.id),
                             "question": question,
                             "model_id": model_id,
+                            "user_id": user_id,
+                            "knowledge_group_ids": knowledge_group_ids or [],
                         }
                     )
                 )

@@ -85,6 +85,8 @@ async def process_job_message(
     message_id = uuid.UUID(body["message_id"])
     question = body["question"]
     model_id = body["model_id"]
+    user_id = body.get("user_id")
+    knowledge_group_ids = body.get("knowledge_group_ids", [])
     receipt_handle = message["ReceiptHandle"]
 
     try:
@@ -100,6 +102,8 @@ async def process_job_message(
             model_id=model_id,
             message_id=message_id,
             conversation_id=conversation_id,
+            user_id=user_id,
+            knowledge_group_ids=knowledge_group_ids,
         )
 
         await conversation_repository.update_message_status(

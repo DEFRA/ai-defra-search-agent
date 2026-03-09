@@ -73,6 +73,8 @@ def test_post_chat_valid_question_returns_202(client, mock_chat_service):
         question="Hello, how are you?",
         model_id="anthropic.claude-3-haiku",
         conversation_id=None,
+        user_id=None,
+        knowledge_group_ids=[],
     )
 
 
@@ -108,7 +110,11 @@ def test_post_chat_unsupported_model_returns_400(client, mock_chat_service):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     mock_chat_service.queue_chat.assert_awaited_once_with(
-        question="Hello", model_id="invalid-model", conversation_id=None
+        question="Hello",
+        model_id="invalid-model",
+        conversation_id=None,
+        user_id=None,
+        knowledge_group_ids=[],
     )
 
 
@@ -140,6 +146,8 @@ def test_post_chat_with_conversation_id(client, mock_chat_service):
         question="Follow-up question",
         model_id="anthropic.claude-3-haiku",
         conversation_id=conversation_id,
+        user_id=None,
+        knowledge_group_ids=[],
     )
 
 
@@ -296,3 +304,57 @@ def test_get_conversation_with_completed_messages(client, mock_chat_service):
     assert response_json["messages"][0]["role"] == "user"
     assert response_json["messages"][0]["status"] == "completed"
     assert response_json["messages"][1]["role"] == "assistant"
+
+
+def test_post_chat_forwards_user_context_to_queue_chat(client, mock_chat_service):
+    """Test that user-id header and knowledgeGroupIds body field are forwarded to queue_chat."""
+    msg_id = uuid.uuid4()
+    conv_id = uuid.uuid4()
+    mock_chat_service.queue_chat.return_value = (
+        msg_id,
+        conv_id,
+        models.MessageStatus.QUEUED,
+    )
+
+    body = {
+        "question": "Hello",
+        "modelId": "anthropic.claude-3-haiku",
+        "knowledgeGroupIds": ["group-1", "group-2"],
+    }
+
+    response = client.post("/chat", json=body, headers={"user-id": "user-123"})
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    mock_chat_service.queue_chat.assert_awaited_once_with(
+        question="Hello",
+        model_id="anthropic.claude-3-haiku",
+        conversation_id=None,
+        user_id="user-123",
+        knowledge_group_ids=["group-1", "group-2"],
+    )
+
+
+def test_post_chat_uses_safe_defaults_when_user_context_not_provided(
+    client, mock_chat_service
+):
+    """Test that missing user-id header and knowledgeGroupIds default to None and []."""
+    msg_id = uuid.uuid4()
+    conv_id = uuid.uuid4()
+    mock_chat_service.queue_chat.return_value = (
+        msg_id,
+        conv_id,
+        models.MessageStatus.QUEUED,
+    )
+
+    body = {"question": "Hello", "modelId": "anthropic.claude-3-haiku"}
+
+    response = client.post("/chat", json=body)
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    mock_chat_service.queue_chat.assert_awaited_once_with(
+        question="Hello",
+        model_id="anthropic.claude-3-haiku",
+        conversation_id=None,
+        user_id=None,
+        knowledge_group_ids=[],
+    )

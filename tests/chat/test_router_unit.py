@@ -60,7 +60,11 @@ def test_post_chat_queues_message_and_saves(client_override, mocker):
     assert "conversationId" in resp_json
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
-        question="Hello", model_id="mid", conversation_id=None
+        question="Hello",
+        model_id="mid",
+        conversation_id=None,
+        user_id=None,
+        knowledge_group_ids=[],
     )
 
 
@@ -185,7 +189,11 @@ def test_post_chat_with_existing_conversation(client_override, mocker):
     assert resp_json["messageId"] == str(msg_id)
 
     mock_chat_service.queue_chat.assert_awaited_once_with(
-        question="Follow up", model_id="mid", conversation_id=conv_id
+        question="Follow up",
+        model_id="mid",
+        conversation_id=conv_id,
+        user_id=None,
+        knowledge_group_ids=[],
     )
 
 

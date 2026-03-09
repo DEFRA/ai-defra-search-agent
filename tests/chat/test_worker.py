@@ -40,6 +40,8 @@ def sample_message():
                 "conversation_id": conversation_id,
                 "question": "What is AI?",
                 "model_id": "anthropic.claude-3-haiku",
+                "user_id": "user-123",
+                "knowledge_group_ids": ["group-1"],
             }
         ),
         "ReceiptHandle": "test-receipt-handle",
@@ -143,6 +145,8 @@ async def test_run_worker_polls_and_processes(monkeypatch, mocker):
                                 "conversation_id": str(uuid.uuid4()),
                                 "question": "q",
                                 "model_id": "m1",
+                                "user_id": None,
+                                "knowledge_group_ids": [],
                             }
                         ),
                         "ReceiptHandle": "rh",
@@ -329,6 +333,8 @@ async def test_run_worker_resets_failures_on_success(monkeypatch, mocker):
                                 "conversation_id": str(uuid.uuid4()),
                                 "question": "q",
                                 "model_id": "m1",
+                                "user_id": None,
+                                "knowledge_group_ids": [],
                             }
                         ),
                         "ReceiptHandle": "rh",
@@ -549,4 +555,88 @@ async def test_process_job_deletes_message_on_exception(
 
     mock_to_thread.assert_called_once_with(
         sqs_client.delete_message, "test-receipt-handle"
+    )
+
+
+@pytest.mark.asyncio
+async def test_process_job_forwards_user_context_to_execute_chat(
+    mock_services, mocker
+):
+    """Test that user_id and knowledge_group_ids from the SQS payload are passed to execute_chat."""
+    chat_service, conversation_repository, sqs_client = mock_services
+
+    message_id = str(uuid.uuid4())
+    conversation_id = str(uuid.uuid4())
+    message = {
+        "Body": json.dumps(
+            {
+                "message_id": message_id,
+                "conversation_id": conversation_id,
+                "question": "What is AI?",
+                "model_id": "anthropic.claude-3-haiku",
+                "user_id": "user-abc",
+                "knowledge_group_ids": ["group-x", "group-y"],
+            }
+        ),
+        "ReceiptHandle": "test-receipt-handle",
+    }
+
+    mock_conversation = mocker.MagicMock()
+    mock_conversation.id = uuid.UUID(conversation_id)
+    chat_service.execute_chat.return_value = mock_conversation
+
+    mocker.patch("asyncio.to_thread", return_value=None)
+
+    await worker.process_job_message(
+        message, chat_service, conversation_repository, sqs_client
+    )
+
+    chat_service.execute_chat.assert_awaited_once_with(
+        question="What is AI?",
+        model_id="anthropic.claude-3-haiku",
+        message_id=uuid.UUID(message_id),
+        conversation_id=uuid.UUID(conversation_id),
+        user_id="user-abc",
+        knowledge_group_ids=["group-x", "group-y"],
+    )
+
+
+@pytest.mark.asyncio
+async def test_process_job_uses_safe_defaults_when_user_context_absent_from_payload(
+    mock_services, mocker
+):
+    """Test that missing user_id and knowledge_group_ids in the payload default to None and []."""
+    chat_service, conversation_repository, sqs_client = mock_services
+
+    message_id = str(uuid.uuid4())
+    conversation_id = str(uuid.uuid4())
+    message = {
+        "Body": json.dumps(
+            {
+                "message_id": message_id,
+                "conversation_id": conversation_id,
+                "question": "What is AI?",
+                "model_id": "anthropic.claude-3-haiku",
+            }
+        ),
+        "ReceiptHandle": "test-receipt-handle",
+    }
+
+    mock_conversation = mocker.MagicMock()
+    mock_conversation.id = uuid.UUID(conversation_id)
+    chat_service.execute_chat.return_value = mock_conversation
+
+    mocker.patch("asyncio.to_thread", return_value=None)
+
+    await worker.process_job_message(
+        message, chat_service, conversation_repository, sqs_client
+    )
+
+    chat_service.execute_chat.assert_awaited_once_with(
+        question="What is AI?",
+        model_id="anthropic.claude-3-haiku",
+        message_id=uuid.UUID(message_id),
+        conversation_id=uuid.UUID(conversation_id),
+        user_id=None,
+        knowledge_group_ids=[],
     )

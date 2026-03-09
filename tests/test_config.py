@@ -85,3 +85,10 @@ def test_mongo_config_env_var_overrides(monkeypatch):
     assert mongo_config.socket_timeout_ms == 8000
     assert mongo_config.retry_attempts == 4
     assert mongo_config.retry_base_delay_seconds == 1.5
+
+
+def test_knowledge_config_loads_without_knowledge_group_id(monkeypatch):
+    monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-service:8087")
+    knowledge_config = config.KnowledgeConfig()
+    assert knowledge_config.base_url == "http://knowledge-service:8087"
+    assert not hasattr(knowledge_config, "knowledge_group_id")

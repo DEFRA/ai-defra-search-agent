@@ -28,6 +28,10 @@ class ChatRequest(BaseRequestSchema):
         description="The internal id of the model to use for generating the response",
         examples=["anthropic.claude-3-7-sonnet"],
     )
+    knowledge_group_ids: list[str] = pydantic.Field(
+        default_factory=list,
+        description="Knowledge group IDs to use for RAG context. If empty, RAG is skipped.",
+    )
 
 
 class MessageResponse(pydantic.BaseModel):
