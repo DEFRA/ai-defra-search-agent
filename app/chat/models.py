@@ -4,6 +4,8 @@ import enum
 import uuid
 from typing import Any, Literal
 
+from app.common.knowledge import Source
+
 __all__ = [
     "AgentRequest",
     "AssistantMessage",
@@ -60,14 +62,6 @@ class UserMessage(Message):
     role: Literal["user"] = "user"
     status: MessageStatus = MessageStatus.COMPLETED
     error_message: str | None = None
-
-
-@dataclasses.dataclass(frozen=True)
-class Source:
-    name: str
-    location: str
-    snippet: str
-    score: float
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)

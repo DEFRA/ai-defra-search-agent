@@ -76,7 +76,7 @@ class BedrockChatAgent(AbstractChatAgent):
                     request.model_id
                 ].name,
                 usage=usage,
-                sources=[],
+                sources=response.sources,
                 rag_error=response.rag_error,
             )
             for content_block in response.content

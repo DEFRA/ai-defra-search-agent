@@ -1,19 +1,29 @@
-import logging
-
 import httpx
 
-from app.common.knowledge import KnowledgeRetriever
+from app.common.knowledge import KnowledgeDoc, KnowledgeRetriever
 
 
 class TestKnowledgeRetriever:
-    def test_search_returns_filtered_documents_from_knowledge_service(self, mocker):
+    def test_search_returns_all_documents_from_knowledge_service(self, mocker):
         base_url = "http://test"
-        retriever = KnowledgeRetriever(base_url=base_url, similarity_threshold=0.5)
+        retriever = KnowledgeRetriever(base_url=base_url)
 
         mock_response = mocker.Mock()
         mock_response.json.return_value = [
-            {"similarity_score": 0.9, "content": "foo", "document_id": "doc1"},
-            {"similarity_score": 0.4, "content": "bar", "document_id": "doc2"},
+            {
+                "similarity_score": 0.9,
+                "content": "foo",
+                "document_id": "doc1",
+                "file_name": "report.pdf",
+                "s3_key": "uploads/report.pdf",
+            },
+            {
+                "similarity_score": 0.4,
+                "content": "bar",
+                "document_id": "doc2",
+                "file_name": "summary.pdf",
+                "s3_key": "uploads/summary.pdf",
+            },
         ]
         mock_response.raise_for_status.return_value = None
 
@@ -36,9 +46,19 @@ class TestKnowledgeRetriever:
             headers={"user-id": "user-1"},
         )
         assert error is None
-        assert len(docs) == 1
-        assert docs[0]["similarity_score"] == 0.9
-        assert docs[0]["content"] == "foo"
+        assert len(docs) == 2
+        assert docs[0] == KnowledgeDoc(
+            content="foo",
+            file_name="report.pdf",
+            s3_key="uploads/report.pdf",
+            score=0.9,
+        )
+        assert docs[1] == KnowledgeDoc(
+            content="bar",
+            file_name="summary.pdf",
+            s3_key="uploads/summary.pdf",
+            score=0.4,
+        )
 
     def test_search_passes_max_results(self, mocker):
         retriever = KnowledgeRetriever(base_url="http://test")
@@ -155,36 +175,3 @@ class TestKnowledgeRetriever:
         assert docs == []
         assert error == KnowledgeRetriever.RAG_ERROR_MESSAGE
         assert "RAG Lookup failed" in caplog.text
-
-    def test_filter_relevant_docs_filters_below_threshold(self):
-        retriever = KnowledgeRetriever(base_url="http://test", similarity_threshold=0.6)
-        docs = [
-            {"id": 1, "similarity_score": 0.7},
-            {"id": 2, "similarity_score": 0.6},
-            {"id": 3, "similarity_score": 0.59},
-            {"id": 4, "similarity_score": 0.9},
-        ]
-
-        result = retriever._filter_relevant_docs(docs)
-
-        assert len(result) == 3
-        assert result[0]["id"] == 1
-        assert result[1]["id"] == 2
-        assert result[2]["id"] == 4
-
-    def test_filter_relevant_docs_logs_when_filtering(self, caplog):
-        retriever = KnowledgeRetriever(base_url="http://test", similarity_threshold=0.8)
-        docs = [
-            {"id": 1, "similarity_score": 0.9},
-            {"id": 2, "similarity_score": 0.7},
-        ]
-
-        with caplog.at_level(logging.INFO):
-            result = retriever._filter_relevant_docs(docs)
-
-        assert len(result) == 1
-        assert "Filtered 1 docs to 1 docs" in caplog.text
-
-    def test_filter_relevant_docs_empty_input(self):
-        retriever = KnowledgeRetriever(base_url="http://test")
-        assert retriever._filter_relevant_docs([]) == []

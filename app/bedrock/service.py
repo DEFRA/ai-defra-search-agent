@@ -33,7 +33,7 @@ class BedrockInferenceService:
             msg = "Cannot invoke Anthropic model with no messages"
             raise ValueError(msg)
 
-        sources_found: list[models.RagSource] = []
+        sources_found: list[knowledge.Source] = []
         model_id = model_config.id
 
         rag_error: str | None = None
@@ -41,6 +41,15 @@ class BedrockInferenceService:
             rag_docs, rag_error = self._retrieve_knowledge(messages, knowledge_group_ids, user_id)
             if rag_docs:
                 system_prompt += self._build_context_string(rag_docs)
+                sources_found = [
+                    knowledge.Source(
+                        name=doc.file_name,
+                        location=doc.s3_key,
+                        snippet=doc.content,
+                        score=doc.score,
+                    )
+                    for doc in rag_docs
+                ]
 
         (guardrail_id, guardrail_version) = (
             model_config.guardrail_id,
@@ -111,7 +120,7 @@ class BedrockInferenceService:
 
     def _retrieve_knowledge(
         self, messages: list[dict[str, Any]], knowledge_group_ids: list[str], user_id: str
-    ) -> tuple[list[dict[str, Any]], str | None]:
+    ) -> tuple[list[knowledge.KnowledgeDoc], str | None]:
         if not self.knowledge_retriever:
             return [], None
 
@@ -120,11 +129,11 @@ class BedrockInferenceService:
             group_ids=knowledge_group_ids, user_id=user_id, query=query
         )
 
-    def _build_context_string(self, docs: list[dict[str, Any]]) -> str:
+    def _build_context_string(self, docs: list[knowledge.KnowledgeDoc]) -> str:
         context_str = "\n\n".join(
             [
-                f'<source id="{i}">\n{d["content"]}\n</source>'
-                for i, d in enumerate(docs)
+                f'<source id="{i}">\n{doc.content}\n</source>'
+                for i, doc in enumerate(docs)
             ]
         )
         return f"\n\n<context>\n{context_str}\n</context>..."

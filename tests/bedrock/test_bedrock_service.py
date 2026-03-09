@@ -4,6 +4,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from app.bedrock import models, service
+from app.common import knowledge
+from app.common.knowledge import KnowledgeDoc
 
 
 @pytest.fixture
@@ -14,7 +16,6 @@ def bedrock_inference_service(
     mock_config.bedrock.max_response_tokens = 100
     mock_config.bedrock.default_model_temprature = 0.5
     mock_knowledge_retriever = mocker.Mock()
-    mock_knowledge_retriever._filter_relevant_docs = lambda x: x
 
     return service.BedrockInferenceService(
         api_client=bedrock_client,
@@ -189,11 +190,12 @@ def test_invoke_with_rag_augments_system_prompt_with_document_content(
     mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
     mock_retriever.search.return_value = (
         [
-            {
-                "content": "This is content of doc1",
-                "similarity_score": 0.9,
-                "document_id": "doc1",
-            }
+            KnowledgeDoc(
+                content="This is content of doc1",
+                file_name="doc1.pdf",
+                s3_key="uploads/doc1.pdf",
+                score=0.9,
+            )
         ],
         None,
     )
@@ -230,7 +232,63 @@ def test_invoke_with_rag_augments_system_prompt_with_document_content(
     assert "<context>" in full_prompt
     assert "This is content of doc1" in full_prompt
 
-    assert response.sources == []
+
+def test_invoke_with_rag_returns_sources_with_file_name_and_s3_key_from_retrieved_documents(
+    bedrock_inference_service: service.BedrockInferenceService,
+    mocker: MockerFixture,
+):
+    mock_retriever = cast(Any, bedrock_inference_service.knowledge_retriever)
+    mock_retriever.search.return_value = (
+        [
+            KnowledgeDoc(
+                content="Content of doc one",
+                file_name="report.pdf",
+                s3_key="uploads/report.pdf",
+                score=0.85,
+            ),
+            KnowledgeDoc(
+                content="Content of doc two",
+                file_name="",
+                s3_key="",
+                score=0.6,
+            ),
+        ],
+        None,
+    )
+
+    mocker.patch.object(
+        bedrock_inference_service.runtime_client,
+        "converse",
+        return_value={
+            "output": {"message": {"content": [{"text": "Response"}]}},
+            "usage": {"inputTokens": 10, "outputTokens": 20},
+        },
+    )
+    mocker.patch.object(
+        bedrock_inference_service, "_get_backing_model", return_value="geni-ai-3.5"
+    )
+
+    response = bedrock_inference_service.invoke_anthropic(
+        model_config=models.ModelConfig(id="geni-ai-3.5"),
+        system_prompt="System prompt.",
+        messages=[{"role": "user", "content": [{"text": "Query"}]}],
+        knowledge_group_ids=["group1"],
+        user_id="user-1",
+    )
+
+    assert len(response.sources) == 2
+    assert response.sources[0] == knowledge.Source(
+        name="report.pdf",
+        location="uploads/report.pdf",
+        snippet="Content of doc one",
+        score=0.85,
+    )
+    assert response.sources[1] == knowledge.Source(
+        name="",
+        location="",
+        snippet="Content of doc two",
+        score=0.6,
+    )
 
 
 def test_invoke_with_rag_but_no_docs_found(
