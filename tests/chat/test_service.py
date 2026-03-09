@@ -547,9 +547,7 @@ async def test_execute_chat_defaults_knowledge_group_ids_to_empty_list(
 
 
 @pytest.mark.asyncio
-async def test_queue_chat_includes_user_context_in_sqs_payload(
-    chat_service, mocker
-):
+async def test_queue_chat_includes_user_context_in_sqs_payload(chat_service, mocker):
     import json as _json
 
     captured = {}
