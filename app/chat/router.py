@@ -44,7 +44,9 @@ async def chat(
         len(request.knowledge_group_ids or []),
         extra={
             "model_id": request.model_id,
-            "conversation_id": str(request.conversation_id) if request.conversation_id else None,
+            "conversation_id": str(request.conversation_id)
+            if request.conversation_id
+            else None,
         },
     )
 
