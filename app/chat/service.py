@@ -73,11 +73,10 @@ class ChatService:
                 )
             if response_message.rag_error:
                 content_parts.append(f"*{response_message.rag_error}*")
-            if len(content_parts) > 1:
-                response_message = dataclasses.replace(
-                    response_message,
-                    content="\n\n".join(content_parts),
-                )
+            response_message = dataclasses.replace(
+                response_message,
+                content="\n\n".join(content_parts),
+            )
 
             message_with_model_name = dataclasses.replace(
                 response_message,
