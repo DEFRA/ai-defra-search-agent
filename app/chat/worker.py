@@ -109,6 +109,7 @@ async def process_job_message(
         )
 
     except models.ConversationNotFoundError as e:
+        logger.error("Conversation not found: %s", e)
         await _update_message_failed(
             conversation_repository,
             conversation_id,

@@ -40,6 +40,7 @@ async def health(
         try:
             worker_task.result()
         except Exception as e:
+            logger.error("Worker task failed: %s", e)
             raise fastapi.HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Worker task failed: {str(e)}",

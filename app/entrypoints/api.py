@@ -53,6 +53,7 @@ app = fastapi.FastAPI(
 async def validation_exception_handler(
     _: fastapi.Request, exc: fastapi.exceptions.RequestValidationError
 ):
+    logger.error(exc.errors())
     return fastapi.responses.JSONResponse(
         status_code=400,
         content={"detail": exc.errors()},
@@ -63,6 +64,7 @@ async def validation_exception_handler(
 async def unsupported_model_exception_handler(
     _: fastapi.Request, exc: UnsupportedModelError
 ):
+    logger.error(str(exc))
     return fastapi.responses.JSONResponse(
         status_code=400,
         content={"detail": str(exc)},

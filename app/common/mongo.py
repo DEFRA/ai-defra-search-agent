@@ -51,6 +51,7 @@ async def retry_mongo_operation[T](
                     exc,
                 )
         except pymongo.errors.PyMongoError:
+            logger.exception("MongoDB error")
             raise
     msg = "MongoDB unavailable"
     raise MongoUnavailableError(msg) from last_exc

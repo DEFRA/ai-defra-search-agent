@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 import fastapi
@@ -5,6 +6,8 @@ from fastapi import status
 
 from app.common.mongo import MongoUnavailableError
 from app.feedback import api_schemas, dependencies, service
+
+logger = logging.getLogger(__name__)
 
 router = fastapi.APIRouter(tags=["feedback"])
 
@@ -29,6 +32,7 @@ async def submit_feedback(
             comment=request.comment,
         )
     except MongoUnavailableError as e:
+        logger.error("MongoDB unavailable")
         raise fastapi.HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         ) from None
