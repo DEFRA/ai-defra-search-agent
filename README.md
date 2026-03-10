@@ -82,6 +82,8 @@ The following environment variables can be configured for the application:
 | `AWS_BEARER_TOKEN_BEDROCK` | No | N/A                      | Bearer token for AWS Bedrock authentication                             |
 | `AWS_BEDROCK_DEFAULT_GENERATION_MODEL` | Yes | N/A                      | Default AI model to use for generation                                  |
 | `AWS_BEDROCK_AVAILABLE_GENERATION_MODELS` | Yes | N/A                      | JSON array of available AI models for generation                        |
+| `AWS_BEDROCK_CONNECT_TIMEOUT` | No | `60`                     | Timeout in seconds to establish a connection to AWS Bedrock             |
+| `AWS_BEDROCK_READ_TIMEOUT` | No | `60`                     | Timeout in seconds to wait for a response from AWS Bedrock              |
 | `KNOWLEDGE_BASE_URL` | No | N/A                      | URL of the knowledge base service used for RAG lookup                   |
 | `KNOWLEDGE_GROUP_ID` | No | N/A                      | Knowledge group identifier for retrieval queries                        |
 | `KNOWLEDGE_SIMILARITY_THRESHOLD` | No | `0.5`                    | Similarity threshold for knowledge retrieval matches (0-1)              |

@@ -1,6 +1,7 @@
 import logging
 
 import boto3
+import botocore.config
 import fastapi
 import pymongo.asynchronous.database
 
@@ -28,7 +29,13 @@ def get_prompt_repository() -> FileSystemPromptRepository:
 
 
 def _bedrock_client_kwargs(app_config: config.AppConfig) -> dict:
-    kwargs: dict = {"region_name": app_config.sqs.region}
+    kwargs: dict = {
+        "region_name": app_config.sqs.region,
+        "config": botocore.config.Config(
+            connect_timeout=app_config.bedrock.connect_timeout,
+            read_timeout=app_config.bedrock.read_timeout,
+        ),
+    }
     if app_config.bedrock.use_credentials:
         kwargs["aws_access_key_id"] = app_config.bedrock.access_key_id
         kwargs["aws_secret_access_key"] = app_config.bedrock.secret_access_key

@@ -87,6 +87,21 @@ def test_mongo_config_env_var_overrides(monkeypatch):
     assert mongo_config.retry_base_delay_seconds == 1.5
 
 
+def test_bedrock_config_defaults():
+    bedrock_config = config.BedrockConfig()
+    assert bedrock_config.connect_timeout == 60
+    assert bedrock_config.read_timeout == 60
+
+
+def test_bedrock_config_env_var_overrides(monkeypatch):
+    monkeypatch.setenv("AWS_BEDROCK_CONNECT_TIMEOUT", "10")
+    monkeypatch.setenv("AWS_BEDROCK_READ_TIMEOUT", "120")
+
+    bedrock_config = config.BedrockConfig()
+    assert bedrock_config.connect_timeout == 10
+    assert bedrock_config.read_timeout == 120
+
+
 def test_knowledge_config_loads_without_knowledge_group_id(monkeypatch):
     monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-service:8087")
     knowledge_config = config.KnowledgeConfig()
