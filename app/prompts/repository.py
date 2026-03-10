@@ -41,6 +41,7 @@ class FileSystemPromptRepository(AbstractPromptRepository):
             return prompt_content
         except FileNotFoundError as err:
             msg = f"Prompt '{name}' not found in directory '{self.prompts_dir}'"
+            logger.error(msg)
             raise RuntimeError(msg) from err
 
     def clear_cache(self) -> None:
