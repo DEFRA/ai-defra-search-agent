@@ -89,6 +89,18 @@ async def process_job_message(
     knowledge_group_ids = body.get("knowledge_group_ids", [])
     receipt_handle = message["ReceiptHandle"]
 
+    logger.info(
+        "SQS message received: message_id=%s conversation_id=%s model=%s",
+        message_id,
+        conversation_id,
+        model_id,
+        extra={
+            "message_id": str(message_id),
+            "conversation_id": str(conversation_id) if conversation_id else None,
+            "model_id": model_id,
+        },
+    )
+
     try:
         if conversation_id:
             should_skip = await _claim_or_skip(
@@ -110,6 +122,16 @@ async def process_job_message(
             conversation_id=conversation.id,
             message_id=message_id,
             status=models.MessageStatus.COMPLETED,
+        )
+
+        logger.info(
+            "Message processing completed: message_id=%s conversation_id=%s",
+            message_id,
+            conversation.id,
+            extra={
+                "message_id": str(message_id),
+                "conversation_id": str(conversation.id),
+            },
         )
 
     except models.ConversationNotFoundError as e:

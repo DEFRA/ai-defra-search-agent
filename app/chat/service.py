@@ -36,6 +36,19 @@ class ChatService:
         if self.chat_agent is None:
             msg = "ChatService.execute_chat requires chat_agent"
             raise RuntimeError(msg)
+
+        logger.info(
+            "Executing chat: message_id=%s conversation_id=%s model=%s",
+            message_id,
+            conversation_id,
+            model_id,
+            extra={
+                "message_id": str(message_id),
+                "conversation_id": str(conversation_id) if conversation_id else None,
+                "model_id": model_id,
+            },
+        )
+
         model_info = self.model_resolution_service.resolve_model(model_id)
 
         if conversation_id:
@@ -86,6 +99,21 @@ class ChatService:
             conversation.add_message(message_with_model_name)
 
         await self.conversation_repository.save(conversation)
+
+        if agent_responses:
+            usage = agent_responses[0].usage
+            if usage:
+                logger.info(
+                    "Chat execution completed: message_id=%s input_tokens=%d output_tokens=%d",
+                    message_id,
+                    usage.input_tokens,
+                    usage.output_tokens,
+                    extra={
+                        "message_id": str(message_id),
+                        "input_tokens": usage.input_tokens,
+                        "output_tokens": usage.output_tokens,
+                    },
+                )
 
         return conversation
 
@@ -143,7 +171,13 @@ class ChatService:
                     )
                 )
             logger.info(
-                "Successfully queued message %s to SQS", user_message.message_id
+                "Message dispatched to SQS: message_id=%s conversation_id=%s",
+                user_message.message_id,
+                conversation.id,
+                extra={
+                    "message_id": str(user_message.message_id),
+                    "conversation_id": str(conversation.id),
+                },
             )
 
         await asyncio.to_thread(_send_to_sqs)

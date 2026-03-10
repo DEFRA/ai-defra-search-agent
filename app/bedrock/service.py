@@ -36,15 +36,33 @@ class BedrockInferenceService:
         sources_found: list[knowledge.Source] = []
         model_id = model_config.id
 
-        rag_error: str | None = None
-        if (
+        rag_eligible = bool(
             self.knowledge_retriever
             and knowledge_group_ids
             and user_id
             and len(messages) == 1
-        ):
+        )
+        logger.info(
+            "RAG triage: eligible=%s knowledge_groups=%d message_count=%d",
+            rag_eligible,
+            len(knowledge_group_ids or []),
+            len(messages),
+            extra={
+                "rag_eligible": rag_eligible,
+                "knowledge_group_count": len(knowledge_group_ids or []),
+            },
+        )
+
+        rag_error: str | None = None
+        if rag_eligible:
             rag_docs, rag_error = self._retrieve_knowledge(
                 messages, knowledge_group_ids, user_id
+            )
+            logger.info(
+                "Knowledge retrieval complete: docs_found=%d rag_error=%s",
+                len(rag_docs),
+                bool(rag_error),
+                extra={"rag_docs_count": len(rag_docs), "rag_error": bool(rag_error)},
             )
             if rag_docs:
                 system_prompt += self._build_context_string(rag_docs)
@@ -83,6 +101,13 @@ class BedrockInferenceService:
                 "guardrailVersion": guardrail_version,
             }
 
+        logger.info(
+            "Invoking Bedrock model: model_id=%s with_guardrails=%s",
+            model_id,
+            bool(guardrail_id),
+            extra={"model_id": model_id, "with_guardrails": bool(guardrail_id)},
+        )
+
         response = self.runtime_client.converse(**converse_args)
 
         backing_model = self._get_backing_model(model_id)
@@ -92,6 +117,18 @@ class BedrockInferenceService:
 
         output_message = response["output"]["message"]
         usage_info = response["usage"]
+
+        logger.info(
+            "Bedrock response received: model_id=%s input_tokens=%d output_tokens=%d",
+            model_id,
+            usage_info["inputTokens"],
+            usage_info["outputTokens"],
+            extra={
+                "model_id": model_id,
+                "input_tokens": usage_info["inputTokens"],
+                "output_tokens": usage_info["outputTokens"],
+            },
+        )
 
         return models.EnhancedModelResponse(
             model_id=model_id,

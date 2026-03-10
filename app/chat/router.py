@@ -37,6 +37,17 @@ async def chat(
     user_id: Annotated[str | None, fastapi.Header(alias="user-id")] = None,
 ):
     """Queue a chat request and return message/conversation IDs."""
+    logger.debug(
+        "Chat request received: model=%s conversation_id=%s knowledge_groups=%d",
+        request.model_id,
+        request.conversation_id,
+        len(request.knowledge_group_ids or []),
+        extra={
+            "model_id": request.model_id,
+            "conversation_id": str(request.conversation_id) if request.conversation_id else None,
+        },
+    )
+
     try:
         message_id, conversation_id, status_value = await chat_service.queue_chat(
             question=request.question,
@@ -57,6 +68,13 @@ async def chat(
         raise fastapi.HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         ) from None
+
+    logger.info(
+        "Chat message queued: message_id=%s conversation_id=%s",
+        message_id,
+        conversation_id,
+        extra={"message_id": str(message_id), "conversation_id": str(conversation_id)},
+    )
 
     return api_schemas.QueueChatResponse(
         message_id=message_id,
