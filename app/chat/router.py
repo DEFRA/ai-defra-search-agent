@@ -1,4 +1,3 @@
-import logging
 import uuid
 from typing import Annotated
 
@@ -8,8 +7,6 @@ from fastapi import status
 from app.chat import api_schemas, dependencies, models, service
 from app.common.mongo import MongoUnavailableError
 from app.models import UnsupportedModelError
-
-logger = logging.getLogger(__name__)
 
 router = fastapi.APIRouter(tags=["chat"])
 
@@ -34,6 +31,7 @@ async def chat(
     chat_service: Annotated[
         service.ChatService, fastapi.Depends(dependencies.get_queue_chat_service)
     ],
+    user_id: Annotated[str | None, fastapi.Header(alias="user-id")] = None,
 ):
     """Queue a chat request and return message/conversation IDs."""
     try:
@@ -41,6 +39,8 @@ async def chat(
             question=request.question,
             model_id=request.model_id,
             conversation_id=request.conversation_id,
+            user_id=user_id,
+            knowledge_group_ids=request.knowledge_group_ids,
         )
     except UnsupportedModelError as e:
         logger.error("Unsupported model ID: %s", request.model_id)

@@ -495,3 +495,104 @@ async def test_execute_chat_does_not_duplicate_user_message(
 
     user_messages = [m for m in result.messages if m.role == "user"]
     assert len(user_messages) == 1
+
+
+@pytest.mark.asyncio
+async def test_execute_chat_includes_user_context_in_agent_request(
+    chat_service, mock_agent
+):
+    mock_agent.execute_flow.return_value = [
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_1,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
+        )
+    ]
+
+    await chat_service.execute_chat(
+        MOCK_QUESTION,
+        MOCK_MODEL_ID,
+        uuid.uuid4(),
+        user_id="user-123",
+        knowledge_group_ids=["group-1", "group-2"],
+    )
+
+    call_args = mock_agent.execute_flow.call_args[0]
+    agent_request = call_args[0]
+    assert agent_request.user_id == "user-123"
+    assert agent_request.knowledge_group_ids == ["group-1", "group-2"]
+
+
+@pytest.mark.asyncio
+async def test_execute_chat_defaults_knowledge_group_ids_to_empty_list(
+    chat_service, mock_agent
+):
+    mock_agent.execute_flow.return_value = [
+        models.AssistantMessage(
+            content=MOCK_RESPONSE_1,
+            usage=MOCK_USAGE,
+            model_name=MOCK_MODEL_NAME,
+            model_id=MOCK_MODEL_ID,
+        )
+    ]
+
+    await chat_service.execute_chat(
+        MOCK_QUESTION, MOCK_MODEL_ID, uuid.uuid4(), knowledge_group_ids=None
+    )
+
+    call_args = mock_agent.execute_flow.call_args[0]
+    agent_request = call_args[0]
+    assert agent_request.knowledge_group_ids == []
+
+
+@pytest.mark.asyncio
+async def test_queue_chat_includes_user_context_in_sqs_payload(chat_service, mocker):
+    import json as _json
+
+    captured = {}
+
+    def _capture(payload):
+        captured["payload"] = _json.loads(payload)
+
+    chat_service.sqs_client.send_message = mocker.MagicMock(side_effect=_capture)
+    chat_service.sqs_client.__enter__ = mocker.MagicMock(
+        return_value=chat_service.sqs_client
+    )
+    chat_service.sqs_client.__exit__ = mocker.MagicMock(return_value=False)
+
+    await chat_service.queue_chat(
+        question=MOCK_QUESTION,
+        model_id=MOCK_MODEL_ID,
+        user_id="user-123",
+        knowledge_group_ids=["group-1"],
+    )
+
+    assert captured["payload"]["user_id"] == "user-123"
+    assert captured["payload"]["knowledge_group_ids"] == ["group-1"]
+
+
+@pytest.mark.asyncio
+async def test_queue_chat_defaults_knowledge_group_ids_to_empty_list(
+    chat_service, mocker
+):
+    import json as _json
+
+    captured = {}
+
+    def _capture(payload):
+        captured["payload"] = _json.loads(payload)
+
+    chat_service.sqs_client.send_message = mocker.MagicMock(side_effect=_capture)
+    chat_service.sqs_client.__enter__ = mocker.MagicMock(
+        return_value=chat_service.sqs_client
+    )
+    chat_service.sqs_client.__exit__ = mocker.MagicMock(return_value=False)
+
+    await chat_service.queue_chat(
+        question=MOCK_QUESTION,
+        model_id=MOCK_MODEL_ID,
+        knowledge_group_ids=None,
+    )
+
+    assert captured["payload"]["knowledge_group_ids"] == []

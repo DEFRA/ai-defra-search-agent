@@ -1,6 +1,8 @@
 import dataclasses
 from typing import Any
 
+from app.common import knowledge
+
 
 @dataclasses.dataclass(frozen=True)
 class ModelConfig:
@@ -24,17 +26,9 @@ class ModelResponse:
 
 
 @dataclasses.dataclass(frozen=True)
-class RagSource:
-    name: str
-    location: str
-    snippet: str
-    score: float
-
-
-@dataclasses.dataclass(frozen=True)
 class EnhancedModelResponse:
     model_id: str
     content: list[dict[str, Any]]
     usage: dict[str, int]
-    sources: list[RagSource] = dataclasses.field(default_factory=list)
+    sources: list[knowledge.Source] = dataclasses.field(default_factory=list)
     rag_error: str | None = None

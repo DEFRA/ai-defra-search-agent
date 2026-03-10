@@ -100,3 +100,10 @@ def test_bedrock_config_env_var_overrides(monkeypatch):
     bedrock_config = config.BedrockConfig()
     assert bedrock_config.connect_timeout == 10
     assert bedrock_config.read_timeout == 120
+
+
+def test_knowledge_config_loads_without_knowledge_group_id(monkeypatch):
+    monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-service:8087")
+    knowledge_config = config.KnowledgeConfig()
+    assert knowledge_config.base_url == "http://knowledge-service:8087"
+    assert not hasattr(knowledge_config, "knowledge_group_id")

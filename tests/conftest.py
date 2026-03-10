@@ -58,5 +58,4 @@ def set_test_env(monkeypatch, bedrock_generation_models):
         "SQS_CHAT_QUEUE_URL",
         "http://sqs.eu-central-1.localstack:4566/000000000000/chat-job-queue",
     )
-    monkeypatch.setenv("KNOWLEDGE_GROUP_ID", "kg-1234567890")
     monkeypatch.setenv("KNOWLEDGE_SIMILARITY_THRESHOLD", "0.5")

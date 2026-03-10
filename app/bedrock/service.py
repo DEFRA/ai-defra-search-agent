@@ -26,21 +26,55 @@ class BedrockInferenceService:
         model_config: models.ModelConfig,
         system_prompt: str,
         messages: list[dict[str, Any]],
-        knowledge_group_id: str | None = None,
+        knowledge_group_ids: list[str] | None = None,
+        user_id: str | None = None,
     ) -> models.EnhancedModelResponse:
         if not messages:
             msg = "Cannot invoke Anthropic model with no messages"
             raise ValueError(msg)
 
-        sources_found: list[models.RagSource] = []
+        sources_found: list[knowledge.Source] = []
         model_id = model_config.id
 
+        rag_eligible = bool(
+            self.knowledge_retriever
+            and knowledge_group_ids
+            and user_id
+            and len(messages) == 1
+        )
+        logger.info(
+            "RAG triage: eligible=%s knowledge_groups=%d message_count=%d",
+            rag_eligible,
+            len(knowledge_group_ids or []),
+            len(messages),
+            extra={
+                "rag_eligible": rag_eligible,
+                "knowledge_group_count": len(knowledge_group_ids or []),
+            },
+        )
+
         rag_error: str | None = None
-        if self.knowledge_retriever and knowledge_group_id and len(messages) == 1:
-            rag_docs, rag_error = self._retrieve_knowledge(messages, knowledge_group_id)
+        if rag_eligible:
+            rag_docs, rag_error = self._retrieve_knowledge(
+                messages, knowledge_group_ids, user_id
+            )
+            logger.info(
+                "Knowledge retrieval complete: docs_found=%d rag_error=%s",
+                len(rag_docs),
+                bool(rag_error),
+                extra={"rag_docs_count": len(rag_docs), "rag_error": bool(rag_error)},
+            )
             if rag_docs:
                 system_prompt += self._build_context_string(rag_docs)
-                sources_found = self._map_docs_to_sources(rag_docs)
+                sources_found = [
+                    knowledge.Source(
+                        name=doc.file_name,
+                        location=doc.s3_key,
+                        snippet=doc.content,
+                        score=doc.score,
+                    )
+                    for doc in rag_docs
+                ]
 
         (guardrail_id, guardrail_version) = (
             model_config.guardrail_id,
@@ -67,6 +101,13 @@ class BedrockInferenceService:
                 "guardrailVersion": guardrail_version,
             }
 
+        logger.info(
+            "Invoking Bedrock model: model_id=%s with_guardrails=%s",
+            model_id,
+            bool(guardrail_id),
+            extra={"model_id": model_id, "with_guardrails": bool(guardrail_id)},
+        )
+
         response = self.runtime_client.converse(**converse_args)
 
         backing_model = self._get_backing_model(model_id)
@@ -76,6 +117,18 @@ class BedrockInferenceService:
 
         output_message = response["output"]["message"]
         usage_info = response["usage"]
+
+        logger.info(
+            "Bedrock response received: model_id=%s input_tokens=%d output_tokens=%d",
+            model_id,
+            usage_info["inputTokens"],
+            usage_info["outputTokens"],
+            extra={
+                "model_id": model_id,
+                "input_tokens": usage_info["inputTokens"],
+                "output_tokens": usage_info["outputTokens"],
+            },
+        )
 
         return models.EnhancedModelResponse(
             model_id=model_id,
@@ -110,35 +163,27 @@ class BedrockInferenceService:
         )
 
     def _retrieve_knowledge(
-        self, messages: list[dict[str, Any]], knowledge_group_id: str
-    ) -> tuple[list[dict[str, Any]], str | None]:
+        self,
+        messages: list[dict[str, Any]],
+        knowledge_group_ids: list[str],
+        user_id: str,
+    ) -> tuple[list[knowledge.KnowledgeDoc], str | None]:
         if not self.knowledge_retriever:
             return [], None
 
         query = messages[-1]["content"][0]["text"]
-        return self.knowledge_retriever.search(group_id=knowledge_group_id, query=query)
+        return self.knowledge_retriever.search(
+            group_ids=knowledge_group_ids, user_id=user_id, query=query
+        )
 
-    def _build_context_string(self, docs: list[dict[str, Any]]) -> str:
+    def _build_context_string(self, docs: list[knowledge.KnowledgeDoc]) -> str:
         context_str = "\n\n".join(
             [
-                f'<source name="{d["name"]}" id="{i}">\n{d["content"]}\n</source>'
-                for i, d in enumerate(docs)
+                f'<source id="{i}">\n{doc.content}\n</source>'
+                for i, doc in enumerate(docs)
             ]
         )
         return f"\n\n<context>\n{context_str}\n</context>..."
-
-    def _map_docs_to_sources(
-        self, docs: list[dict[str, Any]]
-    ) -> list[models.RagSource]:
-        return [
-            models.RagSource(
-                name=d["name"],
-                location=d["location"],
-                snippet=d["content"][:200] + "...",
-                score=d["similarity_score"],
-            )
-            for d in docs
-        ]
 
     def _get_backing_model(self, model_id: str) -> str | None:
         if not model_id.startswith("arn:aws:bedrock"):

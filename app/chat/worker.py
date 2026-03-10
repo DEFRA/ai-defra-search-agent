@@ -85,7 +85,21 @@ async def process_job_message(
     message_id = uuid.UUID(body["message_id"])
     question = body["question"]
     model_id = body["model_id"]
+    user_id = body.get("user_id")
+    knowledge_group_ids = body.get("knowledge_group_ids", [])
     receipt_handle = message["ReceiptHandle"]
+
+    logger.info(
+        "SQS message received: message_id=%s conversation_id=%s model=%s",
+        message_id,
+        conversation_id,
+        model_id,
+        extra={
+            "message_id": str(message_id),
+            "conversation_id": str(conversation_id) if conversation_id else None,
+            "model_id": model_id,
+        },
+    )
 
     try:
         if conversation_id:
@@ -100,12 +114,24 @@ async def process_job_message(
             model_id=model_id,
             message_id=message_id,
             conversation_id=conversation_id,
+            user_id=user_id,
+            knowledge_group_ids=knowledge_group_ids,
         )
 
         await conversation_repository.update_message_status(
             conversation_id=conversation.id,
             message_id=message_id,
             status=models.MessageStatus.COMPLETED,
+        )
+
+        logger.info(
+            "Message processing completed: message_id=%s conversation_id=%s",
+            message_id,
+            conversation.id,
+            extra={
+                "message_id": str(message_id),
+                "conversation_id": str(conversation.id),
+            },
         )
 
     except models.ConversationNotFoundError as e:

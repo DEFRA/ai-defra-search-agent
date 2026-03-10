@@ -21,7 +21,6 @@ def get_knowledge_retriever(
 ) -> knowledge.KnowledgeRetriever | None:
     return knowledge.KnowledgeRetriever(
         base_url=app_config.knowledge.base_url,
-        similarity_threshold=app_config.knowledge.similarity_threshold,
     )
 
 
@@ -157,7 +156,6 @@ async def initialize_worker_services():
 
     knowledge_retriever = knowledge.KnowledgeRetriever(
         base_url=app_config.knowledge.base_url,
-        similarity_threshold=app_config.knowledge.similarity_threshold,
     )
 
     inference_service = bedrock_service.BedrockInferenceService(
