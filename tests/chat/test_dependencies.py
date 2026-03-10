@@ -1,3 +1,5 @@
+from unittest.mock import ANY
+
 import pytest
 from pytest_mock import MockerFixture
 
@@ -26,13 +28,20 @@ def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
     mock_config.bedrock.endpoint_url = None
+    mock_config.bedrock.connect_timeout = 60
+    mock_config.bedrock.read_timeout = 60
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
 
     client = dependencies.get_bedrock_runtime_client(app_config=mock_config)
 
-    mock_boto3.assert_called_with("bedrock-runtime", region_name="us-east-1")
+    mock_boto3.assert_called_with(
+        "bedrock-runtime", region_name="us-east-1", config=ANY
+    )
+    _, kwargs = mock_boto3.call_args
+    assert kwargs["config"].connect_timeout == 60
+    assert kwargs["config"].read_timeout == 60
     assert client == mock_boto3.return_value
 
 
@@ -42,6 +51,8 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.access_key_id = "test-key"
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
     mock_config.bedrock.endpoint_url = None
+    mock_config.bedrock.connect_timeout = 60
+    mock_config.bedrock.read_timeout = 60
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
@@ -50,10 +61,14 @@ def test_get_bedrock_runtime_client_with_credentials(mocker: MockerFixture):
 
     mock_boto3.assert_called_with(
         "bedrock-runtime",
+        region_name="us-east-1",
+        config=ANY,
         aws_access_key_id="test-key",
         aws_secret_access_key="test-secret",  # noqa: S106
-        region_name="us-east-1",
     )
+    _, kwargs = mock_boto3.call_args
+    assert kwargs["config"].connect_timeout == 60
+    assert kwargs["config"].read_timeout == 60
     assert client == mock_boto3.return_value
 
 
@@ -61,13 +76,18 @@ def test_get_bedrock_client_no_credentials(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.bedrock.use_credentials = False
     mock_config.bedrock.endpoint_url = None
+    mock_config.bedrock.connect_timeout = 60
+    mock_config.bedrock.read_timeout = 60
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
 
     client = dependencies.get_bedrock_client(app_config=mock_config)
 
-    mock_boto3.assert_called_with("bedrock", region_name="us-east-1")
+    mock_boto3.assert_called_with("bedrock", region_name="us-east-1", config=ANY)
+    _, kwargs = mock_boto3.call_args
+    assert kwargs["config"].connect_timeout == 60
+    assert kwargs["config"].read_timeout == 60
     assert client == mock_boto3.return_value
 
 
@@ -77,6 +97,8 @@ def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
     mock_config.bedrock.access_key_id = "test-key"
     mock_config.bedrock.secret_access_key = "test-secret"  # noqa: S105
     mock_config.bedrock.endpoint_url = None
+    mock_config.bedrock.connect_timeout = 60
+    mock_config.bedrock.read_timeout = 60
     mock_config.sqs.region = "us-east-1"
 
     mock_boto3 = mocker.patch("boto3.client")
@@ -85,10 +107,14 @@ def test_get_bedrock_client_with_credentials(mocker: MockerFixture):
 
     mock_boto3.assert_called_with(
         "bedrock",
+        region_name="us-east-1",
+        config=ANY,
         aws_access_key_id="test-key",
         aws_secret_access_key="test-secret",  # noqa: S106
-        region_name="us-east-1",
     )
+    _, kwargs = mock_boto3.call_args
+    assert kwargs["config"].connect_timeout == 60
+    assert kwargs["config"].read_timeout == 60
     assert client == mock_boto3.return_value
 
 
@@ -207,6 +233,9 @@ async def test_initialize_worker_services_monkeypatched_variation(mocker):
     cfg = mocker.Mock()
     cfg.mongo.database = "db"
     cfg.bedrock.use_credentials = False
+    cfg.bedrock.endpoint_url = None
+    cfg.bedrock.connect_timeout = 60
+    cfg.bedrock.read_timeout = 60
     cfg.sqs.region = "eu-1"
     cfg.knowledge.base_url = "http://k"
     cfg.knowledge.similarity_threshold = _SIMILARITY_THRESHOLD
@@ -237,6 +266,9 @@ async def test_initialize_worker_services(mocker: MockerFixture):
     mock_config.mongo.database = "test_db"
     mock_config.sqs.region = "us-east-1"
     mock_config.bedrock.use_credentials = False
+    mock_config.bedrock.endpoint_url = None
+    mock_config.bedrock.connect_timeout = 60
+    mock_config.bedrock.read_timeout = 60
     mock_config.knowledge.base_url = "http://knowledge"
     mock_config.knowledge.similarity_threshold = 0.5
     mock_get_config.return_value = mock_config
