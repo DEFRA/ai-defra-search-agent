@@ -53,6 +53,10 @@ class BedrockConfig(pydantic_settings.BaseSettings):
     endpoint_url: str | None = pydantic.Field(
         default=None, alias="BEDROCK_ENDPOINT_URL"
     )
+    connect_timeout: int = pydantic.Field(
+        default=60, alias="AWS_BEDROCK_CONNECT_TIMEOUT"
+    )
+    read_timeout: int = pydantic.Field(default=60, alias="AWS_BEDROCK_READ_TIMEOUT")
 
     @pydantic.field_validator("available_generation_models", mode="before")
     @classmethod

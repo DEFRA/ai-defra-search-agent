@@ -85,3 +85,18 @@ def test_mongo_config_env_var_overrides(monkeypatch):
     assert mongo_config.socket_timeout_ms == 8000
     assert mongo_config.retry_attempts == 4
     assert mongo_config.retry_base_delay_seconds == 1.5
+
+
+def test_bedrock_config_defaults():
+    bedrock_config = config.BedrockConfig()
+    assert bedrock_config.connect_timeout == 60
+    assert bedrock_config.read_timeout == 60
+
+
+def test_bedrock_config_env_var_overrides(monkeypatch):
+    monkeypatch.setenv("AWS_BEDROCK_CONNECT_TIMEOUT", "10")
+    monkeypatch.setenv("AWS_BEDROCK_READ_TIMEOUT", "120")
+
+    bedrock_config = config.BedrockConfig()
+    assert bedrock_config.connect_timeout == 10
+    assert bedrock_config.read_timeout == 120
