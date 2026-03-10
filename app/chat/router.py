@@ -43,12 +43,12 @@ async def chat(
             conversation_id=request.conversation_id,
         )
     except UnsupportedModelError as e:
-        logger.error(f"Unsupported model ID: {request.model_id}")
+        logger.error("Unsupported model ID: %s", request.model_id)
         raise fastapi.HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from None
     except models.ConversationNotFoundError as e:
-        logger.error(f"Conversation not found: {request.conversation_id}")
+        logger.error("Conversation not found: %s", request.conversation_id)
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
         ) from None
@@ -81,7 +81,7 @@ async def get_conversation(
     try:
         conversation = await chat_service.get_conversation(conversation_id)
     except models.ConversationNotFoundError as e:
-        logger.error(f"Conversation not found: {conversation_id}")
+        logger.error("Conversation not found: %s", conversation_id)
         raise fastapi.HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
         ) from None
