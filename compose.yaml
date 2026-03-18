@@ -2,7 +2,7 @@ services:
   localstack:
     image: localstack/localstack:4.9.2
     ports:
-      - "4567:4566" # LocalStack Gateway (avoiding conflict with ai-defra-search-data on 4566)
+      - "4567:4566" # LocalStack Gateway (avoiding conflict with main stack LocalStack on 4566)
       - "4570-4619:4510-4559" # external services port range
     env_file:
       - "compose/aws.env"

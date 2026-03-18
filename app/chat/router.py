@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import Annotated
 
@@ -8,6 +9,7 @@ from app.chat import api_schemas, dependencies, models, service
 from app.common.mongo import MongoUnavailableError
 from app.models import UnsupportedModelError
 
+logger = logging.getLogger(__name__)
 router = fastapi.APIRouter(tags=["chat"])
 
 
