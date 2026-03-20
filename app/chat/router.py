@@ -13,6 +13,34 @@ logger = logging.getLogger(__name__)
 router = fastapi.APIRouter(tags=["chat"])
 
 
+def _message_to_response(msg: models.Message) -> api_schemas.MessageResponse:
+    if isinstance(msg, models.UserMessage):
+        return api_schemas.MessageResponse(
+            message_id=msg.message_id,
+            role=msg.role,
+            content=msg.content,
+            model_id=msg.model_id,
+            model_name=msg.model_name,
+            status=msg.status.value,
+            error_message=msg.error_message,
+            timestamp=msg.timestamp,
+        )
+    if isinstance(msg, models.AssistantMessage):
+        return api_schemas.MessageResponse(
+            message_id=msg.message_id,
+            role=msg.role,
+            content=msg.content,
+            model_id=msg.model_id,
+            model_name=msg.model_name,
+            status=models.MessageStatus.COMPLETED.value,
+            error_message=None,
+            rag_error=msg.rag_error,
+            timestamp=msg.timestamp,
+        )
+    msg_t = type(msg).__name__
+    raise TypeError(f"Unsupported message type: {msg_t}")
+
+
 @router.post(
     "/chat",
     status_code=status.HTTP_202_ACCEPTED,
@@ -93,23 +121,7 @@ async def get_conversation(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         ) from None
 
-    messages = [
-        api_schemas.MessageResponse(
-            message_id=msg.message_id,
-            role=msg.role,
-            content=msg.content,
-            model_id=msg.model_id,
-            model_name=msg.model_name,
-            status=msg.status.value
-            if isinstance(msg, models.UserMessage)
-            else models.MessageStatus.COMPLETED.value,
-            error_message=msg.error_message
-            if isinstance(msg, models.UserMessage)
-            else None,
-            timestamp=msg.timestamp,
-        )
-        for msg in conversation.messages
-    ]
+    messages = [_message_to_response(msg) for msg in conversation.messages]
 
     return api_schemas.ChatResponse(
         conversation_id=conversation.id,

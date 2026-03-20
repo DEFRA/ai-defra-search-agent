@@ -62,6 +62,12 @@ class MessageResponse(pydantic.BaseModel):
         exclude_if=lambda v: v is None,
         serialization_alias="errorMessage",
     )
+    rag_error: str | None = pydantic.Field(
+        default=None,
+        description="Set when RAG retrieval failed for an assistant message",
+        exclude_if=lambda v: v is None,
+        serialization_alias="ragError",
+    )
     timestamp: datetime.datetime = pydantic.Field(
         description="The timestamp of when the message was created"
     )

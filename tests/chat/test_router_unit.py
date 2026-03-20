@@ -136,6 +136,38 @@ def test_get_conversation_returns_data(client_override, mocker):
     data = resp.json()
     assert data["conversationId"] == str(conversation.id)
     assert len(data["messages"]) == 2
+    assert data["messages"][1].get("ragError") is None
+
+
+def test_get_conversation_serializes_rag_error_on_assistant(client_override, mocker):
+    test_client = client_override
+
+    conversation = models.Conversation()
+    user_msg = models.UserMessage(content="q", model_id="m", model_name="mn")
+    rag_err = "RAG lookup failed. Knowledge base sources could not be retrieved."
+    assistant_msg = models.AssistantMessage(
+        content="a",
+        model_id="m",
+        model_name="mn",
+        usage=models.TokenUsage(1, 2, 3),
+        rag_error=rag_err,
+    )
+    conversation.add_message(user_msg)
+    conversation.add_message(assistant_msg)
+
+    mock_chat_service = mocker.AsyncMock()
+    mock_chat_service.get_conversation.return_value = conversation
+
+    from app.chat import dependencies
+
+    app.dependency_overrides[dependencies.get_queue_chat_service] = (
+        lambda: mock_chat_service
+    )
+
+    resp = test_client.get(f"/conversations/{conversation.id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["messages"][1]["ragError"] == rag_err
 
 
 def test_post_chat_with_unsupported_model_returns_400(client_override, mocker):
