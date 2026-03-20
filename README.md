@@ -85,7 +85,6 @@ The following environment variables can be configured for the application:
 | `AWS_BEDROCK_CONNECT_TIMEOUT` | No | `60`                     | Timeout in seconds to establish a connection to AWS Bedrock             |
 | `AWS_BEDROCK_READ_TIMEOUT` | No | `60`                     | Timeout in seconds to wait for a response from AWS Bedrock              |
 | `KNOWLEDGE_BASE_URL` | No | N/A                      | URL of the knowledge base service used for RAG lookup                   |
-| `KNOWLEDGE_GROUP_ID` | No | N/A                      | Knowledge group identifier for retrieval queries                        |
 | `KNOWLEDGE_SIMILARITY_THRESHOLD` | No | `0.5`                    | Similarity threshold for knowledge retrieval matches (0-1)              |
 | `LOCALSTACK_URL` | No | N/A                      | Base URL for LocalStack when running AWS services locally               |
 | `SQS_CHAT_QUEUE_URL` | No | N/A                      | SQS queue URL used by the worker for chat job messages                  |
