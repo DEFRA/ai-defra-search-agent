@@ -1,3 +1,4 @@
+import dataclasses
 import uuid
 
 import fastapi.testclient
@@ -137,6 +138,19 @@ def test_get_conversation_returns_data(client_override, mocker):
     assert data["conversationId"] == str(conversation.id)
     assert len(data["messages"]) == 2
     assert data["messages"][1].get("ragError") is None
+
+
+def test_message_to_response_raises_for_unknown_message_subclass():
+    """Exhaustiveness branch: not UserMessage, not AssistantMessage -> TypeError."""
+    from app.chat.router import _message_to_response
+
+    @dataclasses.dataclass(frozen=True, kw_only=True)
+    class OrphanMessage(models.Message):
+        role: str = "system"
+
+    msg = OrphanMessage(content="c", model_id="mid", model_name="mname")
+    with pytest.raises(TypeError, match="Unsupported message type: OrphanMessage"):
+        _message_to_response(msg)
 
 
 def test_get_conversation_serializes_rag_error_on_assistant(client_override, mocker):
