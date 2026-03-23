@@ -38,7 +38,8 @@ def _message_to_response(msg: models.Message) -> api_schemas.MessageResponse:
             timestamp=msg.timestamp,
         )
     msg_t = type(msg).__name__
-    raise TypeError(f"Unsupported message type: {msg_t}")
+    err_msg = f"Unsupported message type: {msg_t}"
+    raise TypeError(err_msg)
 
 
 @router.post(
