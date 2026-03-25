@@ -23,7 +23,7 @@ class SQSClient:
         self.region_name = config.config.sqs.region
         self.endpoint_url = config.config.sqs.endpoint_url
         self.use_credentials = config.config.sqs.use_credentials
-        self.access_key_id = config.config.sqs.access_key_id
+        self.access_key = config.config.sqs.access_key
         self.secret_access_key = config.config.sqs.secret_access_key
         self._client = None
         self._resolved_queue_url = None
@@ -35,7 +35,7 @@ class SQSClient:
                 "sqs",
                 region_name=self.region_name,
                 endpoint_url=self.endpoint_url,
-                aws_access_key_id=self.access_key_id,
+                aws_access_key_id=self.access_key,
                 aws_secret_access_key=self.secret_access_key,
             )
         else:

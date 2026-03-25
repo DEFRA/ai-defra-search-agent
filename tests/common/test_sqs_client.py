@@ -40,7 +40,7 @@ def test_sqs_client_send_receive_delete(monkeypatch):
         region = "eu-west-2"
         endpoint_url = None
         use_credentials = False
-        access_key_id = None
+        access_key = None
         secret_access_key = None
 
     class Cfg:

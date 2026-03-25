@@ -46,13 +46,13 @@ def set_test_env(monkeypatch, bedrock_generation_models):
     monkeypatch.setenv(
         "AWS_BEDROCK_AVAILABLE_GENERATION_MODELS", json.dumps(bedrock_generation_models)
     )
-    monkeypatch.setenv("AWS_BEDROCK_DEFAULT_GENERATION_MODEL", "Geni AI 3.5")
+    monkeypatch.setenv("AWS_BEDROCK_USE_DISCOVERY", "false")
+    monkeypatch.setenv("AWS_BEDROCK_DEFAULT_GENERATION_MODEL", "geni-ai-3.5")
     monkeypatch.setenv("PORT", "8000")
     monkeypatch.setenv("LOG_CONFIG", "logging.json")
     monkeypatch.setenv("AWS_REGION", "eu-west-2")
     monkeypatch.setenv("AWS_BEDROCK_USE_CREDENTIALS", "False")
-    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
-    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")  # noqa: S105
+    monkeypatch.setenv("SQS_USE_CREDENTIALS", "false")
     monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-base.com")
     monkeypatch.setenv(
         "SQS_CHAT_QUEUE_URL",
