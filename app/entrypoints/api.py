@@ -10,6 +10,7 @@ from app import config
 from app.chat import router as chat_router
 from app.chat.worker import run_worker
 from app.common import mongo, tracing
+from app.dependencies import verify_api_key
 from app.feedback import router as feedback_router
 from app.health import router as health_router
 from app.models import UnsupportedModelError
@@ -73,10 +74,12 @@ async def unsupported_model_exception_handler(
 
 app.add_middleware(tracing.TraceIdMiddleware)
 
+_api_key_dep = [fastapi.Depends(verify_api_key)]
+
 app.include_router(health_router.router)
-app.include_router(models_router.router)
-app.include_router(chat_router.router)
-app.include_router(feedback_router.router)
+app.include_router(models_router.router, dependencies=_api_key_dep)
+app.include_router(chat_router.router, dependencies=_api_key_dep)
+app.include_router(feedback_router.router, dependencies=_api_key_dep)
 
 
 def main() -> None:  # pragma: no cover

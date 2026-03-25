@@ -8,6 +8,7 @@ from app import config
 from app.chat import dependencies
 from app.common import mongo
 from app.common.mongo import MongoUnavailableError
+from app.dependencies import verify_api_key
 from app.entrypoints.api import app
 
 
@@ -26,6 +27,7 @@ def client(monkeypatch, bedrock_inference_service, mongo_uri):
 
     app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+    app.dependency_overrides[verify_api_key] = lambda: None
 
     app.dependency_overrides[dependencies.get_bedrock_inference_service] = (
         lambda: bedrock_inference_service
@@ -141,6 +143,7 @@ def test_post_feedback_mongo_unavailable_returns_503(mocker, monkeypatch, mongo_
 
     app.dependency_overrides[mongo.get_db] = lambda: None
     app.dependency_overrides[mongo.get_mongo_client] = lambda: None
+    app.dependency_overrides[verify_api_key] = lambda: None
     app.dependency_overrides[feedback_deps.get_feedback_service] = (
         lambda: mock_feedback_service
     )

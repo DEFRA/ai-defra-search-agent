@@ -170,6 +170,7 @@ class AppConfig(pydantic_settings.BaseSettings):
     http_proxy: str | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
+    inbound_api_key: str = pydantic.Field(..., alias="AI_DEFRA_SEARCH_AGENT_API_KEY")
 
     sqs: SQSConfig = pydantic.Field(default_factory=SQSConfig)
     mongo: MongoConfig = pydantic.Field(default_factory=MongoConfig)

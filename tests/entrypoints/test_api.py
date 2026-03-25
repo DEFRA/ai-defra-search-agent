@@ -4,6 +4,14 @@ from fastapi.testclient import TestClient
 from app.common import mongo
 from app.entrypoints.api import app
 
+VALID_API_KEY = "test-api-key"
+API_KEY_HEADER = "X-API-KEY"
+
+
+@pytest.fixture
+def api_key_headers():
+    return {API_KEY_HEADER: VALID_API_KEY}
+
 
 @pytest.fixture
 def healthy_mongo_client(mocker):
@@ -90,3 +98,18 @@ def test_health_mongo_unavailable(mocker, client_with_mongo, healthy_mongo_clien
 def test_root(client_with_mongo):
     response = client_with_mongo.get("/")
     assert response.status_code == 404
+
+
+def test_api_key_missing_returns_401(client_with_mongo):
+    response = client_with_mongo.get("/models")
+    assert response.status_code == 401
+
+
+def test_api_key_wrong_returns_403(client_with_mongo):
+    response = client_with_mongo.get("/models", headers={API_KEY_HEADER: "wrong-key"})
+    assert response.status_code == 403
+
+
+def test_api_key_valid_passes(client_with_mongo, api_key_headers):
+    response = client_with_mongo.get("/models", headers=api_key_headers)
+    assert response.status_code == 200
