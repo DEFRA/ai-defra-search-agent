@@ -15,7 +15,7 @@ def get_app_config() -> config.AppConfig:
     return config.get_config()
 
 
-async def verify_api_key(key: str | None = Security(_api_key_header)) -> None:
+def verify_api_key(key: str | None = Security(_api_key_header)) -> None:
     app_config = config.get_config()
     if key is None:
         raise fastapi.HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
