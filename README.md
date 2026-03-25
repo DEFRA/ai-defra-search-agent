@@ -68,6 +68,7 @@ The following environment variables can be configured for the application:
 
 | Variable | Required | Default                  | Description                                                             |
 |----------|----------|--------------------------|-------------------------------------------------------------------------|
+| `AI_DEFRA_SEARCH_AGENT_API_KEY` | Yes | N/A                  | API key used to authenticate incoming requests via the `X-API-KEY` header |
 | `AWS_REGION` | Yes | `eu-central-1`           | The AWS region to use for AWS services                                  |
 | `AWS_DEFAULT_REGION` | Yes | `eu-central-1`           | The default AWS region (should match AWS_REGION)                        |
 | `AWS_ACCESS_KEY_ID` | Yes | `test`                   | AWS access key ID (use `test` for local development with Localstack)    |
@@ -290,13 +291,15 @@ Start the service locally (for example with Docker Compose), then queue a messag
 # Queue a message (returns `conversation_id` and `message_id`)
 curl -X POST http://localhost:8086/chat \
   -H "Content-Type: application/json" \
+  -H "X-API-KEY: <your-api-key>" \
   -d '{
     "question": "What is AI?",
     "model_id": "anthropic.claude-3-haiku"
   }'
 
 # Retrieve the conversation by ID (replace <conversation_id> with the value returned above)
-curl http://localhost:8086/conversations/<conversation_id>
+curl http://localhost:8086/conversations/<conversation_id> \
+  -H "X-API-KEY: <your-api-key>"
 ```
 
 The POST returns `conversation_id` and `message_id` which you can use to poll the GET endpoint.
@@ -351,12 +354,16 @@ The scan will:
 
 ## API Endpoints
 
-| Endpoint                    | Description                           |
-| :-------------------------- | :------------------------------------ |
-| `GET: /docs`                | Automatic API Swagger documentation   |
-| `GET: /health`              | Health check endpoint                 |
-| `POST: /chat`               | Chat interaction with AI assistant    |
-| `POST: /feedback`           | Submit user feedback on AI responses  |
+All endpoints except `/health` require an `X-API-KEY` header containing the value of the `AI_DEFRA_SEARCH_AGENT_API_KEY` environment variable. Requests without this header return `401 Unauthorized`; requests with an incorrect key return `403 Forbidden`.
+
+| Endpoint                    | Auth required | Description                           |
+| :-------------------------- | :------------ | :------------------------------------ |
+| `GET: /docs`                | No            | Automatic API Swagger documentation   |
+| `GET: /health`              | No            | Health check endpoint                 |
+| `GET: /models`              | Yes           | List available AI models              |
+| `POST: /chat`               | Yes           | Chat interaction with AI assistant    |
+| `GET: /conversations/{id}`  | Yes           | Retrieve a conversation by ID         |
+| `POST: /feedback`           | Yes           | Submit user feedback on AI responses  |
 
 ## Custom CloudWatch Metrics
 

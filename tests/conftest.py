@@ -59,3 +59,4 @@ def set_test_env(monkeypatch, bedrock_generation_models):
         "http://sqs.eu-central-1.localstack:4566/000000000000/chat-job-queue",
     )
     monkeypatch.setenv("KNOWLEDGE_SIMILARITY_THRESHOLD", "0.5")
+    monkeypatch.setenv("AI_DEFRA_SEARCH_AGENT_API_KEY", "test-api-key")

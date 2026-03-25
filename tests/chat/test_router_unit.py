@@ -6,6 +6,7 @@ import pytest
 
 from app.chat import models
 from app.common import mongo
+from app.dependencies import verify_api_key
 from app.entrypoints.api import app
 
 
@@ -29,6 +30,7 @@ def client_override():
 
     app.dependency_overrides[mongo.get_db] = get_fresh_mongo_db
     app.dependency_overrides[mongo.get_mongo_client] = get_fresh_mongo_client
+    app.dependency_overrides[verify_api_key] = lambda: None
 
     yield fastapi.testclient.TestClient(app)
 

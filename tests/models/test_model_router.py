@@ -1,13 +1,16 @@
 import fastapi.testclient
 import pytest
 
+from app.dependencies import verify_api_key
 from app.entrypoints.api import app
 from app.models import dependencies as model_dependencies
 
 
 @pytest.fixture
 def client():
-    return fastapi.testclient.TestClient(app)
+    app.dependency_overrides[verify_api_key] = lambda: None
+    yield fastapi.testclient.TestClient(app)
+    app.dependency_overrides.pop(verify_api_key, None)
 
 
 def test_get_models_returns_model_list(client):
@@ -45,4 +48,6 @@ def test_get_models_returns_204_when_no_models_configured(client):
         response = client.get("/models")
         assert response.status_code == 204
     finally:
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(
+            model_dependencies.get_model_resolution_service, None
+        )
