@@ -124,9 +124,7 @@ class MongoConfig(pydantic_settings.BaseSettings):
 class SQSConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     region: str = pydantic.Field(..., alias="AWS_REGION")
-    use_credentials: bool = pydantic.Field(
-        default=False, alias="SQS_USE_CREDENTIALS"
-    )
+    use_credentials: bool = pydantic.Field(default=False, alias="SQS_USE_CREDENTIALS")
     endpoint_url: str | None = pydantic.Field(
         default=None, alias="AWS_SQS_ENDPOINT_URL"
     )
