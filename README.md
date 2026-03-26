@@ -71,8 +71,10 @@ The following environment variables can be configured for the application:
 | `AI_DEFRA_SEARCH_AGENT_API_KEY` | Yes | N/A                  | API key used to authenticate incoming requests via the `X-API-KEY` header |
 | `AWS_REGION` | Yes | `eu-central-1`           | The AWS region to use for AWS services                                  |
 | `AWS_DEFAULT_REGION` | Yes | `eu-central-1`           | The default AWS region (should match AWS_REGION)                        |
-| `AWS_ACCESS_KEY_ID` | Yes | `test`                   | AWS access key ID (use `test` for local development with Localstack)    |
-| `AWS_SECRET_ACCESS_KEY` | Yes | `test`                   | AWS secret access key (use `test` for local development with Localstack) |
+| `AWS_SQS_ENDPOINT_URL` | No | N/A                      | LocalStack SQS endpoint (e.g. `http://localstack:4566` in Docker)       |
+| `SQS_USE_CREDENTIALS` | No | `false`                  | Set `true` with LocalStack; use `SQS_ACCESS_KEY` / `SQS_SECRET_ACCESS_KEY` (not `AWS_ACCESS_KEY_ID`) |
+| `SQS_ACCESS_KEY` | No | N/A                      | Dummy access key for LocalStack SQS (e.g. `test`)                         |
+| `SQS_SECRET_ACCESS_KEY` | No | N/A                      | Dummy secret for LocalStack SQS (e.g. `test`)                             |
 | `AWS_EMF_ENVIRONMENT` | Yes | `local`                  | AWS Embedded Metrics environment setting                                |
 | `AWS_EMF_AGENT_ENDPOINT` | Yes | `tcp://127.0.0.1:25888`  | CloudWatch agent endpoint for metrics                                   |
 | `AWS_EMF_LOG_GROUP_NAME` | Yes | `log-group-name`         | CloudWatch log group name                                               |
