@@ -95,6 +95,9 @@ class BedrockConfig(pydantic_settings.BaseSettings):
 class KnowledgeConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict(env_file=".env", extra="ignore")
     base_url: str = pydantic.Field(..., alias="KNOWLEDGE_BASE_URL")
+    api_key: pydantic.SecretStr = pydantic.Field(
+        ..., alias="AI_DEFRA_SEARCH_KNOWLEDGE_API_KEY"
+    )
 
 
 class MongoConfig(pydantic_settings.BaseSettings):

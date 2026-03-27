@@ -6,7 +6,7 @@ from app.common.knowledge import KnowledgeDoc, KnowledgeRetriever
 class TestKnowledgeRetriever:
     def test_search_returns_all_documents_from_knowledge_service(self, mocker):
         base_url = "http://test"
-        retriever = KnowledgeRetriever(base_url=base_url)
+        retriever = KnowledgeRetriever(base_url=base_url, api_key="test-api-key")
 
         mock_response = mocker.Mock()
         mock_response.json.return_value = [
@@ -43,7 +43,7 @@ class TestKnowledgeRetriever:
                 "query": "query",
                 "max_results": 5,
             },
-            headers={"user-id": "user-1"},
+            headers={"user-id": "user-1", "X-API-KEY": "test-api-key"},
         )
         assert error is None
         assert len(docs) == 2
@@ -61,7 +61,7 @@ class TestKnowledgeRetriever:
         )
 
     def test_search_passes_max_results(self, mocker):
-        retriever = KnowledgeRetriever(base_url="http://test")
+        retriever = KnowledgeRetriever(base_url="http://test", api_key="test-api-key")
         mock_response = mocker.Mock()
         mock_response.json.return_value = []
         mock_response.raise_for_status.return_value = None
@@ -82,11 +82,11 @@ class TestKnowledgeRetriever:
                 "query": "query",
                 "max_results": 10,
             },
-            headers={"user-id": "user-1"},
+            headers={"user-id": "user-1", "X-API-KEY": "test-api-key"},
         )
 
     def test_search_returns_empty_list_on_http_error(self, caplog, mocker):
-        retriever = KnowledgeRetriever(base_url="http://test")
+        retriever = KnowledgeRetriever(base_url="http://test", api_key="test-api-key")
 
         mock_response = mocker.Mock()
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -107,7 +107,7 @@ class TestKnowledgeRetriever:
         assert "RAG Lookup failed" in caplog.text
 
     def test_search_logs_json_body_on_http_error_when_available(self, caplog, mocker):
-        retriever = KnowledgeRetriever(base_url="http://test")
+        retriever = KnowledgeRetriever(base_url="http://test", api_key="test-api-key")
         mock_http_response = mocker.Mock()
         mock_http_response.status_code = 500
         mock_http_response.reason_phrase = "Internal Server Error"
@@ -135,7 +135,7 @@ class TestKnowledgeRetriever:
     def test_search_falls_back_to_text_on_http_error_when_json_unavailable(
         self, caplog, mocker
     ):
-        retriever = KnowledgeRetriever(base_url="http://test")
+        retriever = KnowledgeRetriever(base_url="http://test", api_key="test-api-key")
         mock_http_response = mocker.Mock()
         mock_http_response.status_code = 500
         mock_http_response.reason_phrase = "Internal Server Error"
@@ -161,7 +161,7 @@ class TestKnowledgeRetriever:
         assert "HTML error page" in caplog.text
 
     def test_search_returns_empty_list_on_connection_error(self, caplog, mocker):
-        retriever = KnowledgeRetriever(base_url="http://test")
+        retriever = KnowledgeRetriever(base_url="http://test", api_key="test-api-key")
 
         mock_client = mocker.patch("httpx.Client")
         mock_client_instance = mock_client.return_value

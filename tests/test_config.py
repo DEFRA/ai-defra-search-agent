@@ -104,6 +104,8 @@ def test_bedrock_config_env_var_overrides(monkeypatch):
 
 def test_knowledge_config_loads_without_knowledge_group_id(monkeypatch):
     monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-service:8087")
+    monkeypatch.setenv("AI_DEFRA_SEARCH_KNOWLEDGE_API_KEY", "test-api-key")
     knowledge_config = config.KnowledgeConfig()
     assert knowledge_config.base_url == "http://knowledge-service:8087"
+    assert knowledge_config.api_key.get_secret_value() == "test-api-key"
     assert not hasattr(knowledge_config, "knowledge_group_id")

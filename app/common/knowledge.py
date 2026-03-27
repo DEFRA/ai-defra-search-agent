@@ -23,8 +23,9 @@ class Source:
 
 
 class KnowledgeRetriever:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, api_key: str):
         self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
 
     RAG_ERROR_MESSAGE = (
         "RAG lookup failed. Knowledge base sources could not be retrieved."
@@ -43,7 +44,7 @@ class KnowledgeRetriever:
                         "query": query,
                         "max_results": max_results,
                     },
-                    headers={"user-id": user_id},
+                    headers={"user-id": user_id, "X-API-KEY": self.api_key},
                 )
                 response.raise_for_status()
                 raw_docs = response.json()
