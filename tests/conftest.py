@@ -53,6 +53,7 @@ def set_test_env(monkeypatch, bedrock_generation_models):
     monkeypatch.setenv("AWS_BEDROCK_USE_CREDENTIALS", "False")
     monkeypatch.setenv("SQS_USE_CREDENTIALS", "false")
     monkeypatch.setenv("KNOWLEDGE_BASE_URL", "http://knowledge-base.com")
+    monkeypatch.setenv("AI_DEFRA_SEARCH_KNOWLEDGE_API_KEY", "test-knowledge-api-key")
     monkeypatch.setenv(
         "SQS_CHAT_QUEUE_URL",
         "http://sqs.eu-central-1.localstack:4566/000000000000/chat-job-queue",

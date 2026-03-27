@@ -21,6 +21,7 @@ def get_knowledge_retriever(
 ) -> knowledge.KnowledgeRetriever | None:
     return knowledge.KnowledgeRetriever(
         base_url=app_config.knowledge.base_url,
+        api_key=app_config.knowledge.api_key.get_secret_value(),
     )
 
 
@@ -156,6 +157,7 @@ async def initialize_worker_services():
 
     knowledge_retriever = knowledge.KnowledgeRetriever(
         base_url=app_config.knowledge.base_url,
+        api_key=app_config.knowledge.api_key.get_secret_value(),
     )
 
     inference_service = bedrock_service.BedrockInferenceService(

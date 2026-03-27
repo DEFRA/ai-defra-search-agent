@@ -14,11 +14,13 @@ _RETRY_BASE_DELAY_SECONDS = 0.5
 def test_get_knowledge_retriever(mocker: MockerFixture):
     mock_config = mocker.Mock()
     mock_config.knowledge.base_url = "http://knowledge-base.com"
+    mock_config.knowledge.api_key.get_secret_value.return_value = "test-api-key"
 
     retriever = dependencies.get_knowledge_retriever(app_config=mock_config)
 
     assert isinstance(retriever, knowledge.KnowledgeRetriever)
     assert retriever.base_url == "http://knowledge-base.com"
+    assert retriever.api_key == "test-api-key"
 
 
 def test_get_bedrock_runtime_client_no_credentials(mocker: MockerFixture):
@@ -235,6 +237,7 @@ async def test_initialize_worker_services_monkeypatched_variation(mocker):
     cfg.bedrock.read_timeout = 60
     cfg.sqs.region = "eu-1"
     cfg.knowledge.base_url = "http://k"
+    cfg.knowledge.api_key.get_secret_value.return_value = "test-api-key"
     mocker.patch("app.chat.dependencies.config.get_config", return_value=cfg)
 
     chat_svc, conv_repo, sqs_client = await deps.initialize_worker_services()
@@ -266,6 +269,7 @@ async def test_initialize_worker_services(mocker: MockerFixture):
     mock_config.bedrock.connect_timeout = 60
     mock_config.bedrock.read_timeout = 60
     mock_config.knowledge.base_url = "http://knowledge"
+    mock_config.knowledge.api_key.get_secret_value.return_value = "test-api-key"
     mock_get_config.return_value = mock_config
 
     # Mock MongoDB client and database
