@@ -1,8 +1,14 @@
+# DISABLED (2026-04-17): Automated triggers removed as a security precaution
+# while repositories are being disabled. To re-enable, restore the original
+# 'on:' triggers from the commented block below.
+
+# on:
+#   schedule:
+#     - cron: '0 1 * * *'
+#   workflow_dispatch:
+#   workflow_call:
 on:
-  schedule:
-    - cron: '0 1 * * *'
   workflow_dispatch:
-  workflow_call:
 
 jobs:
   sonarcloud: 
